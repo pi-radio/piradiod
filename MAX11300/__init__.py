@@ -1,1 +1,1 @@
-from .device import MAX11300Dev
+from .max11300 import MAX11300Dev

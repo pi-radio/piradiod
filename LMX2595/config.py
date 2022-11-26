@@ -714,13 +714,8 @@ class LMXConfig:
         print(f"PLL: N: {self.PLL.N} NUM: {self.PLL.NUM} DEN: {self.PLL.DEN}")
 
         print(f"VCO: AMP_CAL: {self.VCO.amp_cal} CAP_CODE: {self.VCO.cap_code} GAIN: {self.VCO.gain}")
-        
-    @property
-    def freqs(self):
-        return (self.AMUX.f_out, self.BMUX.f_out)
 
-    @freqs.setter
-    def freqs(self, f):
+    def tune(self, f):
         (A, B) = f
         VCOFreq = None
         c = copy.deepcopy(self)
@@ -781,3 +776,12 @@ class LMXConfig:
             c.PLLDIV.den = rden
 
             c.f_vco = VCOFreq
+        
+        
+    @property
+    def freqs(self):
+        return (self.AMUX.f_out, self.BMUX.f_out)
+
+    @freqs.setter
+    def freqs(self, f):
+        self.tune(f)

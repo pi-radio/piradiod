@@ -1,24 +1,45 @@
 import time
 
 from spidev import SPIDev
+from pioutput import pioutput
+from picommand import PiCommandObject, picommand
 
 def set_bits(word, bits, start, l):
     word = (word & ~(((1 << l) - 1) << start))
     word |= (bits & ((1 << l) - 1)) << start
     return word
 
-class MAX11300Port:    
+class MAX11300Port(PiCommandObject):    
     def __init__(self, device, i):
         self.device = device
         self.port_no = i
-        
+        self._batch = False
+        self._config_dirty = False
+
         self.config_r = self.device.read_reg(0x20+i) & 0xFFF
         
-        print(f"Port {self.port_no} config: {self.config_r:3x}")
+        pioutput.debug(f"Port {self.port_no} config: {self.config_r:3x}")
+
+    def begin_config(self):
+        self._batch = True
+
+    def end_config(self):
+        assert self._batch == True
+        self._batch = False
+
+        if self._config_dirty:
+            self.update_config()
         
     def update_config(self):
-        print(f"Updating port {self.port_no} config: {self.config_r:3x}")
+        self._config_dirty = True
+
+        if self._batch:
+            return
+        
+        pioutput.debug(f"Updating port {self.port_no} config: {self.config_r:3x}")
         self.device.write_reg(0x20+self.port_no, self.config_r)
+        
+        self._config_dirty = False
         return self.config_r
                 
     @property
@@ -27,8 +48,6 @@ class MAX11300Port:
 
     @funcid.setter
     def funcid(self, v):
-        print(self.config_r)
-        print(v)
         self.config_r = set_bits(self.config_r, v, 12, 4)
         self.update_config()
         
@@ -40,6 +59,11 @@ class MAX11300Port:
     def avr(self):
         return (self.config_r >> 11) & 1
 
+    @avr.setter
+    def avr(self, v):
+        self.config_r &= ~((1 if v else 0) << 11)
+        self.update_config()
+    
     @property
     def range(self):
         return (self.config_r >> 8) & 0x7
@@ -57,6 +81,11 @@ class MAX11300Port:
     def assoc_port(self):
         return (self.config_r >> 0) & 0x1F
 
+    @assoc_port.setter
+    def assoc_port(self, p):
+        self.config_r = set_bits(self.config_r, p, 0, 5)
+        self.update_config()
+    
     @property
     def adc_value(self):
         return self.device.read_reg(0x40+self.port_no) & 0xFFF
@@ -67,32 +96,63 @@ class MAX11300Port:
 
     @dac_value.setter
     def dac_value(self, v):
-        print(f"Setting port {self.port_no} DAC value to {v}")
         self.device.write_reg(0x60+self.port_no, v & 0xFFF)
         return v
 
     @property
+    def adc_range(self):
+        return self.device.ranges[self.range][0]
+    
+    @property
+    def dac_range(self):
+        return self.device.ranges[self.range][1]
+    
+    @property
+    def adc(self):
+        while True:
+            intr = self.device.intr
+            status = self.device.adc_status
+
+            if intr & 1:
+                break
+            
+            time.sleep(0.001)
+            
+        r = self.adc_range
+
+        return (r[1]-r[0]) * self.adc_value / 4096.0 + r[0]
+
+        
+    @property
     def dac(self):
-        if self.range == self.device.RANGE_DAC_0V_10V:
-            return 10.0 * self.dac_value / 4096.0
-        else:
-            raise Exception("Unhandled range")
+        r = self.dac_range
+
+        return (r[1]-r[0]) * self.dac_value / 4096.0 + r[0]
 
     @dac.setter
     def dac(self, v):
-        if self.range == self.device.RANGE_DAC_0V_10V:
-            assert(v >= 0 and v <= 10)
-            self.dac_value = int(round(v * 4096.0 / 10.0))
-        else:
-            raise Exception("Unhandled range")
+        r = self.dac_range
+
+        assert(v >= r[0] and v <= r[1])
+        self.dac_value = int(round((v-r[0]) * 4096.0 / (r[1]-r[0])))
         
-    
+
+    @picommand
+    def ramp_to(self, V, N=16, delay=0.01):
+        assert(self.funcid == self.device.FUNCID_DAC)
+        dV = (V - self.dac) / N
+
+        for i in range(N - 1):
+            self.dac += dV
+            
+        self.dac = V
+        
+        
     def __str__(self):
         return f"<MAX11300 Port {self.port_no}>"
 
     
 class MAX11300Dev(SPIDev):
-
     DEVCTL_ADCCTL_MASK = 3
     DEVCTL_ADCCTL_IDLE = 0
     DEVCTL_ADCCTL_SINGLESWEEP = 1
@@ -105,11 +165,10 @@ class MAX11300Dev(SPIDev):
     DEVCTL_DACCTL_RSTDAT1 = 2 << 2
     DEVCTL_DACCTL_RSTDAT2 = 3 << 2
 
-    DEVCTL_ADCRATE_MASK = 3 << 4
-    DEVCTL_ADCRATE_200ksps = 0 << 4
-    DEVCTL_ADCRATE_250ksps = 1 << 4
-    DEVCTL_ADCRATE_333ksps = 2 << 4
-    DEVCTL_ADCRATE_400ksps = 3 << 4
+    DEVCTL_ADCRATE_200ksps = 0 
+    DEVCTL_ADCRATE_250ksps = 1 
+    DEVCTL_ADCRATE_333ksps = 2 
+    DEVCTL_ADCRATE_400ksps = 3 
 
     DEVCTL_DACREF_MASK = 1 << 6
     DEVCTL_DACREF_EXT = 0 << 6
@@ -138,12 +197,15 @@ class MAX11300Dev(SPIDev):
     DEVCTL_RESET_MASK = 1 << 15
     DEVCTL_RESET_ENABLE = 1 << 15
 
-    RANGE_NONE = 0
-    RANGE_DAC_0V_10V = 1
-    RANGE_DAC_N5V_5V = 2
-    RANGE_DAC_N10V_10V = 3
-    RANGE_DAC_N5V_5V_2 = 4
-    RANGE_DAC_0V_10V_2 = 6
+    ranges = [
+        ((0,0),   (0,0)),
+        ((0,10),  (0,10)),
+        ((-5,5),  (-5,5)),
+        ((-10,0), (-10,0)),
+        ((0,2.5), (-5,5)),
+        ((0,0),   (0,0)),
+        ((0,2.5), (0,10))
+    ]
     
     FUNCID_HIZ = 0
     FUNCID_GPI = 1
@@ -161,7 +223,8 @@ class MAX11300Dev(SPIDev):
     
     def __init__(self, bus_no, dev_no, dac_ref=2.5):
         super().__init__(bus_no, dev_no)
-
+        self._device_ctrl = None
+        
         self.dac_ref = dac_ref
 
         if self.dev_id != 0b0000010000100100:
@@ -177,7 +240,10 @@ class MAX11300Dev(SPIDev):
 
         self._port_list = PortList()
 
-        print(f"dev_ctrl: {self.device_ctrl:04x}")
+        pioutput.debug(f"dev_ctrl: {self.device_ctrl:04x}")
+
+        for p in self._ports:
+            pioutput.debug(f"Port {p}: {p.funcid}")
         
     def read_reg(self, reg_no):
         v = self.dev.transfer([ (reg_no << 1) | 0x1, 0x00, 0x00 ])
@@ -186,7 +252,6 @@ class MAX11300Dev(SPIDev):
 
     def write_reg(self, reg_no, v):
         r = self.dev.transfer([ reg_no << 1, (v >> 8) & 0xFF, v & 0xFF ])
-        print(f"r: {r}")
         return v
     
     def read_20bit_reg(self, reg_no):
@@ -240,12 +305,16 @@ class MAX11300Dev(SPIDev):
 
     @property
     def device_ctrl(self):
-        return self.read_reg(0x10)
+        if self._device_ctrl is None:
+            self._device_ctrl = self.read_reg(0x10)
+            
+        return self._device_ctrl
 
     @device_ctrl.setter
     def device_ctrl(self, v):
-        self.write_reg(0x10, v)
-        return v
+        self._device_ctrl = v
+        self.write_reg(0x10, self._device_ctrl)
+        return self._device_ctrl
     
     @property
     def intr_mask(self):
@@ -314,8 +383,6 @@ class MAX11300Dev(SPIDev):
     def port(self):
         return self._port_list
             
-    
-
     @property
     def adc(self):
         class ADCSet:
@@ -341,3 +408,18 @@ class MAX11300Dev(SPIDev):
                 return self.device.write_reg(0x60+i, v) & 0xFFF;
 
         return DACSet()
+
+    def setup(self, continuous=True, immediate=True, rate=400):
+        c = self.DEVCTL_DACREF_INT
+
+        if continuous:
+            c |= 0x3
+
+        if immediate:
+            c = set_bits(c, 1, 2, 2)
+
+        if rate == 400:
+            c = set_bits(c, 3, 4, 2)
+
+        self.device_ctrl = c
+            

@@ -1,1 +1,1 @@
-from .device import LMX2595Dev
+from .lmx2595 import LMX2595Dev

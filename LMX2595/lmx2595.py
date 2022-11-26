@@ -3,6 +3,7 @@ import time
 from spidev import SPIDev
 
 from .config import LMXConfig
+from picommand import picommand
 
 class LMX2595Dev(SPIDev):
     def __init__(self, bus_no, dev_no):
@@ -20,6 +21,7 @@ class LMX2595Dev(SPIDev):
 
         self.dev.transfer([ 0, v >> 8, v & 0xFF])
 
+        
     def write_reg(self, r, v):
         self.dev.transfer([ r, (v >> 8) & 0xFF, v & 0xFF ])
         
@@ -44,4 +46,7 @@ class LMX2595Dev(SPIDev):
 
             self.active_regs = r
 
-        
+    @picommand
+    def tune(self, f0, f1):
+        self.config.tune((f0, f1))
+        self.program()

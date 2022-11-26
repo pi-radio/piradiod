@@ -2,6 +2,7 @@
 
 from twisted.internet import endpoints, protocol, reactor
 from twisted.protocols import basic
+from lark import Lark
 
 from spidev import SPIDev
 from LTC5584 import LTC5584Dev
