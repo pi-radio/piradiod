@@ -116,11 +116,20 @@ class MAX11300Port(PiCommandObject):
             if intr & 1:
                 break
             
-            time.sleep(0.001)
+            time.sleep(0.010)
             
         r = self.adc_range
-
-        return (r[1]-r[0]) * self.adc_value / 4096.0 + r[0]
+        v = self.adc_value
+                
+        if True:
+            if v >= 2048:
+                v = (v - 4096)/2048.0
+            else:
+                v = v / 2048.0
+        else:
+            v = v / 4096.0
+            
+        return (r[1]-r[0]) * v + r[0]
 
         
     @property
@@ -139,11 +148,13 @@ class MAX11300Port(PiCommandObject):
 
     @picommand
     def ramp_to(self, V, N=16, delay=0.01):
-        assert(self.funcid == self.device.FUNCID_DAC)
+        assert(self.funcid == self.device.FUNCID_DAC or
+               self.funcid == self.device.FUNCID_DAC_MONITOR)
         dV = (V - self.dac) / N
 
         for i in range(N - 1):
             self.dac += dV
+            time.sleep(delay)
             
         self.dac = V
         

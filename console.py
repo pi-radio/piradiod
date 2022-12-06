@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 from board_140GHz import PiRadio_140GHz_Bringup
-from prompt_toolkit import prompt
+from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.validation import Validator, ValidationError
 from prompt_toolkit.lexers import PygmentsLexer
+from prompt_toolkit.history import FileHistory
 from pygments.lexer import RegexLexer
 import pygments.token as pt
 from functools import partial
+from pathlib import Path
 
 board = PiRadio_140GHz_Bringup()
 
@@ -174,15 +176,21 @@ class PiCValidator(Validator):
             raise ValidationError(message=f"{e.parent} does not have a child or action {e.name}")
         except Exception as e:
             raise ValidationError(message=f"Unknown exception {e} in validation")
-        
 
+
+hist_dir = Path.home() / ".piradiod"
+
+hist_dir.mkdir(parents=True, exist_ok=True)
+
+session = PromptSession(history=FileHistory(hist_dir / "history"))
+        
 while True:
     try:
-        text = prompt(">",
-                      completer=PiCCompleter(),
-                      validator=PiCValidator(),
-                      complete_while_typing=False,
-                      lexer=lexer)
+        text = session.prompt(">",
+                              completer=PiCCompleter(),
+                              validator=PiCValidator(),
+                              complete_while_typing=False,
+                              lexer=lexer)
     except KeyboardInterrupt:
         continue
     except EOFError:
