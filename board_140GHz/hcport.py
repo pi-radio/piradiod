@@ -61,11 +61,17 @@ class HCPort(PiCommandObject):
     def I(self):
         return self.adcp.adc / self.Rsense
 
+    def I_oversample(self, N):
+        v = 0.0
+        for i in range(N):
+            v += self.adcp.adc
+        return v/N/self.Rsense
+    
     @property
     def V_sense_lo(self):
         return self.adcn.adc / self.Rsense
     
-    def ramp_to(self, V):
+    def ramp_to(self, V, display=False):
         assert(V <= self.maxV)
         N = 16
         delay = 0.01
@@ -73,6 +79,8 @@ class HCPort(PiCommandObject):
 
         for i in range(N - 1):
             self.V += dV
+            if display:
+                self.status()
             time.sleep(delay)
             
         self.V = V

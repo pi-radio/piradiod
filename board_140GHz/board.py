@@ -9,6 +9,7 @@ from LMX2595 import LMX2595Dev
 from MAX11300 import MAX11300Dev
 
 from .rx import RX
+from .tx import TX
 
 #
 #    Left
@@ -42,6 +43,7 @@ class PiRadio_140GHz_Bringup(PiCommandObject):
         self.children.LTC5584 = [ LTC5584Dev(2, i) for i in range(8) ]
 
         self.children.RX = RX()
+        self.children.TX = TX()
         
         self.children.LMX_Eravant = LMX2595Dev(2, 12)
         self.children.LMX_RX = LMX2595Dev(2, 13)
