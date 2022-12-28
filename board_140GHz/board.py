@@ -35,6 +35,7 @@ from .tx import TX
 # -- PA_Vgs_Right (15)
 
 
+        
     
 class PiRadio_140GHz_Bringup(PiCommandObject):
     def __init__(self):
@@ -60,3 +61,10 @@ class PiRadio_140GHz_Bringup(PiCommandObject):
         p = os.path.dirname(os.path.abspath(__file__))
         
         os.system("fpgautil -b {p}/system.bin -m {p}/system.dtbo")
+
+class FW:
+    path = os.path.dirname(os.path.abspath(__file__))
+
+    binfile = f"{path}/system.bin"
+    dtbofile = f"{path}/system.dtbo"
+        

@@ -24,7 +24,12 @@ class LMX2595Dev(SPIDev):
         
     def write_reg(self, r, v):
         self.dev.transfer([ r, (v >> 8) & 0xFF, v & 0xFF ])
+
+    @picommand
+    def display(self):
+        self.config.display()
         
+    @picommand
     def program(self):
         if not self.active_regs:
             self.active_regs = self.config.regs

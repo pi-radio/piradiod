@@ -7,6 +7,8 @@ from periphery.i2c import I2CError
 from Si5382 import Si5382
 from LMK04208 import LMK04208
 
+from picommand import PiCommandObject, picommand
+
 regs_4GHz = [
     0x700000, 0x6f0000, 0x6e0000, 0x6d0000,
     0x6c0000, 0x6b0000, 0x6a0000, 0x690021,
@@ -42,28 +44,35 @@ regs_4GHz = [
 SCI18IS602Addr=0x2f
 LMXAddrs = [ 0x08, 0x04, 0x01 ]
 
-if __name__ == "__main__":
-    Si5382()
-    LMK04208()
-    
-    print("Configuring LMX2594s")
+class ZCU111(PiCommandObject):
+    def __init__(self):
+        self.Si5382 = Si5382()
+        self.LMK04208 = LMK04208()
 
-    for p in glob.glob("/dev/i2c-*"):
-        i2c = I2C(p)
-        try:
-            msgs = [ I2C.Message([0x00], read=True) ]
-            i2c.transfer(SCI18IS602Addr, msgs)
-            print(f"Found on bus {p}")
-        except I2CError as e:
-            continue
+    @picommand
+    def program(self):
+        self.Si5382.program()
+        self.LMK04208.program()
+        
+        print("Configuring LMX2594s")
 
-        for lmx in LMXAddrs:
-            print(f"Programming LMX@{lmx}...");
-            for r in regs_4GHz:
-                try:
-                    msgs = [ I2C.Message([ lmx,
-                                           (r >> 16) & 0xFF, (r >> 8) & 0xFF, (r) & 0xFF ])]
-                    i2c.transfer(SCI18IS602Addr, msgs)
-                except I2CError as e:
-                    print(f"Error in transfer {s}: {e}")
-                    continue
+        for p in glob.glob("/dev/i2c-*"):
+            i2c = I2C(p)
+            try:
+                msgs = [ I2C.Message([0x00], read=True) ]
+                i2c.transfer(SCI18IS602Addr, msgs)
+                print(f"Found on bus {p}")
+            except I2CError as e:
+                continue
+
+            for lmx in LMXAddrs:
+                print(f"Programming LMX@{lmx}...");
+                for r in regs_4GHz:
+                    try:
+                        msgs = [ I2C.Message([ lmx,
+                                               (r >> 16) & 0xFF, (r >> 8) & 0xFF, (r) & 0xFF ])]
+                        i2c.transfer(SCI18IS602Addr, msgs)
+                    except I2CError as e:
+                        print(f"Error in transfer {s}: {e}")
+                        continue
+

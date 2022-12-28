@@ -5,6 +5,7 @@ import time
 from periphery import I2C
 from periphery.i2c import I2CError
 
+from picommand import PiCommandObject, picommand
 
 si_161MHz = [
     (0x0B, 0x24, 0xC0),
@@ -1339,38 +1340,37 @@ si_122_88 = [ (0x0B, 0x24, 0xC0),
 
 Si5382Addr=0x68
 
-class Si5382:
+class Si5382(PiCommandObject):
     def __init__(self):
         for p in glob.glob("/dev/i2c-*"):
             i2c = I2C(p)
             try:
                 msgs = [ I2C.Message([0x00], read=True) ]
                 i2c.transfer(Si5382Addr, msgs)
-                print(f"Found on bus {p}")
+                print(f"Found Si5382 on bus {p}")
+                self.i2c = i2c
             except I2CError as e:
                 continue
 
-            try:
-                msgs = [I2C.Message([0x01, 0x00]),
-                        I2C.Message([0x02]), I2C.Message([0x00, 0x00], read=True),
-                        I2C.Message([0x03]), I2C.Message([0x00], read=True)]
-                i2c.transfer(Si5382Addr, msgs)
-                print(f"ID: {msgs[2].data} {msgs[4].data}")
-            except I2CError as e:
-                continue
-            
-            
-            config = si_122_88
+    @picommand
+    def program(self):
+        try:
+            msgs = [I2C.Message([0x01, 0x00]),
+                    I2C.Message([0x02]), I2C.Message([0x00, 0x00], read=True),
+                    I2C.Message([0x03]), I2C.Message([0x00], read=True)]
+            self.i2c.transfer(Si5382Addr, msgs)
+        except I2CError as e:
+            print(f"I2C error while programming Si5382: {msgs} {e}")
+                        
+        config = si_122_88
 
-            for page, reg, val in config:
-                if page == -1:
-                    time.sleep(1)
-                else:
-                    msgs = [ I2C.Message([0x01, page]), I2C.Message([reg, val]) ]
-                    try:
-                        i2c.transfer(Si5382Addr, msgs)
-                    except I2CError as e:
-                        print(f"I2C error ({page}, {reg}, {val}) {p}:{e}")
+        for page, reg, val in config:
+            if page == -1:
+                time.sleep(1)
+            else:
+                msgs = [ I2C.Message([0x01, page]), I2C.Message([reg, val]) ]
+                try:
+                    self.i2c.transfer(Si5382Addr, msgs)
+                except I2CError as e:
+                    print(f"I2C error while programming Si5382: {msgs} {e}")
 
-if __name__ == "__main__":
-    Si5382()

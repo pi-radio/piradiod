@@ -5,6 +5,8 @@ import time
 from periphery import I2C
 from periphery.i2c import I2CError
 
+from picommand import PiCommandObject, picommand
+
 SCI18IS602Addr=0x2f
 LMKAddr = 0x02
 
@@ -37,7 +39,7 @@ prog_seq = [
     [0x00, 0x3F, 0x00, 0x1F],
 ]
 
-class LMK04208:
+class LMK04208(PiCommandObject):
     def __init__(self):
         print("Configuring LMK04208")
         
@@ -46,17 +48,17 @@ class LMK04208:
             try:
                 msgs = [ I2C.Message([0x00], read=True) ]
                 i2c.transfer(SCI18IS602Addr, msgs)
-                print(f"Found on bus {p}")
+                print(f"Found LMK04208 on bus {p}")
+                self.i2c = i2c
             except I2CError as e:
                 continue
 
-            for s in prog_seq:
-                try:
-                    msgs = [ I2C.Message([ LMKAddr ] + s) ]
-                    i2c.transfer(SCI18IS602Addr, msgs)
-                except I2CError as e:
-                    print(f"Error in transfer {s}: {e}")
-                    continue
-
-if __name__ == "__main__":
-    LMK04208()
+    @picommand
+    def program(self):
+        for s in prog_seq:
+            try:
+                msgs = [ I2C.Message([ LMKAddr ] + s) ]
+                self.i2c.transfer(SCI18IS602Addr, msgs)
+            except I2CError as e:
+                print(f"Error in transfer {s}: {e}")
+                continue

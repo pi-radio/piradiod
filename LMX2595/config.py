@@ -184,8 +184,8 @@ class OSC_R(FreqDiv):
 
 class PLL(FreqUnit):
     def defaults(self):
-        self._N = 70
-        self._NUM = 0
+        self._N = 38
+        self._NUM = 750
         self._DEN = 1000
 
     @property
@@ -221,14 +221,14 @@ class PLL(FreqUnit):
 
 class PLL2X(FreqMult):
     def defaults(self):
-        self.mult = 1
+        self.mult = 2
 
     def validate(self, v):
         assert(v in [1, 2])
 
 class PLLDIV(FreqDiv):
     def defaults(self):
-        self.den = 2
+        self.den = 8
 
     @property
     def allowed(self):
@@ -239,7 +239,7 @@ class PLLDIV(FreqDiv):
 
 class PortAMux(FreqMux):
     def defaults(self):
-        self.source = 0
+        self.source = 2
 
 class PortBMux(FreqMux):
     def defaults(self):
@@ -785,3 +785,9 @@ class LMXConfig:
     @freqs.setter
     def freqs(self, f):
         self.tune(f)
+
+    def display(self):
+        print(f"Input Freq: {self.OSC.freq} 2X: {self.OSC2X.f_out} Pre-R: {self.PRE_R.f_out} Mult: {self.OSCMult.f_out} Post-R: {self.OSC_R.f_out}")
+        print(f"VCO: {self.VCO.vco_n} freq: {self.VCO.f_out}")
+        print(f"AMUX: {self.AMUX.f_out}")
+        print(f"BMUX: {self.BMUX.f_out}")
