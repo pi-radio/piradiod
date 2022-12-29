@@ -11,96 +11,54 @@
 #include <stdlib.h>
 
 #include <xrfdcpp/xrfdcpp.hpp>
+#include <xrfdcpp/config.hpp>
+#include <xrfdcpp/regs.hpp>
 
 namespace fs = std::filesystem;
 
-struct rftile_csr
+using namespace rfdc;
+
+#define ASSERT_OFFSETOF(class, member, offset) \
+    static_assert(offsetof(class, member) == offset, "The offset of " #member " is not " #offset "...")
+
+RFDC::RFDC() : uio_fd(-1), csr(NULL)
 {
-  uint32_t rsrved0000;
-  uint32_t restart_posm;
-  uint32_t restart_state;
-  uint32_t current_state;
-  uint32_t pad0010[(0x0038-0x0010)/4];
-  uint32_t reset_count;
-  uint32_t pad003C[(0x0080-0x0038)/4];
-  uint32_t clock_detect;
-  uint32_t pad0088[(0x0100-0x0088)/4];
-  uint32_t post_impl_sim_speedup_reg;
-  uint32_t pad0104[(0x0200-0x0104)/4];
-  uint32_t isr;
-  uint32_t ier;
-  uint32_t conv0_intr;
-  uint32_t conv0_intr_en;
-  uint32_t conv1_intr;
-  uint32_t conv1_intr_en;
-  uint32_t conv2_intr;
-  uint32_t conv2_intr_en;
-  uint32_t conv3_intr;
-  uint32_t conv3_intr_en;
-  uint32_t common_status;
-  uint32_t pad022C;
-  uint32_t disable;
-  uint32_t pad[(0x4000 - 0x0234)/4];
-} __attribute__((packed));
+#define XRFDC_ADC_TILE 1
+#define XRFDC_DAC_TILE 1
+
+#define XRFDC_CTRL_STATS_OFFSET 0x0U
 
 
-struct rfdc_csr
-{
-  uint32_t version;
-  uint32_t master_reset;
-  uint32_t cisr;
-  uint32_t cier;
-  uint32_t pad[0x4000/4 - 4];
-  rftile_csr dacs[4];
-  rftile_csr adcs[4];
-  uint32_t pad2[(0x40000-0x24000)/4];
-} __attribute__((packed));
+#define XRFDC_DAC_TILE_DRP_ADDR(X) (0x6000U + (X * 0x4000U))
+#define XRFDC_DAC_TILE_CTRL_STATS_ADDR(X) (0x4000U + (X * 0x4000U))
+#define XRFDC_ADC_TILE_DRP_ADDR(X) (0x16000U + (X * 0x4000U))
+#define XRFDC_ADC_TILE_CTRL_STATS_ADDR(X) (0x14000U + (X * 0x4000U))
+#define XRFDC_HSCOM_ADDR 0x1C00U
+#define XRFDC_BLOCK_ADDR_OFFSET(X) (X * 0x400U)
+#define XRFDC_TILE_DRP_OFFSET 0x2000U
 
-XRFDCTile::XRFDCTile(volatile rftile_csr *_csr) : csr(_csr)
-{
-}
+#define XRFDC_DRP_BASE(type, tile)                                                                                     \
+	((type) == XRFDC_ADC_TILE ? XRFDC_ADC_TILE_DRP_ADDR(tile) : XRFDC_DAC_TILE_DRP_ADDR(tile))
 
-uint32_t XRFDCTile::state()
-{
-  return csr->current_state;
-}
+#define XRFDC_CTRL_STS_BASE(Type, Tile)                                                                                \
+	((Type) == XRFDC_ADC_TILE ? XRFDC_ADC_TILE_CTRL_STATS_ADDR(Tile) : XRFDC_DAC_TILE_CTRL_STATS_ADDR(Tile))
 
-bool XRFDCTile::cdetect_status()
-{
-  return (csr->clock_detect & 1) ? true : false;
-}
+#define XRFDC_BLOCK_BASE(Type, Tile, Block)                                                                            \
+	((Type) == XRFDC_ADC_TILE ? (XRFDC_ADC_TILE_DRP_ADDR(Tile) + XRFDC_BLOCK_ADDR_OFFSET(Block)) :                 \
+				    (XRFDC_DAC_TILE_DRP_ADDR(Tile) + XRFDC_BLOCK_ADDR_OFFSET(Block)))
 
-
-bool XRFDCTile::clock_detected()
-{
-  return (csr->common_status & 1) ? true : false;
-}
-
-bool XRFDCTile::supplies_up()
-{
-  return (csr->common_status & 2) ? true : false;
-}
-
-bool XRFDCTile::power_up()
-{
-  return (csr->common_status & 4) ? true : false;
-}
-
-bool XRFDCTile::pll_locked()
-{
-  return (csr->common_status & 8) ? true : false;
-}
-		       
-
-
-XilinxRFDC::XilinxRFDC() : uio_fd(-1), csr(NULL)
-{
-  std::cout << std::hex << sizeof(rftile_csr) << std::endl;
-  std::cout << sizeof(rfdc_csr) << std::endl;
+  static_assert(sizeof(csr::adc) == 0x400);
+  static_assert(sizeof(csr::dac) == 0x400);
+  static_assert(sizeof(csr::tile) == 0x2000);
+  static_assert(sizeof(csr::dac_tile) == 0x4000);
+  static_assert(sizeof(csr::adc_tile) == 0x4000);
+  static_assert(sizeof(csr::rfdc) == 0x40000);
   
-  assert(sizeof(rftile_csr) == 0x4000);
-  assert(sizeof(rfdc_csr) == 0x40000);
-  
+  ASSERT_OFFSETOF(csr::rfdc, pad_0x24000, 0x24000);
+
+  ASSERT_OFFSETOF(csr::rfdc, dac_tiles[0], XRFDC_DAC_TILE_CTRL_STATS_ADDR(0));
+  ASSERT_OFFSETOF(csr::rfdc, adc_tiles[0], XRFDC_ADC_TILE_CTRL_STATS_ADDR(0));
+
   std::cout << "Searching for RFDC..." << std::endl;
 
   fs::path dev_path("/sys/devices/platform/axi");
@@ -119,6 +77,56 @@ XilinxRFDC::XilinxRFDC() : uio_fd(-1), csr(NULL)
   
   std::cout << "Found data converter at " << rfdc_path << std::endl;
 
+  int pl_fd = open((rfdc_path / "of_node" / "param-list").c_str(), O_RDONLY);
+  
+  read(pl_fd, &config, sizeof(config));
+
+  close(pl_fd);
+
+  //std::cout << config;
+
+  if (config.ip_type == 2) {
+    generation = 3;
+  } else {
+    // Check for ADC type
+    generation = 1;
+  }
+
+  n_adc_tiles = 0;
+  n_adc_slices = 0;
+  
+  for (int i = 0; i < 4; i++) {
+    if (config.adcs[i].num_slices != 0) {
+      n_adc_tiles++;
+
+      if (n_adc_tiles == 1) {
+	n_adc_slices = config.adcs[i].num_slices;
+      } else {
+	assert(n_adc_slices == config.adcs[i].num_slices);
+      }
+    }
+  }
+
+  n_dac_tiles = 0;
+  n_dac_slices = 0;
+  
+  for (int i = 0; i < 4; i++) {
+    if (config.dacs[i].num_slices != 0) {
+      n_dac_tiles++;
+
+      if (n_dac_tiles == 1) {
+	n_dac_slices = config.dacs[i].num_slices;
+      } else {
+	assert(n_dac_slices == config.dacs[i].num_slices);
+      }
+    }
+  }
+
+  std::cout << "Geometry:" << std::endl
+	    << " DAC tiles: " << n_dac_tiles << " slices: " << n_dac_slices << std::endl
+	    << " ADC tiles: " << n_adc_tiles << " slices: " << n_adc_slices << std::endl
+    ;
+  
   for (auto const &dir_entry : fs::directory_iterator{rfdc_path / "uio"}) {
     if (dir_entry.path().filename().string().find("uio") == 0) {
       uio_name = dir_entry.path().filename();
@@ -157,15 +165,30 @@ XilinxRFDC::XilinxRFDC() : uio_fd(-1), csr(NULL)
 
   std::cout << "Addr: " << addr << " offset " << offset << " size " << csr_len << std::endl;
 
-  csr = (rfdc_csr *)mmap(NULL, csr_len, PROT_READ | PROT_WRITE, MAP_SHARED, uio_fd, 0);
+  csr = (csr::rfdc *)mmap(NULL, csr_len, PROT_READ | PROT_WRITE, MAP_SHARED, uio_fd, 0);
 
   if (csr == MAP_FAILED) {
     throw std::runtime_error("Failed to map CSR");
   }
-  //csr = mmap
+
+  for (int i = 0; i < n_adc_tiles; i++) {
+    adc_tiles.emplace_back(*this, &csr->adc_tiles[i]);
+
+    for (auto &adc: adc_tiles.back().get_slices()) {
+      adcs.emplace_back(adc);
+    }
+  }
+
+  for (int i = 0; i < n_dac_tiles; i++) {
+    dac_tiles.emplace_back(*this, &csr->dac_tiles[i]);
+
+    for (auto &dac: dac_tiles.back().get_slices()) {
+      dacs.emplace_back(dac);
+    }
+  }
 }
 
-XilinxRFDC::~XilinxRFDC()
+RFDC::~RFDC()
 {
   if (csr) {
     munmap((void *)csr, csr_len);
@@ -174,28 +197,14 @@ XilinxRFDC::~XilinxRFDC()
   close(uio_fd);
 }
 
-std::tuple<int, int, int, int> XilinxRFDC::version()
+std::tuple<int, int, int, int> RFDC::version()
 {
   uint32_t v = csr->version;
   
   return std::make_tuple((v>>24)&0xFF, (v>>16)&0xFF, (v>>8)&0xFF, v&0xFF);
 }
 
-void XilinxRFDC::reset()
+void RFDC::reset()
 {
   csr->master_reset = 1;
-}
-  
-
-
-XRFDCTile XilinxRFDC::adc(int n)
-{
-  assert(n >= 0 && n < 4);
-  return XRFDCTile(&csr->adcs[n]);
-}
-
-XRFDCTile XilinxRFDC::dac(int n)
-{
-  assert(n >= 0 && n < 4);
-  return XRFDCTile(&csr->dacs[n]);
 }

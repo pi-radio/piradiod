@@ -1,39 +1,81 @@
+#pragma once
 
-struct rfdc_csr;
-struct rftile_csr;
+#include <vector>
 
-class XRFDCTile
-{
-  volatile rftile_csr *csr;
-public:
-  XRFDCTile(volatile rftile_csr *);
+#include <xrfdcpp/adc.hpp>
+#include <xrfdcpp/dac.hpp>
+
+namespace rfdc {
+  class RFDC
+  {
+    volatile struct csr::rfdc *csr;
+    uint64_t csr_len;
+    int uio_fd;
+
+    cfg::dc config;
   
-  uint32_t state();
+    int generation;
 
-  bool cdetect_status();
-  
-  bool clock_detected();
-  bool supplies_up();
-  bool power_up();
-  bool pll_locked();  
-};
+    int n_dac_tiles;
+    int n_dac_slices;
 
-class XilinxRFDC
-{
-  volatile struct rfdc_csr *csr;
-  uint64_t csr_len;
-  int uio_fd;
-  
-public:
-  XilinxRFDC();
-  ~XilinxRFDC();
+    int n_adc_tiles;
+    int n_adc_slices;
 
-  std::tuple<int, int, int, int> version();
+    std::vector<ADCTile> adc_tiles;
+    std::vector<DACTile> dac_tiles;  
 
-  void reset();
+    std::vector<std::reference_wrapper<ADC> > adcs;
+    std::vector<std::reference_wrapper<DAC> > dacs;
   
-  uint32_t POSM();
+  public:
+    RFDC();
+    ~RFDC();
+
+    std::tuple<int, int, int, int> version();
+
+    void reset();
   
-  XRFDCTile adc(int);
-  XRFDCTile dac(int);
+    uint32_t POSM();
+
+    auto &get_adcs(void) {
+      return adcs;
+    }
+  
+    auto &get_dacs(void) {
+      return dacs;
+    }
+  
+    auto &get_adc_tiles(void) {
+      return adc_tiles;
+    }
+
+    auto &get_dac_tiles(void) {
+      return dac_tiles;
+    }
+    
+    ADCTile &get_adc_tile(int n) {
+      return adc_tiles[n];
+    }
+  
+    DACTile &get_dac_tile(int n) {
+      return dac_tiles[n];
+    }
+
+    int get_n_adc_tiles(void) {
+      return n_adc_tiles;
+    }
+
+    int get_n_dac_tiles(void) {
+      return n_dac_tiles;
+    }
+  
+    int get_n_adc_slices(void) {
+      return n_adc_slices;
+    }
+
+    int get_n_dac_slices(void) {
+      return n_dac_slices;
+    }
+  };
 };

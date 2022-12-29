@@ -4,10 +4,13 @@
 #include <unistd.h>
 
 #include <xrfdcpp/xrfdcpp.hpp>
+#include <xrfdcpp/regs.hpp>
+
+using namespace rfdc;
 
 int main(int argc, char **argv)
-{
-  XilinxRFDC rfdc;
+{  
+  RFDC rfdc;
 
   rfdc.reset();
 
@@ -23,11 +26,11 @@ int main(int argc, char **argv)
 
   std::cout << std::endl;
   std::cout << "ADCs:" << std::endl;
-  
-  for (int i = 0; i < 4; i++) {
-    XRFDCTile t = rfdc.adc(i);
 
-    std::cout << "Tile " << i << std::endl;
+  int n_tile = 0;
+  
+  for (auto &t: rfdc.get_adc_tiles()) {
+    std::cout << "Tile " << n_tile << std::endl;
     std::cout << " State: " << (t.state()) << std::endl;
     std::cout << " Status:" << (t.clock_detected() ? " CLOCK" : "")
 	      << (t.supplies_up() ? " SUPPLIES" : "")
@@ -35,15 +38,16 @@ int main(int argc, char **argv)
 	      << (t.pll_locked() ? " PLL" : "")
 	      << std::endl;
     std::cout << " Clock Detector: " << (t.cdetect_status() ? "DETECTED" : "NOT DETECTED") << std::endl;
+    n_tile++;
   }
 
   std::cout << std::endl;
   std::cout << "DACs:" << std::endl;
-  
-  for (int i = 0; i < 4; i++) {
-    XRFDCTile t = rfdc.dac(i);
 
-    std::cout << "Tile " << i << std::endl;
+  n_tile = 0;
+  
+  for (auto &t: rfdc.get_dac_tiles()) {
+    std::cout << "Tile " << n_tile << std::endl;
     std::cout << " State: " << (t.state()) << std::endl;
     std::cout << " Status:" << (t.clock_detected() ? " CLOCK" : "")
 	      << (t.supplies_up() ? " SUPPLIES" : "")
@@ -51,5 +55,6 @@ int main(int argc, char **argv)
 	      << (t.pll_locked() ? " PLL" : "")
 	      << std::endl;
     std::cout << " Clock Detector: " << (t.cdetect_status() ? "DETECTED" : "NOT DETECTED") << std::endl;
+    n_tile++;
   }
 }
