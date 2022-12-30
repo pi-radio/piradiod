@@ -1,5 +1,7 @@
 #include <stdint.h>
 
+#include <iostream>
+
 #include <tuple>
 
 #pragma once
@@ -37,7 +39,7 @@ namespace rfdc {
       uint32_t link_coupling;
       dac_analog analog[4];
       dac_digital digital[4];
-    };
+    } __attribute__((packed));
 
     /*
       "C_ADC_Slice00_Enable"
@@ -117,5 +119,8 @@ namespace rfdc {
       dac dacs[4];
       adc adcs[4];
     } __attribute__((packed));
+
   };
+
+  std::ostream &operator <<(std::ostream &os, cfg::dc &rfdcc);
 };

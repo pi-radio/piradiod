@@ -165,6 +165,8 @@ RFDC::RFDC() : uio_fd(-1), csr(NULL)
 
   std::cout << "Addr: " << addr << " offset " << offset << " size " << csr_len << std::endl;
 
+  std::cout << config;
+  
   csr = (csr::rfdc *)mmap(NULL, csr_len, PROT_READ | PROT_WRITE, MAP_SHARED, uio_fd, 0);
 
   if (csr == MAP_FAILED) {
@@ -180,7 +182,7 @@ RFDC::RFDC() : uio_fd(-1), csr(NULL)
   }
 
   for (int i = 0; i < n_dac_tiles; i++) {
-    dac_tiles.emplace_back(*this, &csr->dac_tiles[i]);
+    dac_tiles.emplace_back(*this, config.dacs[i], &csr->dac_tiles[i]);
 
     for (auto &dac: dac_tiles.back().get_slices()) {
       dacs.emplace_back(dac);

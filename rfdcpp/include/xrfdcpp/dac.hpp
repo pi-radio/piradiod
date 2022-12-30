@@ -21,7 +21,7 @@ namespace rfdc {
   };
 
 
-  class DACTile : public Tile
+  class DACTile : public Tile<cfg::dac>
   {
     volatile csr::dac_tile *csr;
 
@@ -30,7 +30,7 @@ namespace rfdc {
   public:
     RFDC &rfdc;
 
-    DACTile(RFDC &, volatile csr::dac_tile *);
+    DACTile(RFDC &, const cfg::dac &, volatile csr::dac_tile *);
 
     auto &get_slices(void) {
       return slices;

@@ -18,7 +18,7 @@ ADC::ADC(ADCTile &_tile,
 
 ADCTile::ADCTile(RFDC &_rfdc,
 		 const cfg::adc &_conf,
-		 volatile csr::adc_tile *_csr) : Tile(&_csr->t),
+		 volatile csr::adc_tile *_csr) : Tile(&_csr->t, _conf),
 						 conf(_conf),
 						 csr(_csr),
 						 rfdc(_rfdc)

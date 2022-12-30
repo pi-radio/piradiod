@@ -6,7 +6,7 @@ include_directories (./include)
 
 project(xrfdcpp)
 
-set(LIBXRFDCPP_SOURCES src/xrfdcpp.cpp src/tile.cpp src/adc.cpp src/dac.cpp src/mixer.cpp)
+set(LIBXRFDCPP_SOURCES src/xrfdcpp.cpp src/tile.cpp src/adc.cpp src/dac.cpp src/mixer.cpp src/config.cpp)
 
 
 add_library(xrfdcpp SHARED ${LIBXRFDCPP_SOURCES})
@@ -17,7 +17,7 @@ find_package(pybind11 CONFIG)
 pybind11_add_module(xrfdcpy src/pymod.cpp)
 target_link_libraries(xrfdcpy PRIVATE xrfdcpp)
 
-include_directories(Python3_INCLUDE_DIRS)
+include_directories(Python3_INCLUDE_DIRS ../magic_enum/include)
 
 
 

@@ -18,23 +18,19 @@ namespace rfdc {
   };
   
   namespace mixer {
-    namespace mixer_mode {
-      enum e {
-	OFF = 0,
-	C2C = 1,
-	C2R = 2,
-	R2C = 3,
-	R2R = 4
-      };
+    enum class mixer_mode {
+      OFF = 0,
+      C2C = 1,
+      C2R = 2,
+      R2C = 3,
+      R2R = 4
     };
     
-    namespace mixer_type {
-      enum e {
-	OFF = 0,
-	COARSE = 1,
-	FINE = 2,
-	DISABLED = 3
-      };
+    enum class mixer_type {
+      OFF = 0,
+      COARSE = 1,
+      FINE = 2,
+      DISABLED = 3
     };
     
     namespace coarse_mixer {
@@ -87,7 +83,7 @@ namespace rfdc {
     }
     
     typedef std::tuple<uint32_t, uint32_t, bool> cmix_regs_t;
-    typedef std::tuple<mixer_mode::e, coarse_mixer::e> cmix_cfg_t;
+    typedef std::tuple<mixer_mode, coarse_mixer::e> cmix_cfg_t;
     
     extern std::map<cmix_regs_t, cmix_cfg_t> cmix_map;
     
@@ -100,8 +96,8 @@ namespace rfdc {
       
     public:      
       
-      mixer_type::e type;
-      mixer_mode::e mode;
+      mixer_type type;
+      mixer_mode mode;
       coarse_mixer::e coarse_freq;
       event_source::e evt_src;
       fine_mix_scale::e fine_scale;
@@ -131,11 +127,13 @@ namespace rfdc {
 	return cmix_map[r];
       }
 
-      mixer_mode::e get_fine_mixer_mode(void) {
+      mixer_mode get_fine_mixer_mode(void) {
 	static bitfield<uint32_t> i_mode_bf(0, 2);
+
+	uint32_t fmm = mix_csr->mxr_mode;
 	
-	auto i_mode = bitfield(0,2).get(mix_csr->mxr_mode);
-	auto q_mode = bitfield(2,2).get(mix_csr->mxr_mode);
+	auto i_mode = bitfield(0,2).get(fmm);
+	auto q_mode = bitfield(2,2).get(fmm);
 
 	if (i_mode == 0x3 && q_mode == 0x3) {
 	  return mixer_mode::C2C;
@@ -148,7 +146,7 @@ namespace rfdc {
 	}
       }
 
-      mixer_mode::e get_mixer_mode(void) {
+      mixer_mode get_mixer_mode(void) {
 	auto fmm = get_fine_mixer_mode(); 
 
 	if (fmm != mixer_mode::OFF) {

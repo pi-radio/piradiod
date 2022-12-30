@@ -30,7 +30,7 @@ namespace rfdc {
     bool is_dac(void) { return false; }
   };
   
-  class ADCTile : public Tile
+  class ADCTile : public Tile<cfg::adc>
   {    
     volatile csr::adc_tile *csr;
     
