@@ -27,5 +27,6 @@ PYBIND11_MODULE(xrfdcpy, m) {
     .def_property_readonly("dac_tiles", &RFDC::get_dac_tiles)
     .def_property_readonly("adcs", &RFDC::get_adcs)
     .def_property_readonly("dacs", &RFDC::get_dacs)
+    .def_property_readonly("ip_version", &RFDC::version)
     ;
 }

@@ -172,7 +172,7 @@ RFDC::RFDC() : uio_fd(-1), csr(NULL)
   }
 
   for (int i = 0; i < n_adc_tiles; i++) {
-    adc_tiles.emplace_back(*this, &csr->adc_tiles[i]);
+    adc_tiles.emplace_back(*this, config.adcs[i], &csr->adc_tiles[i]);
 
     for (auto &adc: adc_tiles.back().get_slices()) {
       adcs.emplace_back(adc);

@@ -12,6 +12,12 @@ namespace rfdc {
     
   public:
     DAC(DACTile &, volatile csr::dac *);
+
+    bool is_adc(void) { return false; }
+    bool is_high_speed(void) { return false; } // Fix for Gen > 1
+
+    bool is_dac(void) { return true; }
+
   };
 
 

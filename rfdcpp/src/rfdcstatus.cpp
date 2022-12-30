@@ -38,6 +38,12 @@ int main(int argc, char **argv)
 	      << (t.pll_locked() ? " PLL" : "")
 	      << std::endl;
     std::cout << " Clock Detector: " << (t.cdetect_status() ? "DETECTED" : "NOT DETECTED") << std::endl;
+
+    for (auto &adc: t.get_slices()) {
+      auto cmm = adc.mixer.get_coarse_mixer_mode();
+      std::cout << std::get<0>(cmm) << " " << std::get<1>(cmm)  << std::endl;
+    }
+    
     n_tile++;
   }
 
