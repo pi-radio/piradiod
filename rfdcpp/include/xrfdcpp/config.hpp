@@ -8,6 +8,15 @@
 
 namespace rfdc {
   namespace cfg {
+    enum class multiband_mode {
+      SB = 0x0,
+      BLK01_2X = 0x1,
+      BLK23_2X = 0x2,
+      ALL_2X = 0x3,
+      ALL_4X = 0x4,
+      ALT_2X = 0x5
+    };
+    
     struct dac_analog {
       uint32_t block_avail;
       uint32_t inv_sinc_en;
@@ -122,5 +131,7 @@ namespace rfdc {
 
   };
 
-  std::ostream &operator <<(std::ostream &os, cfg::dc &rfdcc);
+  std::ostream &operator <<(std::ostream &os, const cfg::adc &);
+  std::ostream &operator <<(std::ostream &os, const cfg::dac &);
+  std::ostream &operator <<(std::ostream &os, const cfg::dc &);
 };

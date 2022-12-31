@@ -18,7 +18,7 @@ namespace rfdc
     }
   };
   
-  template <class n = volatile uint32_t> struct bitfield
+  template <class n = uint32_t> struct bitfield
   {
     static const size_t bits = sizeof(n) * 8;
     
@@ -27,12 +27,12 @@ namespace rfdc
 
     bitfield(uint32_t _base, uint32_t _len) : base(_base), len(_len) {};
 
-    n get(n &v) const
+    n get(n v) const
     {
       return (v >> base) & ((1 << len) - 1);
     }
     
-    n &set(n &dst, n &val) const
+    volatile n &set(n &dst, volatile n &val) const
     {
       return mask(val).apply(dst);
     }

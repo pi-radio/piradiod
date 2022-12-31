@@ -122,10 +122,6 @@ RFDC::RFDC() : uio_fd(-1), csr(NULL)
     }
   }
 
-  std::cout << "Geometry:" << std::endl
-	    << " DAC tiles: " << n_dac_tiles << " slices: " << n_dac_slices << std::endl
-	    << " ADC tiles: " << n_adc_tiles << " slices: " << n_adc_slices << std::endl
-    ;
   
   for (auto const &dir_entry : fs::directory_iterator{rfdc_path / "uio"}) {
     if (dir_entry.path().filename().string().find("uio") == 0) {
@@ -164,8 +160,6 @@ RFDC::RFDC() : uio_fd(-1), csr(NULL)
   size_f >> std::hex >> csr_len;
 
   std::cout << "Addr: " << addr << " offset " << offset << " size " << csr_len << std::endl;
-
-  std::cout << config;
   
   csr = (csr::rfdc *)mmap(NULL, csr_len, PROT_READ | PROT_WRITE, MAP_SHARED, uio_fd, 0);
 
@@ -174,17 +168,17 @@ RFDC::RFDC() : uio_fd(-1), csr(NULL)
   }
 
   for (int i = 0; i < n_adc_tiles; i++) {
-    adc_tiles.emplace_back(*this, config.adcs[i], &csr->adc_tiles[i]);
+    adc_tiles.emplace_back(new ADCTile(*this, i, config.adcs[i], &csr->adc_tiles[i]));
 
-    for (auto &adc: adc_tiles.back().get_slices()) {
+    for (auto adc: adc_tiles.back()->get_slices()) {
       adcs.emplace_back(adc);
     }
   }
 
   for (int i = 0; i < n_dac_tiles; i++) {
-    dac_tiles.emplace_back(*this, config.dacs[i], &csr->dac_tiles[i]);
+    dac_tiles.emplace_back(new DACTile(*this, i, config.dacs[i], &csr->dac_tiles[i]));
 
-    for (auto &dac: dac_tiles.back().get_slices()) {
+    for (auto dac: dac_tiles.back()->get_slices()) {
       dacs.emplace_back(dac);
     }
   }

@@ -6,7 +6,7 @@ include_directories (./include)
 
 project(xrfdcpp)
 
-set(LIBXRFDCPP_SOURCES src/xrfdcpp.cpp src/tile.cpp src/adc.cpp src/dac.cpp src/mixer.cpp src/config.cpp)
+set(LIBXRFDCPP_SOURCES src/xrfdcpp.cpp src/tile.cpp src/adc.cpp src/dac.cpp src/mixer.cpp src/config.cpp src/slice_base.cpp)
 
 
 add_library(xrfdcpp SHARED ${LIBXRFDCPP_SOURCES})

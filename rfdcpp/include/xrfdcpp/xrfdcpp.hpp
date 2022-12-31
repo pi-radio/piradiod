@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <memory>
 
 #include <xrfdcpp/adc.hpp>
 #include <xrfdcpp/dac.hpp>
@@ -22,11 +23,11 @@ namespace rfdc {
     int n_adc_tiles;
     int n_adc_slices;
 
-    std::vector<ADCTile> adc_tiles;
-    std::vector<DACTile> dac_tiles;  
+    std::vector<std::shared_ptr<ADCTile>> adc_tiles;
+    std::vector<std::shared_ptr<DACTile>> dac_tiles;  
 
-    std::vector<std::reference_wrapper<ADC> > adcs;
-    std::vector<std::reference_wrapper<DAC> > dacs;
+    std::vector<std::shared_ptr<ADC>> adcs;
+    std::vector<std::shared_ptr<DAC>> dacs;
   
   public:
     RFDC();
@@ -38,6 +39,22 @@ namespace rfdc {
   
     uint32_t POSM();
 
+    uint32_t get_tiles_enabled_mask(void) {
+      return csr->tiles_enabled;
+    }
+
+    uint32_t get_adc_paths_enabled(void) {
+      return csr->adc_paths_enabled;
+    }
+    
+    uint32_t get_dac_paths_enabled(void) {
+      return csr->dac_paths_enabled;
+    }
+
+    int get_generation(void) {
+      return generation;
+    }
+    
     auto &get_adcs(void) {
       return adcs;
     }
@@ -55,11 +72,11 @@ namespace rfdc {
     }
     
     ADCTile &get_adc_tile(int n) {
-      return adc_tiles[n];
+      return *adc_tiles[n];
     }
   
     DACTile &get_dac_tile(int n) {
-      return dac_tiles[n];
+      return *dac_tiles[n];
     }
 
     int get_n_adc_tiles(void) {

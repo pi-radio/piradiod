@@ -193,7 +193,9 @@ namespace rfdc {
       uint32_t nco_updt; /**< ADC/DAC NCO Update mode Register */
       // 0x0090
       uint32_t nco_rst; /**< ADC/DAC NCO Phase Reset Register */
-      uint32_t pad_0x0094[3];
+      uint32_t nco_fqwd_upp; /**< DAC NCO Frequency Word[47:32] Register */
+      uint32_t nco_fqwd_mid; /**< DAC NCO Frequency Word[31:16] Register */
+      uint32_t nco_fqwd_low; /**< DAC NCO Frequency Word[15:0] Register */
       // 0x00a0
       uint32_t nco_phase_upp; /**< ADC/DAC NCO Phase[17:16] Register */
       uint32_t nco_phase_low; /**< ADC/DAC NCO Phase[15:0] Register */
@@ -287,7 +289,16 @@ namespace rfdc {
       uint32_t master_reset;
       uint32_t cisr;
       uint32_t cier;
-      uint32_t pad[0x4000/4 - 4];
+      // 0x00010
+      uint32_t pad_0x00010[(0x000A0 - 0x00010)/4];
+      // 0x000A0
+      uint32_t tiles_enabled;
+      uint32_t adc_paths_enabled;
+      uint32_t dac_paths_enabled;
+      uint32_t pad_0x000AC;
+      // 0x000B0
+      uint32_t pad_0x000B0[(0x04000-0x000B0)/4];
+      // 0x04000
       dac_tile dac_tiles[4];
       adc_tile adc_tiles[4];
       uint32_t pad_0x24000[(0x40000-0x24000)/4];
