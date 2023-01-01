@@ -82,11 +82,11 @@ namespace rfdc {
     virtual uint32_t get_path_enabled_reg(void) = 0;
 
     virtual uint32_t get_digital_enabled_slices(void) {
-      bitfield(16+4*n_tile,4).get(get_path_enabled_reg());
+      return bitfield(16+4*n_tile,4).get(get_path_enabled_reg());
     }
 
     virtual uint32_t get_analog_enabled_slices(void) {
-      bitfield(16+4*n_tile,4).get(get_path_enabled_reg());
+      return bitfield(16+4*n_tile,4).get(get_path_enabled_reg());
     }
   };
 };

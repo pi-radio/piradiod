@@ -16,6 +16,7 @@ nyquist_zone DAC::get_nyquist_zone(void)
 {
   auto mb = tile.get_multiband_mode();
 
+  
 #if 0
   if (MultibandConfig != XRFDC_MB_MODE_SB) {
     Status = XRFdc_CheckDigitalPathEnabled(InstancePtr, Type, Tile_Id, Block_Id);
