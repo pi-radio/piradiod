@@ -18,15 +18,10 @@ namespace rfdc
     }
   };
   
-  template <class n = uint32_t> struct bitfield
+  template <int base, int len, class n = uint32_t> struct bitfield
   {
-    static const size_t bits = sizeof(n) * 8;
+    static constexpr size_t bits = sizeof(n) * 8;
     
-    uint32_t base;
-    uint32_t len;
-
-    bitfield(uint32_t _base, uint32_t _len) : base(_base), len(_len) {};
-
     n get(n v) const
     {
       return (v >> base) & ((1 << len) - 1);

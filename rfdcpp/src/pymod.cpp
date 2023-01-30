@@ -13,16 +13,25 @@ PYBIND11_MODULE(xrfdcpy, m) {
   py::class_<frequency<double>>(m, "Frequency")
     ;
   
-  py::class_<mixer::Mixer<ADCSliceTypes>>(m, "ADCMixer")
+  py::class_<mixer::Mixer<LSADC, csr::adc>>(m, "LSADCMixer")
     ;
 
-  py::class_<mixer::Mixer<DACSliceTypes>>(m, "DACMixer")
+  py::class_<mixer::Mixer<HSADC, csr::adc>>(m, "HSADCMixer")
+    ;
+  
+  py::class_<mixer::Mixer<DAC, csr::dac>>(m, "DACMixer")
     ;
 
+
+  py::class_<HSADC, std::shared_ptr<HSADC>>(m, "LSADC")
+    ;
+  
+  py::class_<HSADC, std::shared_ptr<HSADC>>(m, "HSADC")
+    ;
   
   py::class_<ADC, std::shared_ptr<ADC>>(m, "ADC")
-    .def_readonly("mixer", &ADC::mixer)
-    .def_property_readonly("is_high_speed", &ADC::is_high_speed)
+    //.def_readonly("mixer", &ADC::mixer)
+    //.def_property_readonly("is_high_speed", &ADC::is_high_speed)
     .def_property_readonly("sampling_rate", &ADC::get_sampling_rate)
     ;
 

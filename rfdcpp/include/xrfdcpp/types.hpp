@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 namespace rfdc {
   class ADC;
   class DAC;

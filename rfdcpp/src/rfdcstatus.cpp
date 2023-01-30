@@ -62,17 +62,17 @@ int main(int argc, char **argv)
 	      << std::endl;
     std::cout << " Clock Detector: " << (t->cdetect_status() ? "DETECTED" : "NOT DETECTED") << std::endl;
     std::cout << " Clocks:" << std::endl;
-    std::cout << "  Sample: " << t->sample_clock() << std::endl;
-    std::cout << "  Reference: " << t->reference_clock() << " (div: " << t->reference_div() << ")" << std::endl;
-    std::cout << "  Fabric: " << t->fabric_clock() <<  std::endl;
-    std::cout << "  Output: " << t->output_clock() << " (div: " << t->output_div() << ")" << std::endl;
+    std::cout << "  Sample: " << t->clock.sample_rate() << std::endl;
+    std::cout << "  Reference: " << t->clock.reference() << " (div: " << t->clock.reference_div() << ")" << std::endl;
+    std::cout << "  Fabric: " << t->clock.fabric() <<  std::endl;
+    std::cout << "  Output: " << t->clock.output() << " (div: " << t->clock.output_div() << ")" << std::endl;
     
     int n_slice = 0;
     
     for (auto &adc: t->get_slices()) {
       std::cout << " ADC: " << n_adc << " (slice " << n_slice << ")" << std::endl;
 
-      print_mixer(adc->mixer);
+      //print_mixer(adc->mixer);
       n_adc++;
       n_slice++;
     }
@@ -100,8 +100,10 @@ int main(int argc, char **argv)
     
     for (auto &dac: t->get_slices()) {
       std::cout << " DAC: " << n_dac << " (slice " << n_slice << ")" << std::endl;
-
+      std::cout << "  Nyquist zone: " << magic_enum::enum_name(dac->get_nyquist_zone()) << std::endl;
+      
       print_mixer(dac->mixer);
+
       n_dac++;
       n_slice++;
     }

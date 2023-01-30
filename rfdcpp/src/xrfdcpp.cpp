@@ -24,7 +24,7 @@ using namespace rfdc;
 RFDC::RFDC() : uio_fd(-1), csr(NULL)
 {
 #define XRFDC_ADC_TILE 1
-#define XRFDC_DAC_TILE 1
+#define XRFDC_DAC_TILE 2
 
 #define XRFDC_CTRL_STATS_OFFSET 0x0U
 
@@ -168,7 +168,9 @@ RFDC::RFDC() : uio_fd(-1), csr(NULL)
   }
 
   for (int i = 0; i < n_adc_tiles; i++) {
-    adc_tiles.emplace_back(new ADCTile(*this, i, config.adcs[i], &csr->adc_tiles[i]));
+    tile_params<cfg::adc, csr::adc_tile> p(*this, i, config.adcs[i], &csr->adc_tiles[i]);
+    
+    adc_tiles.emplace_back(std::make_shared<ADCTile>(p));
 
     for (auto adc: adc_tiles.back()->get_slices()) {
       adcs.emplace_back(adc);
@@ -176,8 +178,10 @@ RFDC::RFDC() : uio_fd(-1), csr(NULL)
   }
 
   for (int i = 0; i < n_dac_tiles; i++) {
-    dac_tiles.emplace_back(new DACTile(*this, i, config.dacs[i], &csr->dac_tiles[i]));
+    tile_params<cfg::dac, csr::dac_tile> p(*this, i, config.dacs[i], &csr->dac_tiles[i]);
 
+    dac_tiles.emplace_back(std::make_shared<DACTile>(p));
+  
     for (auto dac: dac_tiles.back()->get_slices()) {
       dacs.emplace_back(dac);
     }

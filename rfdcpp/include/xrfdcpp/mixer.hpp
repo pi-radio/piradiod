@@ -3,9 +3,10 @@
 #include <iostream>
 #include <map>
 
-#include <xrfdcpp/bitfield.hpp>
+#include <xrfdcpp/types.hpp>
 #include <xrfdcpp/frequency.hpp>
-#include <xrfdcpp/slice_base.hpp>
+#include <xrfdcpp/regs.hpp>
+#include <xrfdcpp/slice.hpp>
 #include <magic_enum.hpp>
 
 namespace rfdc {
@@ -81,14 +82,25 @@ namespace rfdc {
     typedef std::tuple<mixer_mode, coarse_mixer> cmix_cfg_t;
     
     extern std::map<cmix_regs_t, cmix_cfg_t> cmix_map;
-    
-    template <class ST> class Mixer
+
+    class MixerBase
     {
-      ST::csr_t mix_csr;
+    public:
+      int _dummy;
+      
+      virtual cmix_cfg_t get_coarse_mixer_mode(void) = 0;
+      virtual mixer_mode get_fine_mixer_mode(void) = 0;
+      virtual mixer_mode get_mixer_mode(void) = 0;
+      virtual dfrequency get_nco_frequency(void) = 0;
+      virtual event_source get_event_source(void) = 0;
+    };
+    
+    template <class S, class CSR> class Mixer : public MixerBase
+    {
+      S &s;
+      volatile CSR *csr;
       
     public:      
-      SliceBase<ST> &s;
-
       /*
       bool validate(void) {
 	if (!(phase_offset >= -180.0 && phase_offset <= 180.0)) {
@@ -97,18 +109,18 @@ namespace rfdc {
       }
       */
 
-      Mixer(SliceBase<ST> &_slice, ST::csr_t _csr) : s(_slice), mix_csr(_csr) {
+      Mixer(S &_s, volatile CSR *_csr) : s(_s), csr(_csr) {
       }
       
       cmix_cfg_t get_coarse_mixer_mode(void) {
-	uint32_t c0 = mix_csr->mxr_cfg0;
-	uint32_t c1 = mix_csr->mxr_cfg1;
+	uint32_t c0 = csr->mxr_cfg0;
+	uint32_t c1 = csr->mxr_cfg1;
 
-	cmix_regs_t r(c0, c1, s.is_high_speed());
+	cmix_regs_t r(c0, c1, S::high_speed);
 
 	auto [ mode, freq ] = cmix_map[r];
 
-	if (s.tile.dc.get_generation() < 3 && s.is_adc() && s.get_calibration_mode() == 1) {
+	if (S::generation < 3 && S::is_adc && s.get_calibration_mode() == 1) {
 	  if (freq == coarse_mixer::BYPASS) {
 	    freq = coarse_mixer::F_2;
 	  } else if (freq == coarse_mixer::F_4) {
@@ -119,20 +131,22 @@ namespace rfdc {
 	  } else if (freq == coarse_mixer::NEG_F_4) {
 	    freq = coarse_mixer::F_4;
 	  } else if (freq != coarse_mixer::OFF) {
-	    throw std::runtime_error("Invalid value for freq");
+	    throw std::runtime_error("Invalid value for freqhe way down) ");
 	  } 
 	}
 	
 	return cmix_cfg_t(mode, freq);
       }
-
+      
+      
       mixer_mode get_fine_mixer_mode(void) {
-	static bitfield<uint32_t> i_mode_bf(0, 2);
+	uint32_t fmm = csr->mxr_mode;
 
-	uint32_t fmm = mix_csr->mxr_mode;
+	using namespace csr::fields::mixer;
 	
-	auto i_mode = bitfield(0,2).get(fmm);
-	auto q_mode = bitfield(2,2).get(fmm);
+	auto i_mode = fine::mode::i_en.get(fmm);
+	auto q_mode = fine::mode::q_en.get(fmm);
+	
 
 	if (i_mode == 0x3 && q_mode == 0x3) {
 	  return mixer_mode::C2C;
@@ -158,8 +172,10 @@ namespace rfdc {
       }
 
       uint32_t get_raw_phase_offset(void) {
-	return (bitfield(0,2).get(mix_csr->nco_phase_upp) << 16) |
-	  bitfield(0,16).get(mix_csr->nco_phase_low);
+	using namespace csr::fields::mixer::fine::nco;
+
+	return (phase_high.get(csr->nco_phase_upp) << 16) |
+	  phase_low.get(csr->nco_phase_low);
       }
 
       double get_phase_offset_deg(void) {
@@ -167,16 +183,18 @@ namespace rfdc {
       }
 
       uint64_t get_raw_nco_frequency(void) {
-	return (uint64_t(bitfield(0, 16).get(mix_csr->nco_fqwd_upp)) << 32) |
-	  (bitfield(0,16).get(mix_csr->nco_fqwd_mid) << 16) |
-	  bitfield(0,16).get(mix_csr->nco_fqwd_low);	
+	using namespace csr::fields::mixer::fine::nco;
+	
+	return (uint64_t(freq_high.get(csr->nco_fqwd_upp)) << 32) |
+	  (freq_mid.get(csr->nco_fqwd_mid) << 16) |
+	  freq_low.get(csr->nco_fqwd_low);	
       }
 
-      auto get_nco_frequency(void) {
+      dfrequency get_nco_frequency(void) {
 	auto sr = s.get_sampling_rate();
 	auto retval =  sr * double(get_raw_nco_frequency()) / (1ULL << 48);
 
-	if (s.tile.dc.get_generation() < 3 && s.is_adc() && s.get_calibration_mode() == 1) {
+	if (S::generation < 3 && S::is_adc && s.get_calibration_mode() == 1) {
 	  retval -= sr / 2;
 	}
 
@@ -191,9 +209,9 @@ namespace rfdc {
       }
 
       event_source get_event_source(void) {
-	int s = bitfield(0,3).get(mix_csr->nco_updt);
+	int src = csr::fields::mixer::fine::nco::event_src.get(csr->nco_updt);
 
-	return *magic_enum::enum_cast<event_source>(s);
+	return *magic_enum::enum_cast<event_source>(src);
       }
     };
   };

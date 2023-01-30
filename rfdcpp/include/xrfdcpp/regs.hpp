@@ -262,7 +262,14 @@ namespace rfdc {
       uint32_t common_status;
       uint32_t pad022C;
       uint32_t disable;
-      uint32_t pad[(0x2000 - 0x0234)/4];
+      uint32_t pad_0x0234[(0x0300-0x0234)/4];
+      uint32_t pll_freq;
+      uint32_t pll_fs;
+      uint32_t pad_0x0308;
+      uint32_t tmr_mult;
+      uint32_t cal_dly;
+      uint32_t cal_type;
+      uint32_t pad_0x0314[(0x2000 - 0x0314)/4];
     } __attribute__((packed));
 
 
@@ -306,9 +313,36 @@ namespace rfdc {
 
 
     namespace fields {
-      namespace mixer {
-	const bitfield coarse(0, 12);
+      namespace adc {
+	static constexpr bitfield<11, 4> calibration_mode;
+	static constexpr bitfield<2, 1> nyquist_zone;
+      };
+
+      namespace dac {
+	static constexpr bitfield<1, 1> nyquist_zone;
       }
+
+      namespace mixer {
+	static constexpr bitfield<0, 12> coarse;
+
+	namespace fine {
+	  namespace nco {
+	    static constexpr bitfield<0,2>   phase_high;
+	    static constexpr bitfield<0,16>  phase_low;
+	    static constexpr bitfield<0,16>  freq_high;
+	    static constexpr bitfield<0,16>  freq_mid;
+	    static constexpr bitfield<0,16>  freq_low;
+	    static constexpr bitfield<0,3>   event_src;
+	  };
+	  
+	  namespace mode {
+	    static constexpr bitfield<0,2> i_en;
+	    static constexpr bitfield<2,2> q_en;
+	    static constexpr bitfield<8,4> i_sel;
+	    static constexpr bitfield<12,4> q_sel;
+	  };
+	};
+      };
     };    
   };
 };

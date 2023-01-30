@@ -9,54 +9,60 @@ namespace rfdc {
     ODD
   };
 
-  template <class ST> class SliceBase;
+  template <typename T>
+  struct type_t {
+    using type = T;
+  };
+  
+  template <typename T>
+  inline constexpr type_t<T> type{};
 
-  template <class Tile, class AnalogConfig, class DigitalConfig, class CSR>
+  template <class Tile, class AnalogConfig, class DigitalConfig, class CSR, class T>
   struct SliceTypes
   {
-    static SliceTypes<Tile, AnalogConfig, DigitalConfig, CSR> self;
-    
     typedef Tile tile_t;
     typedef AnalogConfig acfg_t;
     typedef DigitalConfig dcfg_t;
     typedef volatile CSR *csr_t;
-    typedef SliceBase<decltype(self)> slice_base_t;
+    typedef std::shared_ptr<T> ptr_t;
+
+    int generation = 1;
+    bool is_adc = false;
+    bool high_speed = false;
   };
+
   
-  template <class ST>
-  class SliceBase
+  template <SliceTypes ST>
+  class Slice 
   {
   public:
-    typedef ST types;
+    using types = decltype(ST);
     
   protected:
     types::csr_t csr;
 
   public:
-    types::tile_t &tile;
+    std::shared_ptr<types::tile_t> &tile;
     const int n_slice;
     const types::acfg_t &acfg;
     const types::dcfg_t &dcfg;
-
-    SliceBase(types::tile_t &_tile,
-	      int _n,
-	      const types::acfg_t &_acfg,
-	      const types::dcfg_t &_dcfg,
-	      types::csr_t _csr) : tile(_tile),
-				   n_slice(_n),
-				   acfg(_acfg),
-				   dcfg(_dcfg),
-				   csr(_csr)
+    
+    Slice(types::tile_t &_tile,
+	  int _n,
+	  const types::acfg_t &_acfg,
+	  const types::dcfg_t &_dcfg,
+	  types::csr_t _csr) : tile(_tile),
+			       n_slice(_n),
+			       acfg(_acfg),
+			       dcfg(_dcfg),
+			       csr(_csr)
     {
     }
     
-    virtual bool is_adc(void) { return false; }
-    virtual bool is_dac(void) { return false; }
-    virtual bool is_high_speed(void) { return false; }
     virtual int get_calibration_mode(void) { return -1; };
     virtual dfrequency_limits get_sampling_limits(void) = 0;
     virtual nyquist_zone get_nyquist_zone(void) = 0;
-
+    
     frequency<double> get_sampling_rate(void) {
       return tile.sample_clock();
     }

@@ -2,70 +2,80 @@
 #include <xrfdcpp/mixer.hpp>
 #include <xrfdcpp/config.hpp>
 
+namespace rfdc{
+  nyquist_zone LSADC::get_nyquist_zone(void)
+  {
+    return _get_nyquist_zone();
+  }
 
-using namespace rfdc;
-
-ADC::ADC(types::tile_t &_tile, int _n,
-    const types::acfg_t &_acfg,
-    const types::dcfg_t &_dcfg,
-    types::csr_t _csr) : ADCSlice(_tile, _n,
-				  _acfg, _dcfg,
-				  _csr)
-{
-}
-
-bool ADC::is_high_speed(void)
-{
-  int n = tile.dc.get_n_adc_slices();
-  
-  return n == 2;
-}
-
-int ADC::get_calibration_mode(void) {
-  if(tile.dc.get_generation() < 3) {
-    auto mode = bitfield(11, 4).get(csr->ti_dcb_crl0);
+  int HSADC::get_calibration_mode(void) {
+    auto mode = csr::fields::adc::calibration_mode.get(csr->ti_dcb_crl0);
     
     if (mode == 0) {
       return 2;
     } else {
       return 1;
     }
-  } else {
-    // TODO
+
+    throw std::runtime_error("Unhandled calibration mode");
   }
 
-  throw std::runtime_error("Unhandled calibration mode");
-}
+  nyquist_zone ADC::_get_nyquist_zone(void)
+  {
+    auto mb = tile->get_multiband_mode();
 
-nyquist_zone ADC::get_nyquist_zone(void)
-{
-  auto mb = tile.get_multiband_mode();
-}
+    if (mb == cfg::multiband_mode::SB ? !is_analog_enabled() : !is_digital_enabled()) {
+      throw std::runtime_error("Block not available");
+    }
+  
+    // The Xilinx code has this disaster:
+    //
+    // if ((XRFdc_IsHighSpeedADC(InstancePtr, Tile_Id) == 1) && (Block_Id == XRFDC_BLK_ID1) &&
+    //     (Type == XRFDC_ADC_TILE)) {
+    //   Block_Id = XRFDC_BLK_ID2;
+    // }
+    //
 
-ADCTile::ADCTile(RFDC &_dc,
-		 int _n,
-		 const cfg::adc &_conf,
-		 volatile csr::adc_tile *_csr) : Tile(&_csr->t, _n, _conf),
-						 conf(_conf),
-						 csr(_csr),
-						 dc(_dc)
-{
-  int nslices = dc.get_n_adc_slices();
+    auto retval = csr::fields::adc::nyquist_zone.get(csr->ti_tisk_crl0) ? nyquist_zone::EVEN : nyquist_zone::ODD;
 
-  slices.reserve(nslices);
 
-  for (int i = 0; i < nslices; i++) {
-    // High speed ADCs use 1 and 3
-    int ci = (nslices == 2) ? (2 * i + 1) : i;
-    
-    slices.emplace_back(new ADC(*this, ci, conf.analog[ci], conf.digital[ci], &csr->adcs[ci]));
+    return retval;
   }
-}
 
-bool ADCTile::is_enabled(void) {
-  return bitfield(n_tile, 1).get(dc.get_tiles_enabled_mask());
-}
+  nyquist_zone HSADC::get_nyquist_zone(void)
+  {
+    auto zone = _get_nyquist_zone();
 
-uint32_t ADCTile::get_path_enabled_reg(void) {
-  return dc.get_adc_paths_enabled();
+    if (get_calibration_mode() == 1) {
+      zone = (zone == nyquist_zone::ODD) ? nyquist_zone::EVEN : nyquist_zone::ODD;
+    }
+
+    return zone;
+  }
+
+  ADCTile::ADCTile(const tile_params<cfg::adc, csr::adc_tile> &p) : Tile(p)
+  {
+    int nslices = dc.get_n_adc_slices();
+
+    if (nslices == 2) {
+      for (int i = 0; i < nslices; i++) {
+	// High speed ADCs use 1 and 3
+	int ci = (2 * i + 1);
+      
+	slices.emplace_back(std::make_shared<HSADC>(this, ci, config.analog[ci], config.digital[ci], &csr->adcs[2 * i], &csr->adcs[ci])); 
+      }
+    } else {
+      for (int i = 0; i < nslices; i++) {
+	slices.emplace_back(std::make_shared<LSADC>(this, i, config.analog[i], config.digital[i], &csr->adcs[i])); 
+      }
+    }
+  }
+
+  bool ADCTile::is_enabled(void) {
+    return (dc.get_tiles_enabled_mask() >> n_tile) & 1;
+  }
+
+  uint32_t ADCTile::get_path_enabled_reg(void) {
+    return dc.get_adc_paths_enabled();
+  }
 }
