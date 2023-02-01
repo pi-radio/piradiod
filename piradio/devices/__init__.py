@@ -1,6 +1,7 @@
 from .sysfs import SysFS
 from .spidev import SPIDev
 from .axigpio import AXI_GPIO
+from .samplebuf import SampleBufferIn, SampleBufferOut
 from .Si5382 import Si5382
 from .LMK04208 import LMK04208
 from .LTC5584 import LTC5584Dev

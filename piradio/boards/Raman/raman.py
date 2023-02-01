@@ -5,7 +5,7 @@ from pathlib import Path
 
 from piradio.command import CommandObject, command
 from piradio.output import output
-from piradio.devices import SysFS, SPIDev, Renesas_8T49N240, LMX2595Dev, AXI_GPIO
+from piradio.devices import SysFS, SPIDev, Renesas_8T49N240, LMX2595Dev, AXI_GPIO, SampleBufferIn, SampleBufferOut
 
 sysfs_dt_path = Path("/sys/firmware/devicetree/base")
 sysfs_devices_path = Path("/sys/devices/platform")
@@ -30,6 +30,6 @@ class Raman(CommandObject):
         self.children.clk_root = Renesas_8T49N240()
         self.children.lo_root = LMX2595Dev(2, 24, f_src=45)
 
-        
-        
+        self.children.input_samples = [ SampleBufferIn(i) for i in range(8) ]
+        self.children.output_samples = [ SampleBufferOut(i) for i in range(8) ]
         
