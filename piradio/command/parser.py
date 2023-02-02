@@ -7,7 +7,7 @@ from pygments.lexer import RegexLexer
 import pygments.token as pt
 from functools import partial
 from pathlib import Path
-
+import inspect
 
 class PiCPException(Exception):
     pass
@@ -53,45 +53,82 @@ class PiCParser:
         self.last_token = self.tokens[0]
         self.tokens = self.tokens[1:]
 
+        if len(self.tokens) and self.tokens[0] == pt.Error:
+            self.SYNTAX_ERROR()
+        
         if self.last_token[0] == pt.Name:
             self.last_name = self.last_token[1]
+
+    def need_shift(self):
+        self.shift()
+
+        if self.ntokens == 0:
+            self.INCOMPLETE()
 
     def NOTHING_BY_NAME(self):
         raise NothingByName(self.cur_obj, self.last_name, self.cur_token[1])
         
     def INCOMPLETE(self):
-        cmpl = list(self.cur_obj.children) + list(self.cur_obj.verbs.keys())
-        cmpl_len = 0
+        if isinstance(self.cur_obj, list):
+            cmpl = list([ f"[{i}]" for i in range(len(self.cur_obj))])
 
-        if self.ntokens != 0 and self.cur_token[1] != ".":
-            cmpl_len = len(self.cur_token[1])
-            cmpl = list(filter(lambda x: x.startswith(self.cur_token[1]), cmpl))
+            if self.last_token[0] == pt.Name:
+                cmpl_len = 0
+            elif self.last_token[1] == "[":
+                cmpl_len = 1
+            else:
+                cmpl_len = len(self.last_token[1]) + 1
+        else:
+            cmpl = list(self.cur_obj.children) + list(self.cur_obj.verbs.keys())
+            cmpl_len = 0
 
-            if len(cmpl) == 0:
-                self.NOTHING_BY_NAME()
+            if self.ntokens != 0 and self.cur_token[1] != ".":
+                cmpl_len = len(self.cur_token[1])
+                cmpl = list(filter(lambda x: x.startswith(self.cur_token[1]), cmpl))
+
+                if len(cmpl) == 0:
+                    self.NOTHING_BY_NAME()
 
         raise Incomplete(self.cur_obj, cmpl_len, cmpl)
             
     def SYNTAX_ERROR(self):
         raise BadSyntax(self.cur_obj, self.cur_token)
-
+            
     def parse_scope(self):
         if self.ntokens == 0:
             self.INCOMPLETE()
-            
+
         s = self.cur_token[1]
         
         if s in self.cur_obj.children:
             self.cur_obj = self.cur_obj.children[s]
-            self.shift()
+            self.need_shift()
+            
+            if self.cur_token[1] == "[":
+                if not isinstance(self.cur_obj, list):
+                    self.SYNTAX_ERROR() # not really syntax, but too lazy to make new exception at the moment
 
-            if self.ntokens == 0:
-                return
+                self.need_shift()
+
+                if self.cur_token[0] != pt.Literal.Number:
+                    self.SYNTAX_ERROR()
+                
+                try:
+                    n = int(self.cur_token[1])
+                    self.cur_obj = self.cur_obj[n]
+                except ValueError:
+                    self.SYNTAX_ERROR()
+
+                self.need_shift()
+
+                if self.cur_token[1] != "]":
+                    self.SYNTAX_ERROR()
+
+                self.need_shift()                
             
             if self.cur_token[1] == ".":
                 self.shift()
                 self.parse_scope()
-            
     
     def parse(self):
         if self.ntokens == 0:
@@ -107,16 +144,27 @@ class PiCParser:
 
         if self.cur_token[1] in self.cur_obj.verbs:
             verb = getattr(self.cur_obj, self.cur_token[1])
+            self.shift()
+            
+            sig = inspect.signature(verb)
 
-            args = verb.args
-            nargs = len(args)
+            params = sig.parameters
+            args = []
 
-            argv = [  ]
-        
-            while nargs:
-                nargs -= 1
+            for p in params.values():
+                if self.ntokens == 0:
+                    break
 
-            return partial(verb, *argv)
+                if p.annotation:
+                    args.append(p.annotation(self.cur_token[1]))
+                else:
+                    args.append(self.cur_token[1])
+
+                self.shift()
+
+            ba = sig.bind(*args)
+            
+            return partial(verb, *ba.args, **ba.kwargs)
             
         elif self.cur_token[1] in self.cur_obj.properties:
             pass
@@ -136,6 +184,7 @@ class PiCLexer(RegexLexer):
             (r"[_A-Za-z][_A-Za-z0-9]*", pt.Name),
             (r"[ \n]+", pt.Whitespace),
             (r"\.", pt.Operator),
+            (r"[+-]?[0-9]+(\\.[0-9]+)?(e[+-]?[0-9]+)?", pt.Literal.Number)
         ]
     }
 

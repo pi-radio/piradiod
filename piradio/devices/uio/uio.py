@@ -1,5 +1,6 @@
 import mmap
 import resource
+import struct
 
 from pathlib import Path
 
@@ -27,6 +28,20 @@ class UIOMap:
     def __setitem__(self, n, v):
         self.mmap[n] = v
 
+uint32 = struct.Struct("i")
+        
+class UIO_CSR:
+    def __init__(self, uio_map):
+        self.uio_map = uio_map
+
+        self.uio_map.map()
+
+    def __getitem__(self, n):
+        return uint32.unpack(self.uio_map[4*n:4*n+4])[0]
+
+    def __setitem__(self, n, v):
+        self.uio_map[4*n:4*n+4] = uint32.pack(v)
+        
 class UIO(CommandObject):
     def __init__(self, path, attach=False):
         self.path = path

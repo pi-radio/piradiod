@@ -2,6 +2,10 @@ import math
 import struct
 from pathlib import Path
 from functools import cached_property
+from multiprocessing import Process
+
+import numpy as np
+import matplotlib.pyplot as plt
 
 from piradio.output import output
 from piradio.command import command
@@ -12,6 +16,8 @@ dt_uint32 = struct.Struct(">i")
 uint32 = struct.Struct("i")
 csr_struct = struct.Struct("iiiiii")
 
+iq_struct = struct.Struct("hh")
+
 # For now, the univers is IQ_SAMPLES
 REAL_SAMPLES=0
 IQ_SAMPLES=1
@@ -19,21 +25,24 @@ IQ_SAMPLES=1
 def make_sample(f):
     return round((1 << 15) * f)
 
+def make_iq(v):
+    return (v >> 16, v & 0xFFFF)
+
+
 class Samples:
     def __init__(self, sbuf, sample_format):
         self.sbuf = sbuf
         self._format = sample_format
-
+       
     def __getitem__(self, n):
-        if self._format == IQ_SAMPLES:
-            v = uint32.unpack(self.sbuf.samples_map[4*n:4*n+4])[0]
-            return (v >> 16, v & 0xFFFF)
-        else:
+       if self._format == IQ_SAMPLES:
+            return iq_struct.unpack(self.sbuf.samples_map[4*n:4*n+4])
+       else:
             raise RuntimeException("Not implemented")
-
+ 
     def __setitem__(self, n, v):
         if self._format == IQ_SAMPLES:
-            self.sbuf.samples_map[4*n:4*n+4] = uint32.pack((v[0] << 16) | v[1])
+            self.sbuf.samples_map[4*n:4*n+4] = iq_struct.pack(v[0], v[1])
         else:
             raise RuntimeException("Not implemented")
 
@@ -49,7 +58,7 @@ class Samples:
     def format(self):
         return self._format
             
-        
+    
 class SampleBuffer(UIO):
     def __init__(self, n, direction, sample_rate=2e9, sample_format=IQ_SAMPLES):
         self.direction = direction
@@ -126,17 +135,63 @@ class SampleBuffer(UIO):
     def end_sample(self):
         return self.end_offset * self.bytes_per_stream_word
 
+    @property
+    def nsamples(self):
+        return (self.end_offset - self.start_offset) * self.bytes_per_stream_word
+    
     @command
     def fill_sine(self, freq: float, phase : float = 0):
         if self.samples._format == IQ_SAMPLES:
             phase_advance = 2 * math.pi * freq / self.sample_rate
             phi = phase
-            for i in range(self.start_sample, self.end_sample):
-                self.samples[i] = (make_sample(math.sin(phi)), make_sample(math.cos(phi)))
+
+            v = np.arange(0, self.nsamples) * phase_advance + phase
+            v = (np.sin(v) - 1.0j * np.cos(v)) * 0x7FFF
+            
+            for i, x in zip(range(self.start_sample, self.end_sample), v):
+                self.samples[i] = (int(x.real), int(x.imag))
+        else:
+            raise RuntimeException("Not implemented")
+
+    @property
+    def array(self):
+        if self.sample_format == IQ_SAMPLES:
+            v = np.array([ self.samples[i] for i in range(self.start_sample, self.end_sample) ]) / 0x7FFF
+            
+            v = v[...,0] + 1j * v[...,1]
+            
+            return v
         else:
             raise RuntimeException("Not implemented")
         
+    @command
+    def plot(self):
+        if self.sample_format == IQ_SAMPLES:
+            def plot_iq(samples, sample_rate):
+                N = len(samples)
+                
+                fig, axs = plt.subplots(2, 1)
 
+                t = np.arange(0, N) / sample_rate
+                
+                axs[0].plot(t, np.real(samples), t, np.imag(samples))
+
+                df = sample_rate / N
+                
+                fft = np.fft.fftshift(np.fft.fft(samples))
+                f = np.fft.fftshift(np.fft.fftfreq(N)) * sample_rate
+
+                dB = 10 * np.log10(np.abs(fft) / N)
+                
+                axs[1].plot(f, dB)
+
+                plt.show()
+
+            p = Process(target=plot_iq, args=(self.array, self.sample_rate))
+            p.daemon = True
+            p.start()
+            
+    
 class SampleBufferIn(SampleBuffer):
     def __init__(self, n, **kwargs):
         assert "direction" not in kwargs

@@ -1,3 +1,4 @@
+import copy
 
 cls_property = property().__class__
 
@@ -9,25 +10,24 @@ def command(f):
 
 class CommandMetaclass(type):
     def __new__(cls, name, bases, dct):
-        commands = {}
-        properties = {}
+        retval = super().__new__(cls, name, bases, dct)
 
+        retval.picommands = copy.copy(getattr(retval, "picommands", dict()))
+        retval.piproperties = copy.copy(getattr(retval, "piproperties", dict()))
+        
         for mname, member in dct.items():
             try:
                 if member.picommand == True:
-                    commands[mname] = member
+                    retval.picommands[mname] = member
             except:
                 pass
             
             if isinstance(member, cls_property):
-                properties[mname] = member
+                retval.piproperties[mname] = member
                 
-        dct["__piname"] = name
-        dct["__picommands"] = commands
-        dct["verbs"] = property(lambda x: commands)
-        dct["properties"] = property(lambda x: properties)
-        
-        return type.__new__(cls, name, bases, dct)
+        retval.piname = name
+
+        return retval
 
 
 class CommandChildren:
@@ -53,7 +53,7 @@ class CommandChildren:
 class CommandObject(metaclass=CommandMetaclass):
     @property
     def name(self):
-        return self.__piname
+        return self.piname
     
     @property
     def children(self):
@@ -62,6 +62,12 @@ class CommandObject(metaclass=CommandMetaclass):
 
         return self._pichildren
 
-    
+    @property
+    def verbs(self):
+        return self.picommands
+
+    @property
+    def properties(self):
+        return self.piproperties
 
         
