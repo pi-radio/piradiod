@@ -5,7 +5,7 @@ from functools import cached_property
 
 from piradio.output import output
 from piradio.command import command
-from piradio.devices.uio import UIO, UIO_CSR
+from piradio.devices.uio import UIO
 
 dt_uint32 = struct.Struct(">i")
 
@@ -23,11 +23,11 @@ class Trigger(UIO):
 
         super().__init__(path, attach=True)
         
-        self.csr = UIO_CSR(self.maps[0])
+        self.csr = self.maps[0]
 
-        assert self.csr[0] == 0x50545247, "Improper IP ID"
+        self.csr.map()
         
-        print(f"{self.csr[0]:x}")
+        assert self.csr[0] == 0x50545247, "Improper IP ID"
         
         class DelayMap:
             trigger = self
@@ -54,6 +54,9 @@ class Trigger(UIO):
         self._delays = DelayMap()
         self._enables = EnableMap()
 
+        for i in range(16):
+            self.csr[3 + i] = 1
+
         
     @property
     def delays(self):
@@ -63,10 +66,20 @@ class Trigger(UIO):
     def enables(self):
         return self._enables
 
+    @command
     def enable_all(self):
-        self.trigger.csr[1] = 0xFFFFFFFF
+        self.csr[1] = 0xFFFFFFFF
 
+    @command
     def trigger(self):
-        self.trigger.csr[2] = 0
-        
+        self.csr[2] = 0
+
+    @command
+    def status(self):
+        print(f"IP id: {self.csr[0]:08x}")
+        print(f"Enables: {self.csr[1]:08x}")
+        print(f"Trigger: {self.csr[2]:08x}")
+
+        for i in range(32):
+            print(f"Delay {i}: {self.csr[3+i]}")
     

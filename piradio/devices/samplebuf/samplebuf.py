@@ -13,7 +13,9 @@ from piradio.devices.uio import UIO
 
 dt_uint32 = struct.Struct(">i")
 
-uint32 = struct.Struct("i")
+uint32 = struct.Struct("I")
+iq = struct.Struct("hh")
+
 csr_struct = struct.Struct("iiiiii")
 
 iq_struct = struct.Struct("hh")
@@ -36,21 +38,21 @@ class Samples:
        
     def __getitem__(self, n):
        if self._format == IQ_SAMPLES:
-            return iq_struct.unpack(self.sbuf.samples_map[4*n:4*n+4])
+           return iq.unpack(uint32.pack(self.sbuf._samples[n]))
        else:
-            raise RuntimeException("Not implemented")
+           raise RuntimeException("Not implemented")
  
     def __setitem__(self, n, v):
         if self._format == IQ_SAMPLES:
-            self.sbuf.samples_map[4*n:4*n+4] = iq_struct.pack(v[0], v[1])
+            self.sbuf._samples[n] = uint32.unpack(iq.pack(*v))[0]
         else:
             raise RuntimeException("Not implemented")
 
     def dump(self):
         if self._format == IQ_SAMPLES:
             for i in range(self.sbuf.start_sample, self.sbuf.end_sample):
-                v = self.sbuf.samples_map[4*i:4*i+4]
-                print(f"{i}: {v >> 16} { v & 0xFFFF }")
+                v = self[i]
+                print(f"{i}: {v[0]} { v[1] }")
         else:
             raise RuntimeException("Not implemented")
                 
@@ -76,16 +78,18 @@ class SampleBuffer(UIO):
                     path = p
                     break
 
+        print(f"Sample Buffer: {direction} {n} {path}")
+                
         if path is None:
             raise RuntimeError(f"Could not find sample buffer {direction} {n}")
                 
         super().__init__(path, attach=True)
 
-        self.csr_map = self.maps[0]
-        self.samples_map = self.maps[1]
+        self.csr = self.maps[0]
+        self._samples = self.maps[1]
 
-        self.csr_map.map()
-        self.samples_map.map()
+        self.csr.map()
+        self._samples.map()
 
         self.samples = Samples(self, sample_format)
         
@@ -101,27 +105,27 @@ class SampleBuffer(UIO):
         
     @cached_property
     def ip_id(self):
-        return self.read_reg(0)
+        return self.csr[0]
 
     @property
     def ctrl_stat(self):
-        return self.read_reg(1)
+        return self.csr[1]
         
     @property
     def start_offset(self):
-        return self.read_reg(2)
+        return self.csr[2]
 
     @property
     def end_offset(self):
-        return self.read_reg(3)
+        return self.csr[3]
 
     @cached_property
     def stream_depth(self):
-        return self.read_reg(4)
+        return self.csr[4]
 
     @cached_property
     def size_bytes(self):
-        return self.read_reg(5)
+        return self.csr[5]
 
     @cached_property
     def bytes_per_stream_word(self):
@@ -129,15 +133,40 @@ class SampleBuffer(UIO):
     
     @property
     def start_sample(self):
-        return self.start_offset * self.bytes_per_stream_word
+        return self.start_offset * self.bytes_per_stream_word // 4
 
     @property
     def end_sample(self):
-        return self.end_offset * self.bytes_per_stream_word
+        return (self.end_offset + 1) * self.bytes_per_stream_word // 4
 
     @property
     def nsamples(self):
-        return (self.end_offset - self.start_offset) * self.bytes_per_stream_word
+        return self.end_sample - self.start_sample
+
+    @command
+    def status(self):
+        print(f"IP id: {self.csr[0]:08x}")
+        print(f"CTRLSTAT: {self.csr[1]:08x}")
+        print(f"START OFFSET: {self.csr[2]:08x}")
+        print(f"END OFFSET: {self.csr[3]:08x}")
+        print(f"STREAM DEPTH: {self.csr[4]:08x}")
+        print(f"SIZE BYTES: {self.csr[5]:08x}")
+        print(f"TRIGGER COUNT: {self.csr[6]:08x}")
+        print(f"WRITE COUNT: {self.csr[7]:08x}")
+    
+    @command
+    def one_shot(self, v : bool = True):
+        if v:
+            self.csr[1] |= 2
+        else:
+            self.csr[1] &= ~2
+    
+    @command
+    def trigger(self):
+        x = self.csr[1] | 3        
+        print(f"{x}")
+        self.csr[1] = 0xFFFFFFFF
+        print(f"{self.csr[1]}")
     
     @command
     def fill_sine(self, freq: float, phase : float = 0):

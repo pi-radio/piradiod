@@ -32,6 +32,9 @@ class Raman(CommandObject):
         time.sleep(0.25)
         
         self.children.clk_root = Renesas_8T49N240()
+
+        self.children.clk_root.program()
+        
         self.children.lo_root = LMX2595Dev(2, 24, f_src=45)
 
         self.children.input_samples = [ SampleBufferIn(i) for i in range(8) ]

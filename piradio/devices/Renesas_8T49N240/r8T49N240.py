@@ -305,6 +305,8 @@ class Renesas_8T49N240(CommandObject):
         assert self.dev_id == 0x60C, f"Invalid ID code received {self.dev_id}"
         assert data[5] & 1
 
+
+    def program(self):
         start_addr = 0
         nregs = 0
         d = []

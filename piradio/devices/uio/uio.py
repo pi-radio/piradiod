@@ -1,12 +1,14 @@
 import mmap
 import resource
 import struct
+import os
 
 from pathlib import Path
 
 from piradio.output import output
 from piradio.command import CommandObject, command
 
+# Let's just assume 32-bit access
 class UIOMap:
     def __init__(self, UIO, n, addr, offset, size):
         self.UIO = UIO
@@ -17,30 +19,21 @@ class UIOMap:
 
     def map(self):
         output.debug(f"Mapping map {self.n} size {self.size} addr {self.addr}")
-        self.mmap = mmap.mmap(self.UIO.f.fileno(), self.size,
+        self.mmap = mmap.mmap(self.UIO.fd, self.size,
                               flags = mmap.MAP_SHARED,
                               prot = mmap.PROT_WRITE | mmap.PROT_READ,
                               offset=self.n * resource.getpagesize())
-
-    def __getitem__(self, n):
-        return self.mmap[n]
-
-    def __setitem__(self, n, v):
-        self.mmap[n] = v
-
-uint32 = struct.Struct("i")
+        self.mv = memoryview(self.mmap)
+        self.mv32 = self.mv.cast('I')
         
-class UIO_CSR:
-    def __init__(self, uio_map):
-        self.uio_map = uio_map
-
-        self.uio_map.map()
-
     def __getitem__(self, n):
-        return uint32.unpack(self.uio_map[4*n:4*n+4])[0]
+        return self.mv32[n]
 
     def __setitem__(self, n, v):
-        self.uio_map[4*n:4*n+4] = uint32.pack(v)
+        print(f"n: {n} v: {v:08x} self.addr: {self.addr:08x}")
+        self.mv32[n] = v
+
+uint32 = struct.Struct("I")
         
 class UIO(CommandObject):
     def __init__(self, path, attach=False):
@@ -73,6 +66,8 @@ class UIO(CommandObject):
         self.maps = []
         
         output.debug(f"uio: {self.path} Maps: {maps_path}")
+
+        self.fd = os.open(Path("/dev")/self.uio_name.stem, os.O_RDWR | os.O_SYNC | os.O_NONBLOCK)
         
         for p in maps_path.glob("map*"):
             n = int(p.stem[3:])
@@ -90,5 +85,4 @@ class UIO(CommandObject):
             self.maps.append(UIOMap(self, n, addr, offset, size))
             
             
-        self.f = open(Path("/dev")/self.uio_name.stem, "r+")
 

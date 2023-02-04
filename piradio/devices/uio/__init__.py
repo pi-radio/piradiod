@@ -1,1 +1,1 @@
-from .uio import UIO, UIO_CSR
+from .uio import UIO
