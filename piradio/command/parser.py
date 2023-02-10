@@ -8,6 +8,8 @@ import pygments.token as pt
 from functools import partial
 from pathlib import Path
 import inspect
+import traceback
+from .shutdown import shutdown
 
 class PiCPException(Exception):
     pass
@@ -79,7 +81,7 @@ class PiCParser:
             else:
                 cmpl_len = len(self.last_token[1]) + 1
         else:
-            cmpl = list(self.cur_obj.children) + list(self.cur_obj.verbs.keys())
+            cmpl = list(self.cur_obj.children) + list(self.cur_obj.verbs.keys()) + list(self.cur_obj.properties.keys())
             cmpl_len = 0
 
             if self.ntokens != 0 and self.cur_token[1] != ".":
@@ -165,6 +167,30 @@ class PiCParser:
             ba = sig.bind(*args)
             
             return partial(verb, *ba.args, **ba.kwargs)
+
+        if self.cur_token[1] in self.cur_obj.properties:
+            prop = self.cur_token[1]
+            self.shift()
+
+            if self.ntokens == 0:
+                def show_property():
+                    print(f"{getattr(self.cur_obj, prop)}")
+                return show_property
+            elif self.ntokens == 1:
+                sig = inspect.signature(self.cur_obj.properties[prop].fset)
+
+                i = iter(sig.parameters.values())
+                next(i)
+
+                val = next(i).annotation(self.cur_token[1])
+                
+                def set_property():
+                    setattr(self.cur_obj, prop, val)
+
+                return set_property
+            else:
+                self.SYNTAX_ERROR()  # Unexpected parameter
+            
             
         elif self.cur_token[1] in self.cur_obj.properties:
             pass
@@ -262,7 +288,11 @@ def command_loop(root):
             except BadSyntax:
                 print("Syntax error")
                 continue
+            except Exception as e:
+                print(''.join(traceback.format_exception(e)))
+                break
             #except Exception as e:
             #    print(f"Command execution failure: {e}")
             
         
+    shutdown.shutdown()

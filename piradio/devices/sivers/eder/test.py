@@ -1,5 +1,9 @@
+import time
+
+from piradio.command.shutdown import shutdown
 from piradio.devices.sivers.eder.registers import generate_fake
 from piradio.devices.sivers.eder.eder import Eder
+from piradio.devices.sivers.eder.tasks import shutdown
 
 class FakeSPI:
     def __init__(self):
@@ -11,23 +15,42 @@ class FakeSPI:
         cmd = (x[1] & 0x7)
 
         d = x[2:]
-        
-        print(f"XFER: {addr} {cmd} {d}")
 
-        retval = [ 0x00, 0x00 ] + self.values[addr:addr+len(d)]
+        if cmd != 4:
+            d = d[:-1]
         
+        retval = [ 0x00, 0x00 ] + self.values[addr:addr+len(d)]
+
         if cmd == 0:
             self.values[addr:addr+len(d)] = d
         elif cmd == 1:
-            self.values[addr:addr+len(d)] &= ~d
+            self.values[addr:addr+len(d)] = [ i & ~j for i, j in zip(self.values[addr:addr+len(d)], d) ] 
         elif cmd == 2:
-            self.values[addr:addr+len(d)] |= d
+            self.values[addr:addr+len(d)] = [ i | j for i, j in zip(self.values[addr:addr+len(d)], d) ] 
         elif cmd == 3:
-            self.values[addr:addr+len(d)] ^= d
+            self.values[addr:addr+len(d)] = [ i ^ j for i, j in zip(self.values[addr:addr+len(d)], d) ] 
+
+        if len(retval) < 16:
+            print(f"XFER: {addr} {cmd} {d} | {retval[2:]} => {self.values[addr:addr+len(d)]}")
+        else:
+            print(f"XFER: {addr} {cmd} | LARGE                                      ")
             
-        
         return retval
         
 e = Eder(FakeSPI())    
 
-e.startup()
+e.INIT()
+
+e.freq = 61e9
+
+e.SX()
+
+#e.startup()
+
+
+time.sleep(20)
+
+print("Shutting down")
+
+shutdown.shutdown()
+

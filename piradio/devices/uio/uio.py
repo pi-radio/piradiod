@@ -30,11 +30,42 @@ class UIOMap:
         return self.mv32[n]
 
     def __setitem__(self, n, v):
-        print(f"n: {n} v: {v:08x} self.addr: {self.addr:08x}")
         self.mv32[n] = v
 
 uint32 = struct.Struct("I")
+
+
+class UIOWindow:
+    def __init__(self, offset, obj=None):
+        self.offset = offset
+        self.obj = obj
         
+    def __get__(self, obj, objtype):
+        return self.__class__(self.offset, obj)
+
+    @property
+    def csr(self):
+        print("Getting Window CSR")
+        class CSR:
+            def __getitem__(csr, a):
+                return self.obj.csr[self.offset + a]
+
+            def __getitem__(csr, a, v):
+                self.obj.csr[self.offset + a] = v
+
+            
+class UIORegister:
+    def __init__(self, offset):
+        self.offset = offset // 4
+
+    def __get__(self, obj, objtype):
+        print(f"UIO Reg: {self.offset}")
+        return obj.csr[self.offset]
+
+    def __set__(self, obj, v):
+        obj.csr[self.offset] = v
+
+
 class UIO(CommandObject):
     def __init__(self, path, attach=False):
         self.path = path

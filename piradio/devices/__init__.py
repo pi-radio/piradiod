@@ -9,3 +9,4 @@ from .LTC5584 import LTC5584Dev
 from .LMX2595 import LMX2595Dev
 from .Renesas_8T49N240 import Renesas_8T49N240
 from .MAX11300 import MAX11300Dev
+from .rfdc import RFDC

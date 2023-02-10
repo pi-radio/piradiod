@@ -233,7 +233,11 @@ class PLLDIV(FreqDiv):
     @property
     def allowed(self):
         return [2, 4, 6, 8, 12, 16, 24, 32, 48, 64, 72, 96, 128, 192, 256, 384, 512, 768 ]
-        
+
+    @property
+    def index(self):
+        return self.allowed.index(self.den)
+    
     def validate(self, v):
         assert(v in self.allowed)
 
@@ -246,7 +250,10 @@ class PortBMux(FreqMux):
         self.source = 0
 
 class LMXConfig:
-    def __init__(self, f_src=45, A=1000, B=1000):
+    def __init__(self, name, f_src=45, A=1000, B=1000, Apwr=31, Bpwr=31):
+        print(f"Configuring LMX {name} for {A} MHz, {B} MHz")
+        self.name = name
+        
         self.OSC = OSCSource(f_src)
         self.OSC2X = OSC2X(self.OSC)
         self.PRE_R = PRE_R(self.OSC2X)
@@ -261,6 +268,9 @@ class LMXConfig:
         self.BMUX = PortBMux([ self.PLLDIV, self.PLL ]) # Missing SYSREF, but we don't use it
 
         self.VCO = LMXVCO(self, self.PLL)
+
+        self.Apwr = Apwr
+        self.Bpwr = Bpwr
 
         VCOFreq = None
         
@@ -355,11 +365,11 @@ class LMXConfig:
 
     @property
     def chdiv(self):
-        return 0x0
+        return self.PLLDIV.index
 
     @property
     def cpg(self):
-        return 0x7; ## IMPORTANT LOOK FOR UPDATES IN PYTHON
+        return 0x7 ## IMPORTANT LOOK FOR UPDATES IN PYTHON
 
     @property
     def fcal_en(self):
@@ -478,7 +488,7 @@ class LMXConfig:
         
     @property
     def out_iset(self):
-        return 0x0
+        return 0x3
 
     @property
     def out_mute(self):
@@ -494,7 +504,7 @@ class LMXConfig:
 
     @property
     def outa_pwr(self):
-        return 0x1f
+        return self.Apwr
 
     @property
     def outb_mux(self):
@@ -502,11 +512,11 @@ class LMXConfig:
 
     @property
     def outb_pd(self):
-        return 0x1
+        return 0x0
     
     @property
     def outb_pwr(self):
-        return 0x1f
+        return self.Bpwr
 
     @property
     def pfd_dly_sel(self):
@@ -768,14 +778,9 @@ class LMXConfig:
 
         i_den = math.floor(den)
         
-        print(f"OSC: {self.OSC.f_out} f: {f} r: {r} den: {den}")
-
         self.PLL.N = i_den
         self.PLL.NUM = round(self.PLL.DEN*(den - i_den))
 
-        print(f"PLL: N: {self.PLL.N} NUM: {self.PLL.NUM} DEN: {self.PLL.DEN}")
-
-        print(f"VCO: AMP_CAL: {self.VCO.amp_cal} CAP_CODE: {self.VCO.cap_code} GAIN: {self.VCO.gain}")
 
         
     @property
@@ -788,11 +793,16 @@ class LMXConfig:
 
     def display(self):
         print(f"Input Freq: {self.OSC.freq} 2X: {self.OSC2X.f_out} Pre-R: {self.PRE_R.f_out} Mult: {self.OSCMult.f_out} Post-R: {self.OSC_R.f_out}")
+        print(f"PLL: N: {self.PLL.N} NUM: {self.PLL.NUM} DEN: {self.PLL.DEN}")
+        print(f"VCO: AMP_CAL: {self.VCO.amp_cal} CAP_CODE: {self.VCO.cap_code} GAIN: {self.VCO.gain}")
         print(f"VCO: {self.VCO.vco_n} freq: {self.VCO.f_out}")
         print(f"AMUX: {self.AMUX.f_out}")
         print(f"BMUX: {self.BMUX.f_out}")
-
+        print(f"f_pd: {self.f_pd}")
+        print(f"fcal_hpfd_adj: {self.fcal_hpfd_adj}")
+        
     def dump_regs(self):
-        for i in range(112, -1, -1):
-            print(f"R{i}\t0x{self.regs[i]:06x}")
+        with open("lmx_hexdump.txt", "w") as f:
+            for i in range(112, -1, -1):
+                print(f"R{i}\t0x{self.regs[i]:06x}", file=f)
 

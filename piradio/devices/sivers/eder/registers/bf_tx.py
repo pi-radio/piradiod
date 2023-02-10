@@ -1,4 +1,4 @@
-from .register import Register
+from .register import Register, BFRegister
 class bf_tx:
     bf_tx_awv_idx_table = Register(name="bf_tx_awv_idx_table",addr=0x100,size=0x40,default=0x0)
     bf_tx_awv_idx = Register(name="bf_tx_awv_idx",addr=0x140,size=0x1,default=0x0)
@@ -11,5 +11,5 @@ class bf_tx:
     bf_tx_mbist_result = Register(name="bf_tx_mbist_result",addr=0x14c,size=0x2,default=0x0)
     bf_tx_mbist_done = Register(name="bf_tx_mbist_done",addr=0x14e,size=0x2,default=0x0)
     bf_tx_awv_ptr = Register(name="bf_tx_awv_ptr",addr=0x142,size=0x1,default=0x0)
-    bf_tx_awv = Register(name="bf_tx_awv",addr=0x800,size=0x800,default=0x0)
+    bf_tx_awv = BFRegister(name="bf_tx_awv",addr=0x800)
 

@@ -24,12 +24,12 @@ iq_struct = struct.Struct("hh")
 REAL_SAMPLES=0
 IQ_SAMPLES=1
 
-def make_sample(f):
-    return round((1 << 15) * f)
+def int_to_iq(n):
+    return iq.unpack(uint32.pack(n))
 
-def make_iq(v):
-    return (v >> 16, v & 0xFFFF)
-
+class IQBuf:
+    def plot():
+        pass
 
 class Samples:
     def __init__(self, sbuf, sample_format):
@@ -37,10 +37,15 @@ class Samples:
         self._format = sample_format
        
     def __getitem__(self, n):
-       if self._format == IQ_SAMPLES:
-           return iq.unpack(uint32.pack(self.sbuf._samples[n]))
-       else:
-           raise RuntimeException("Not implemented")
+        s = self.sbuf._samples[n]
+        
+        if self._format == IQ_SAMPLES:
+            if isinstance(s, list):
+                return map(int_to_iq, s)
+            else:
+                return int_to_iq(s)
+        else:
+            raise RuntimeException("Not implemented")
  
     def __setitem__(self, n, v):
         if self._format == IQ_SAMPLES:
@@ -52,7 +57,6 @@ class Samples:
         if self._format == IQ_SAMPLES:
             for i in range(self.sbuf.start_sample, self.sbuf.end_sample):
                 v = self[i]
-                print(f"{i}: {v[0]} { v[1] }")
         else:
             raise RuntimeException("Not implemented")
                 
@@ -78,8 +82,6 @@ class SampleBuffer(UIO):
                     path = p
                     break
 
-        print(f"Sample Buffer: {direction} {n} {path}")
-                
         if path is None:
             raise RuntimeError(f"Could not find sample buffer {direction} {n}")
                 
@@ -90,7 +92,7 @@ class SampleBuffer(UIO):
 
         self.csr.map()
         self._samples.map()
-
+        
         self.samples = Samples(self, sample_format)
         
         assert self.ip_id == 0x5053424F, f"Invalid IP identifier {self.ip_id:x}"
@@ -164,10 +166,13 @@ class SampleBuffer(UIO):
     @command
     def trigger(self):
         x = self.csr[1] | 3        
-        print(f"{x}")
         self.csr[1] = 0xFFFFFFFF
-        print(f"{self.csr[1]}")
-    
+
+    @command
+    def capture(self):
+        self.trigger()
+        self.plot()
+        
     @command
     def fill_sine(self, freq: float, phase : float = 0):
         if self.samples._format == IQ_SAMPLES:
@@ -186,7 +191,7 @@ class SampleBuffer(UIO):
     def array(self):
         if self.sample_format == IQ_SAMPLES:
             v = np.array([ self.samples[i] for i in range(self.start_sample, self.end_sample) ]) / 0x7FFF
-            
+
             v = v[...,0] + 1j * v[...,1]
             
             return v
@@ -210,7 +215,7 @@ class SampleBuffer(UIO):
                 fft = np.fft.fftshift(np.fft.fft(samples))
                 f = np.fft.fftshift(np.fft.fftfreq(N)) * sample_rate
 
-                dB = 10 * np.log10(np.abs(fft) / N)
+                dB = np.nan_to_num(10 * np.log10(np.abs(fft) / N), nan=-100, posinf=100, neginf=-100)
                 
                 axs[1].plot(f, dB)
 
@@ -219,6 +224,10 @@ class SampleBuffer(UIO):
             p = Process(target=plot_iq, args=(self.array, self.sample_rate))
             p.daemon = True
             p.start()
+
+    @command
+    def monitor(self):
+        pass
             
     
 class SampleBufferIn(SampleBuffer):

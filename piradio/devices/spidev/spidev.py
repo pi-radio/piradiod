@@ -15,7 +15,7 @@ class SPIDev(CommandObject):
     def override_file(self):
         return f"/sys/bus/spi/devices/spi{self.bus_no}.{self.dev_no}/driver_override"
     
-    def __init__(self, bus_no, dev_no):
+    def __init__(self, bus_no, dev_no, mode=0, speed=500000):
         output.debug(f"Attaching to device {bus_no}.{dev_no}");
         self.bus_no = bus_no
         self.dev_no = dev_no
@@ -30,7 +30,7 @@ class SPIDev(CommandObject):
             while not os.path.exists(self.device_file):
                 time.sleep(0.1)
             
-        self.dev = SPI(self.device_file, 0, 500000)
+        self.dev = SPI(self.device_file, mode, speed)
 
         atexit.register(self.atexit)
 

@@ -6,6 +6,7 @@ from periphery.i2c import I2CError
 
 from piradio.devices import Si5382
 from piradio.devices import LMK04208
+from piradio.devices import RFDC
 
 from piradio.command import CommandObject, command
 
@@ -46,13 +47,15 @@ LMXAddrs = [ 0x08, 0x04, 0x01 ]
 
 class ZCU111(CommandObject):
     def __init__(self):
-        self.Si5382 = Si5382()
-        self.LMK04208 = LMK04208()
+        self.children.Si5382 = Si5382()
+        self.children.LMK04208 = LMK04208()
+        self.children.rfdc = RFDC()
 
+        
     @command
     def program(self):
-        self.Si5382.program()
-        self.LMK04208.program()
+        self.children.Si5382.program()
+        self.children.LMK04208.program()
         
         print("Configuring LMX2594s")
 
@@ -75,4 +78,3 @@ class ZCU111(CommandObject):
                     except I2CError as e:
                         print(f"Error in transfer {s}: {e}")
                         continue
-
