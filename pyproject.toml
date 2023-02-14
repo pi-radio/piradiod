@@ -9,6 +9,7 @@ version="0.1.0"
 dependencies = [
     "click",
     "Pygments",
+    "matplotlib",
     "prompt-toolkit",
     "python-periphery",
     "numpy",
