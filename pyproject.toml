@@ -9,7 +9,7 @@ version="0.1.0"
 dependencies = [
     "click",
     "prompt-toolkit",
-    "periphery",
+    "python-periphery",
     "numpy",
     "twisted"
 ]
