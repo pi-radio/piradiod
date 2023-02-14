@@ -45,9 +45,38 @@ class Raman(CommandObject):
 
         self.children.trigger = Trigger()
 
-        self.children.radios = [ Eder(SPIDev(2, 6 * card + 2 * radio + 1)) for card in range(1) for radio in range(2) ]
+        self.children.radios = list()
         
-        
+        for card in range(4):
+            for radio in range(2):                
+                try:
+                    eder = Eder(SPIDev(2, 6 * card + 2 * radio + 1, mode=0))
+                    self.children.radios.append(eder)
+                except:
+                    print(f"Failed to detect radio {2 * card + radio}")
+                    self.children.radios.append(None)
+                    
+    def all_radios(self):
+        for r in self.children.radios:
+            if r is not None:
+                yield r
+
+    @command
+    def TX_test(self):
+        for r in self.all_radios():
+            r.INIT()
+            r.freq = 60e9
+            r.SX()
+            
+        while True:
+            for r in self.all_radios():
+                r.TX()
+
+            time.sleep(5)
+
+            for r in self.all_radios():
+                r.RX()
+                    
     @command
     def radar_test(self):
         self.children.radios[0].INIT()

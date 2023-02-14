@@ -43,6 +43,7 @@ class Eder(StateMachine):
         elif self.cid == self.CID_EDER_B_MMF:
             output.info("Found Eder B MMF")
         else:
+            output.info(f"Unkown SIVERS CID: {self.cid}")
             raise RuntimeError("Unknown SIVERS chip")
 
         self.ref = FreqRef(self)
@@ -50,9 +51,10 @@ class Eder(StateMachine):
         self.adc = ADC(self)
         self.rx = RX(self)
         self.tx = TX(self)
-
+        
     def __del__(self):
-        self.regs.trx_ctrl = clear_bits(0xB)
+        if self.spi is not None:
+            self.regs.trx_ctrl = clear_bits(0xB)
         
     def __setattr__(self, name, value):
         if hasattr(self, "regs") and name in self.regs.registers:
