@@ -2,7 +2,8 @@
 import os
 import sys
 import click
-    
+
+import matplotlib.pyplot as plt
 
 @click.command()
 @click.argument("board_type")
@@ -13,8 +14,7 @@ def start_console(board_type):
 
     from piradio.zcu111 import ZCU111
     from piradio import boards
-    from piradio.command import CommandObject, command, command_loop
-
+    from piradio.command import CommandObject, command, command_loop, task_manager
 
     class CommandRoot(CommandObject):
         def __init__(self, board):
@@ -40,7 +40,7 @@ def start_console(board_type):
         if os.system("modprobe spidev") != 0:
             print("Unable to load spidev module")
             sys.exit(1)
-
+            
     try:
         bcls = getattr(boards, board_type)
     except Exception as e:
@@ -50,4 +50,8 @@ def start_console(board_type):
         
     root = CommandRoot(bcls)
 
-    command_loop(root)
+    try:
+        command_loop(root)
+    finally:
+        print("Exiting all tasks")
+        task_manager.stop_all()

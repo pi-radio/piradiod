@@ -2,14 +2,13 @@ import gc
 import time
 
 from piradio.output import output
-from piradio.command import StateMachine, command, cmdproperty, State, transition, precondition
+from piradio.command import StateMachine, command, cmdproperty, State, transition, precondition, TaskGroup
 from piradio.devices.sivers.eder.registers import attach_registers, set_bits, clear_bits, toggle_bits, modify_bits
 from piradio.devices.sivers.eder.adc import ADC
 from piradio.devices.sivers.eder.eeprom import EEPROM
 from piradio.devices.sivers.eder.rx import RX
 from piradio.devices.sivers.eder.tx import TX
 from piradio.devices.sivers.eder.selftest import self_test, agc_test
-from piradio.devices.sivers.eder.tasks import register_eder
 from piradio.devices.sivers.eder.pll import FreqRef, PLL
 
 def KtoC(K):
@@ -29,6 +28,8 @@ class Eder(StateMachine):
     
     def __init__(self, spi, i2c=None):
         super().__init__()
+        self.task_group = TaskGroup()
+        
         self.spi = spi
 
         self.eeprom = EEPROM(i2c)
@@ -65,6 +66,8 @@ class Eder(StateMachine):
 
     @freq.setter
     def freq(self, v : float):
+        assert v >= 55e9 and v <= 70e9
+        
         if self.cur_state == None or self.cur_state == self.PRERESET or self.cur_state == self.RESET:
             self.INIT()
             
@@ -75,7 +78,7 @@ class Eder(StateMachine):
 
     @cmdproperty
     def Tj(self):
-        return self.adc.tj
+        return KtoC(self.adc.tj)
         
     @property
     def mmf(self):
@@ -102,21 +105,21 @@ class Eder(StateMachine):
         self.pll.startup()
 
         prevT = 0.0
-        curT = self.adc.tj
+        curT = self.Tj
 
         output.info("Waiting for stable temperature")
         
         while abs(curT - prevT) > 0.1:
             prevT = curT
             time.sleep(1)
-            curT = self.adc.tj
-            output.info(f"Temp: {KtoC(curT)} C")
+            curT = self.Tj
+            output.info(f"Temp: {curT:.1f} C")
 
+        self.task_group.create_task(5, self.monitor)
+            
         self.rx.startup()
         self.tx.startup()
-        
-        register_eder(self)
-            
+                    
         output.info("Eder initialized")
         
     @command
@@ -157,6 +160,9 @@ class Eder(StateMachine):
     def TX_to_SX(self):
         self.regs.trx_ctrl = clear_bits(2)
 
+
+    def monitor(self):
+        print(f"Radio {self.name} temp: {self.Tj:.1f} C")
         
     def bringup_tests(self):
         self_test(eder)

@@ -64,10 +64,10 @@ class Raman(CommandObject):
 
         #self.children.output_samples[1].plot()
 
-        self.children.trigger.trigger()
+        #self.children.trigger.trigger()
         
-        #self.children.output_samples[1].trigger()
-        #self.children.input_samples[0].trigger()
+        self.children.output_samples[1].trigger()
+        self.children.input_samples[0].trigger()
 
         self.children.input_samples[0].plot()
 

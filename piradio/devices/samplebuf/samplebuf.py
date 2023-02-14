@@ -1,15 +1,18 @@
+import time
 import math
 import struct
 from pathlib import Path
 from functools import cached_property
-from multiprocessing import Process
+from threading import Timer
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 from piradio.output import output
-from piradio.command import command
+from piradio.command import command, TaskGroup
 from piradio.devices.uio import UIO
+
+from .monitor import SamplePlotter
 
 dt_uint32 = struct.Struct(">i")
 
@@ -71,7 +74,9 @@ class SampleBuffer(UIO):
         self.n = n
         self.sample_rate=sample_rate
         self.sample_format = sample_format
-
+        self.task_group = TaskGroup()
+        self.monitor_task = None
+        self._monitor = None
         path = None
 
         for p in Path("/sys/bus/platform/devices").glob(f"*.axis_sample_buffer_{direction}"):
@@ -165,13 +170,27 @@ class SampleBuffer(UIO):
     
     @command
     def trigger(self):
-        x = self.csr[1] | 3        
-        self.csr[1] = 0xFFFFFFFF
+        self.csr[1] |= 1
 
+    @command
+    def plot(self):
+        if self._monitor is None:
+            from piradio.monitor import get_monitor
+            self._monitor = get_monitor()
+            print(self._monitor)
+
+        self._monitor.send(self.array)
+        
+        
     @command
     def capture(self):
         self.trigger()
         self.plot()
+
+    @command
+    def monitor(self):
+        self.monitor_task = self.task_group.create_task(2.5, self.capture)
+
         
     @command
     def fill_sine(self, freq: float, phase : float = 0):
@@ -198,36 +217,7 @@ class SampleBuffer(UIO):
         else:
             raise RuntimeException("Not implemented")
         
-    @command
-    def plot(self):
-        if self.sample_format == IQ_SAMPLES:
-            def plot_iq(samples, sample_rate):
-                N = len(samples)
-                
-                fig, axs = plt.subplots(2, 1)
-
-                t = np.arange(0, N) / sample_rate
-                
-                axs[0].plot(t, np.real(samples), t, np.imag(samples))
-
-                df = sample_rate / N
-                
-                fft = np.fft.fftshift(np.fft.fft(samples))
-                f = np.fft.fftshift(np.fft.fftfreq(N)) * sample_rate
-
-                dB = np.nan_to_num(10 * np.log10(np.abs(fft) / N), nan=-100, posinf=100, neginf=-100)
-                
-                axs[1].plot(f, dB)
-
-                plt.show()
-
-            p = Process(target=plot_iq, args=(self.array, self.sample_rate))
-            p.daemon = True
-            p.start()
-
-    @command
-    def monitor(self):
-        pass
+            
             
     
 class SampleBufferIn(SampleBuffer):
