@@ -12,8 +12,6 @@ from piradio.output import output
 from piradio.command import command, TaskGroup
 from piradio.devices.uio import UIO
 
-from .monitor import SamplePlotter
-
 dt_uint32 = struct.Struct(">i")
 
 uint32 = struct.Struct("I")
