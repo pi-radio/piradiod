@@ -1,1 +1,1 @@
-from .uio import UIO, UIOWindow, UIORegister
+from .uio import UIO, reg, window, window_array

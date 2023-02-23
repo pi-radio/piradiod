@@ -45,6 +45,7 @@ regs_4GHz = [
 SCI18IS602Addr=0x2f
 LMXAddrs = [ 0x08, 0x04, 0x01 ]
 
+
 class ZCU111(CommandObject):
     def __init__(self):
         self.children.Si5382 = Si5382()
@@ -78,3 +79,5 @@ class ZCU111(CommandObject):
                     except I2CError as e:
                         print(f"Error in transfer {s}: {e}")
                         continue
+
+zcu111 = ZCU111()

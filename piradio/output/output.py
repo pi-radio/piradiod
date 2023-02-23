@@ -4,6 +4,12 @@ class PiOutput:
     def __init__(self):
         pass
 
+    def error(self, s):
+        print_formatted_text(f"ERROR: {s}")
+    
+    def warn(self, s):
+        print_formatted_text(f"WARNING: {s}")
+    
     def info(self, s):
         print_formatted_text(s)
     

@@ -26,6 +26,16 @@ REAL_SAMPLES=0
 IQ_SAMPLES=1
 
 def int_to_iq(n):
+    def u2s(x):
+        if x & (1 << 15):
+            x = -((~x & 0xFFFF) + 1)
+        return x
+    
+    I = u2s((n >> 16) & 0xFFFF)
+    Q = u2s(n & 0xFFFF)
+
+    return (I, Q)
+
     return iq.unpack(uint32.pack(n))
 
 class IQBuf:
@@ -58,6 +68,7 @@ class Samples:
         if self._format == IQ_SAMPLES:
             for i in range(self.sbuf.start_sample, self.sbuf.end_sample):
                 v = self[i]
+                print(f"{i}: {v}")
         else:
             raise RuntimeException("Not implemented")
                 
@@ -162,33 +173,51 @@ class SampleBuffer(UIO):
     @command
     def one_shot(self, v : bool = True):
         if v:
-            self.csr[1] |= 2
+            self.csr[1] = (self.csr[1] & ~0x1) | 2
         else:
-            self.csr[1] &= ~2
+            self.csr[1] &= ~3
     
     @command
     def trigger(self):
         self.csr[1] |= 1
 
     @command
+    def save(self, name : str):
+        self.capture()
+
+        with open(name, "w") as f:
+            for r in self.array:
+                print(r, file=f)
+        
+    @command
     def plot(self):
         if self._monitor is None:
             from piradio.monitor import get_monitor
             self._monitor = get_monitor()
-            print(self._monitor)
 
         self._monitor.send(self.array)
         
+
+    @command
+    def plot_local(self):
+        pass
         
     @command
     def capture(self):
         self.trigger()
-        self.plot()
 
+        while (self.csr[1] & 3) not in [ 0, 1, 2 ]:
+            time.sleep(0.001)
+        
     @command
     def monitor(self):
+        self.one_shot(True)
         self.monitor_task = self.task_group.create_task(2.5, self.capture)
 
+
+    @command
+    def dump(self):
+        self.samples.dump()
         
     @command
     def fill_sine(self, freq: float, phase : float = 0):
@@ -208,10 +237,8 @@ class SampleBuffer(UIO):
     def array(self):
         if self.sample_format == IQ_SAMPLES:
             v = np.array([ self.samples[i] for i in range(self.start_sample, self.end_sample) ]) / 0x7FFF
-
-            v = v[...,0] + 1j * v[...,1]
             
-            return v
+            return v[...,0] + 1j * v[...,1]
         else:
             raise RuntimeException("Not implemented")
         

@@ -9,8 +9,6 @@ from periphery.i2c import I2CError
 
 from piradio.command import CommandObject, command
 
-i2c = I2C("/dev/i2c-23")
-
 class Renesas_8T49N240(CommandObject):
     addr=0x6c
 

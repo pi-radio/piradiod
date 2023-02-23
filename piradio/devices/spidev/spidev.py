@@ -29,9 +29,19 @@ class SPIDev(CommandObject):
 
             while not os.path.exists(self.device_file):
                 time.sleep(0.1)
-            
-        self.dev = SPI(self.device_file, mode, speed)
 
+        self.dev = None
+        i = 0
+        
+        while self.dev is None and i < 3:
+            try:
+                self.dev = SPI(self.device_file, mode, speed)
+            except periphery.spi.SPIError:
+                i += 1
+
+        if self.dev is None:
+            raise RuntimeError(f"Unable to open SPI device after {i} retries")
+                
         atexit.register(self.atexit)
 
     @command

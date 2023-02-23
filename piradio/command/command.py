@@ -3,6 +3,8 @@ import inspect
 
 cls_property = property().__class__
 
+cmdroot = None
+
 def command(f):
     f.picommand = True
     return f

@@ -12,15 +12,19 @@ def start_console(board_type):
         print("Must be run as super-user")
         sys.exit(1)
 
-    from piradio.zcu111 import ZCU111
+    from piradio.zcu111 import zcu111
     from piradio import boards
     from piradio.command import CommandObject, command, command_loop, task_manager
 
     class CommandRoot(CommandObject):
         def __init__(self, board):
             self.children.board = board()
-            self.children.zcu111 = ZCU111()
+            self.children.zcu111 = zcu111
 
+        @command
+        def monitor(self):
+            self.children.board.children.input_samples[0].monitor()
+            
     def check_spidev():
         with open("/proc/modules", "r") as f:
             for l in f:

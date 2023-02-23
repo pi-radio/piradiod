@@ -41,18 +41,21 @@ prog_seq = [
 
 class LMK04208(CommandObject):
     def __init__(self):
-        print("Configuring LMK04208")
-        
+        self.i2c = None
+
         for p in glob.glob("/dev/i2c-*"):
             i2c = I2C(p)
             try:
                 msgs = [ I2C.Message([0x00], read=True) ]
                 i2c.transfer(SCI18IS602Addr, msgs)
-                print(f"Found LMK04208 on bus {p}")
                 self.i2c = i2c
+                break
             except I2CError as e:
                 continue
 
+        if self.i2c is None:
+            raise RuntimeError("Unable to find LMK04208")
+            
     @command
     def program(self):
         for s in prog_seq:

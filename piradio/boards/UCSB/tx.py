@@ -29,7 +29,7 @@ class CMOS_PA(CommandObject):
     @command
     def up(self):
         if not self.tx.inp.is_up:
-            pioutput.error("Can not procceed -- power amp is not up")
+            output.error("Can not procceed -- power amp is not up")
             return
 
         self.children.VDD.ramp_to(self.VDD_target/2)
@@ -46,7 +46,7 @@ class CMOS_PA(CommandObject):
     def status(self):
         pioutput.print(f"LNA:")
         self.children.VDD.status("VDD: ")
-        pioutput.print(f"VGG: {1000.0*self.children.VGG.dac:4.0f} mV")
+        output.print(f"VGG: {1000.0*self.children.VGG.dac:4.0f} mV")
 
 class InP_PA(CommandObject):
     def __init__(self, tx):
@@ -93,7 +93,7 @@ class InP_PA(CommandObject):
 
         ICC = self.ICC
         
-        pioutput.print(f"ICC: {ICC}")
+        output.print(f"ICC: {ICC}")
 
         if ICC > 0.1:
             self.down()
@@ -101,7 +101,7 @@ class InP_PA(CommandObject):
 
         self.children.VBB.ramp_to(self.VBB_target/2)
 
-        pioutput.print(f"ICC: {self.ICC}")
+        output.print(f"ICC: {self.ICC}")
 
         ICC = self.ICC
         IBB = self.IBB
@@ -109,13 +109,13 @@ class InP_PA(CommandObject):
         if IBB != 0:
             β = ICC/IBB
             
-            pioutput.print(f"ICC: {ICC} IBB: {IBB} Composite β: {β}")
+            output.print(f"ICC: {ICC} IBB: {IBB} Composite β: {β}")
         else:
-            pioutput.print(f"ICC: {ICC} IBB: {IBB}")
+            output.print(f"ICC: {ICC} IBB: {IBB}")
             
     @command
     def down(self):
-        pioutput.print("InP down!")
+        output.print("InP down!")
         self.children.VBB.ramp_to(0.0)
         self.children.VCC.ramp_to(0.0)
 
@@ -123,7 +123,7 @@ class InP_PA(CommandObject):
     def watch(self):
         try:
             while True:
-                pioutput.print(f"ICC: {self.ICC} IBB: {self.IBB}")
+                output.print(f"ICC: {self.ICC} IBB: {self.IBB}")
                 time.sleep(0.25)
         except KeyboardInterrupt:
             return
@@ -137,7 +137,7 @@ class TXSide(CommandObject):
     @command
     def up(self):
         if not self.tx.children.InP.is_up:
-            pioutput.error("Can not procceed -- power amp is not up")
+            output.error("Can not procceed -- power amp is not up")
             return
 
     @command

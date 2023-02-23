@@ -3,7 +3,8 @@ import time
 from piradio.devices.spidev import SPIDev
 
 from .config import LMXConfig
-from piradio.command import command
+from piradio.command import command, cmdproperty
+from piradio.util import Freq
 
 class LMX2595Dev(SPIDev):
     def __init__(self, name, bus_no, dev_no, **kwargs):
@@ -14,7 +15,12 @@ class LMX2595Dev(SPIDev):
         self.config = LMXConfig(self.name, **kwargs)
         self.active_regs = None
                 
-    def write_reg(self, r, v):
+    def write_reg(self, r):
+        if self.active_regs is None:
+            self.active_regs = self.config.regs
+            
+        v = self.active_regs[r]
+        
         self.dev.transfer([ r, (v >> 8) & 0xFF, v & 0xFF ])
 
     @command
@@ -37,17 +43,70 @@ class LMX2595Dev(SPIDev):
         
     @command
     def program(self):
-        self.active_regs = self.config.regs
-        
         for rno in range(106, 0, -1):
-            self.write_reg(rno, self.active_regs[rno])
+            self.write_reg(rno)
             time.sleep(0.01)
 
-        v = self.active_regs[0] & ~8
-        self.write_reg(0, v)
+        self.config.fcal_en = 0
+        #v = self.active_regs[0] & ~8
+        self.write_reg(0)
 
         time.sleep(0.01)
             
-        v = self.active_regs[0] | 8
-        self.write_reg(0, self.active_regs[0] | 0x8)
+        self.config.fcal_en = 1
+        #v = self.active_regs[0] | 8
+        self.write_reg(0)
 
+    @command
+    def disable_output(self, output : str):
+        if output == "A":
+            self.config.Apd = True
+        elif output == "B":
+            self.config.Bpd = True
+        else:
+            raise RuntimeError("Invalid Output")
+        
+        self.write_reg(44)
+
+    @command
+    def enable_output(self, output : str):
+        if output == "A":
+            self.config.Apd = False
+        elif output == "B":
+            self.config.Bpd = False
+        else:
+            raise RuntimeError("Invalid Output")
+        
+        self.write_reg(44)
+
+    @command
+    def tune(self, A : Freq, B : Freq = None):
+        self.config.tune(A, B)
+    
+        
+    @cmdproperty
+    def Apwr(self):
+        return self.config.Apwr
+
+    @Apwr.setter
+    def Apwr(self, v : int):
+        v = int(v)
+        assert v >= 0 and v < 64
+        self.disable_output("A")
+        self.config.Apwr = v
+        self.write_reg(44)
+        self.enable_output("A")
+
+
+    @cmdproperty
+    def Bpwr(self):
+        return self.config.Bpwr
+
+    @Bpwr.setter
+    def Bpwr(self, v : int):
+        v = int(v)
+        assert v >= 0 and v < 64
+        self.disable_output("B")
+        self.config.Apwr = v
+        self.write_reg(45)
+        self.enable_output("B")

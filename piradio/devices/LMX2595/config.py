@@ -3,6 +3,10 @@ import copy
 
 from .regs import LMXRegs
 
+from piradio.output import output
+from piradio.util import Freq, GHz, MHz
+
+
 def chandiv(i):
     return [ 2, 4, 6, 8, 12, 16, 24, 32, 48, 64, 72, 96, 128, 192, 256, 384, 512, 768 ][i]
 
@@ -41,15 +45,15 @@ class LMXVCO:
             return self.gain_min + int(round((self.gain_max - self.gain_min) * self.scale(f)))
         
     VCOs = [
-        VCO(1, 7500, 8600, 240, 299, 12, 164, 73, 114),
-        VCO(2, 8600, 9800, 247, 356, 16, 165, 61, 121),
-        VCO(3, 9800, 10800, 224, 324, 19, 158, 98, 132),
-        VCO(4, 10800, 12000, 244, 383, 0, 140, 106, 141),
+        VCO(1, MHz(7500), MHz(8600), 240, 299, 12, 164, 73, 114),
+        VCO(2, MHz(8600), MHz(9800), 247, 356, 16, 165, 61, 121),
+        VCO(3, MHz(9800), MHz(10800), 224, 324, 19, 158, 98, 132),
+        VCO(4, MHz(10800), MHz(12000), 244, 383, 0, 140, 106, 141),
         #   Frequency Hole
-        VCO(4, 11900, 12100, 100, 100, 0, 0, 0, 0),
-        VCO(5, 12000, 12900, 146, 205, 36, 183, 170, 215),
-        VCO(6, 12900, 13900, 163, 242, 6, 155, 172, 218),
-        VCO(7, 13900, 15000, 244, 323, 19, 175, 182, 239),
+        VCO(4, MHz(11900), MHz(12100), 100, 100, 0, 0, 0, 0),
+        VCO(5, MHz(12000), MHz(12900), 146, 205, 36, 183, 170, 215),
+        VCO(6, MHz(12900), MHz(13900), 163, 242, 6, 155, 172, 218),
+        VCO(7, MHz(13900), MHz(15000), 244, 323, 19, 175, 182, 239),
     ]
     
     def __init__(self, LMX, PLL):
@@ -70,6 +74,9 @@ class LMXVCO:
             if self.f_out >= vco.f_min and self.f_out < vco.f_max:
                 return vco
 
+            if self.f_out == self.VCOs[-1].f_max:
+                return self.VCOs[-1]
+            
         raise Exception(f"Invalid frequency {self.f_out}")
 
     @property
@@ -250,8 +257,16 @@ class PortBMux(FreqMux):
         self.source = 0
 
 class LMXConfig:
-    def __init__(self, name, f_src=45, A=1000, B=1000, Apwr=31, Bpwr=31):
-        print(f"Configuring LMX {name} for {A} MHz, {B} MHz")
+    def __init__(self, name,
+                 f_src=MHz(45),
+                 A=GHz(1), B=GHz(1),
+                 Apwr=31, Bpwr=31,
+                 Apd=False, Bpd=False):
+
+        assert isinstance(f_src, Freq)
+        assert isinstance(A, Freq)
+        assert isinstance(B, Freq)
+                
         self.name = name
         
         self.OSC = OSCSource(f_src)
@@ -272,22 +287,36 @@ class LMXConfig:
         self.Apwr = Apwr
         self.Bpwr = Bpwr
 
+        self.Apd = Apd
+        self.Bpd = Bpd
+
         VCOFreq = None
         
+        self.tune(A, B)
+
+        self._best_lock = 1
+        self._reset = 0
+        self._fcal_en = 1
+
+
+    def tune(self, A, B=None):
+        if B is None:
+            B = A * (self.BMUX.f_out / self.AMUX.f_out)
+            
         # One, find a VCO frequency that even works
-        if A > 15000:
+        if A > MHz(15000):
             if B > A / 2:
                 raise Exception(f"B must be <= A/2 if doubler enabled: A: {A} B: {B}")
             # We need the doubler here
             self.AMUX.source = 2
             self.PLL2X.mult = 2
-            VCOFreq = round(A / 2, 10)
-        elif A >= 7500:
+            VCOFreq = round(A / 2, MHz(1e-10))
+        elif A >= MHz(7500):
             if B > A:
                 raise Exception(f"B must be <= A if A is raw VCO: A: {A} B: {B}")
             self.AMUX.source = 1
             self.PLL2X.mult = 1
-            VCOFreq = round(A, 10)
+            VCOFreq = round(A, MHz(1e-10))
         else:
             # Below lower limit of VCO            
             self.AMUX.source = 0
@@ -296,18 +325,15 @@ class LMXConfig:
             for i in self.PLLDIV.allowed:
                 f = i * A
 
-                if (f >= 7500 and (f <= 11500 or i <= 6)):
-                    VCOFreq = round(f, 10)
-                    print(f"{VCOFreq/B}")
+                if (f >= MHz(7500) and (f <= MHz(11500) or i <= 6)):
+                    VCOFreq = round(f, MHz(1e-10))
                     self.PLLDIV.den = i
                     break
                 
-        if VCOFreq == None:
+        if VCOFreq is None:
             raise Exception(f"Could not find proper VCO frequency for {A}MHz on port A");
 
-        print(f"Selecting VCO frequency: {VCOFreq}")
-        
-        if B >= 7500:
+        if B >= MHz(7500):
             if B != VCOFreq:
                 raise Exception(f"Could not match VCO for port B {B} VCO: {VCOFreq}")
             self.BMUX.source = 1          
@@ -322,22 +348,13 @@ class LMXConfig:
                 raise Exception(f"Unable to find integer divider for port B: {B} VCO: {VCOFreq} den: {den}")
 
             if abs(den - rden) > 0.001:
-                print("WARNING: rounding B to {VCOFreq/rden}, requested {B}")
+                output.warn(f"rounding B to {VCOFreq/rden}, requested {B}")
                 B = VCOFreq/rden
-
-            print(rden)
                 
             self.PLLDIV.den = rden
 
             self.f_vco = VCOFreq
-
-
-
         
-
-        self._best_lock = 1
-        self._reset = 0
-        self._fcal_en = 1
         
     @property
     def regs(self):
@@ -383,22 +400,22 @@ class LMXConfig:
 
     @property
     def fcal_hpfd_adj(self):
-        if self.f_pd <= 100:
+        if self.f_pd <= MHz(100):
             return 0
-        elif self.f_pd <= 150:
+        elif self.f_pd <= MHz(150):
             return 1
-        elif self.f_pd <= 200:
+        elif self.f_pd <= MHz(200):
             return 2
         else:
             return 3
 
     @property
     def fcal_lpfd_adj(self):
-        if self.f_pd >= 10:
+        if self.f_pd >= MHz(10):
             return 0
-        elif self.f_pd >= 5:
+        elif self.f_pd >= MHz(5):
             return 1
-        elif self.f_pd >= 2.5:
+        elif self.f_pd >= MHz(2.5):
             return 2
         else:
             return 3
@@ -500,7 +517,7 @@ class LMXConfig:
 
     @property
     def outa_pd(self):
-        return 0x0
+        return 1 if self.Apd else 0
 
     @property
     def outa_pwr(self):
@@ -512,7 +529,7 @@ class LMXConfig:
 
     @property
     def outb_pd(self):
-        return 0x0
+        return 1 if self.Bpd else 0
     
     @property
     def outb_pwr(self):
@@ -792,14 +809,18 @@ class LMXConfig:
         self.tune(f)
 
     def display(self):
-        print(f"Input Freq: {self.OSC.freq} 2X: {self.OSC2X.f_out} Pre-R: {self.PRE_R.f_out} Mult: {self.OSCMult.f_out} Post-R: {self.OSC_R.f_out}")
-        print(f"PLL: N: {self.PLL.N} NUM: {self.PLL.NUM} DEN: {self.PLL.DEN}")
-        print(f"VCO: AMP_CAL: {self.VCO.amp_cal} CAP_CODE: {self.VCO.cap_code} GAIN: {self.VCO.gain}")
-        print(f"VCO: {self.VCO.vco_n} freq: {self.VCO.f_out}")
-        print(f"AMUX: {self.AMUX.f_out}")
-        print(f"BMUX: {self.BMUX.f_out}")
-        print(f"f_pd: {self.f_pd}")
-        print(f"fcal_hpfd_adj: {self.fcal_hpfd_adj}")
+        output.print(f"Input Freq: {self.OSC.freq} 2X: {self.OSC2X.f_out} Pre-R: {self.PRE_R.f_out} Mult: {self.OSCMult.f_out} Post-R: {self.OSC_R.f_out}")
+        output.print(f"PLL: N: {self.PLL.N} NUM: {self.PLL.NUM} DEN: {self.PLL.DEN}")
+        output.print(f"VCO: AMP_CAL: {self.VCO.amp_cal} CAP_CODE: {self.VCO.cap_code} GAIN: {self.VCO.gain}")
+        output.print(f"VCO: {self.VCO.vco_n} freq: {self.VCO.f_out}")
+        output.print(f"AMUX: {self.AMUX.f_out}")
+        output.print(f"BMUX: {self.BMUX.f_out}")
+        output.print(f"f_pd: {self.f_pd}")
+        output.print(f"fcal_hpfd_adj: {self.fcal_hpfd_adj}")
+        output.print(f"A: Power: {self.Apwr:x} Power Down: {self.Apd}")
+        output.print(f"B: Power: {self.Bpwr:x} Power Down: {self.Bpd}")
+        
+
         
     def dump_regs(self):
         with open("lmx_hexdump.txt", "w") as f:

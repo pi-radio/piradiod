@@ -39,16 +39,16 @@ class LNA(CommandObject):
 
     @command
     def status(self):
-        pioutput.print(f"LNA:")
+        output.print(f"LNA:")
         self.children.VDD.status("VDD: ")
-        pioutput.print(f"VGG: {1000.0*self.children.VGG.dac:4.0f} mV")
+        output.print(f"VGG: {1000.0*self.children.VGG.dac:4.0f} mV")
         
         
 class Mixer(CommandObject):
     def __init__(self, dev):
         self.MAX11300 = dev
 
-        self.VGG_target = 1.1
+        self.VGG_target = 0.8
 
         self.children.VGG = HCPort(dev, (4, 5, 6), self.VGG_target)
 
@@ -62,7 +62,7 @@ class Mixer(CommandObject):
 
     @command
     def status(self):
-        pioutput.print("Mixer:")
+        output.print("Mixer:")
         self.children.VGG.status("VGG: ")
 
         
@@ -99,8 +99,8 @@ class BBAmp(CommandObject):
 
     @command
     def status(self):
-        pioutput.print(f"VDD_1: {1000.0*self.children.VDD_1.dac:4.0f} mV")
-        pioutput.print(f"VDD_2: {1000.0*self.children.VDD_2.dac:4.0f} mV")
+        output.print(f"VDD_1: {1000.0*self.children.VDD_1.dac:4.0f} mV")
+        output.print(f"VDD_2: {1000.0*self.children.VDD_2.dac:4.0f} mV")
         
 
 class X9(CommandObject):
@@ -134,7 +134,7 @@ class X9(CommandObject):
     @command
     def status(self):
         self.children.VDD.status("VDD: ")
-        pioutput.print(f"VGG: {1000.0*self.children.VGG.dac:4.0f} mV")
+        output.print(f"VGG: {1000.0*self.children.VGG.dac:4.0f} mV")
 
         
 
@@ -179,4 +179,14 @@ class RX(CommandObject):
         self.children.L = RXSide(self.left_MAX11300)
         self.children.R = RXSide(self.right_MAX11300)
 
-        
+    @command
+    def up(self):
+        self.children.L.up()
+        self.children.R.up()
+
+    @command
+    def status(self):
+        output.print("RX Left side:")
+        self.children.L.status()
+        output.print("RX right side:")
+        self.children.R.status()

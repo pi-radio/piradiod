@@ -11,6 +11,6 @@ class LTC5584Dev(SPIDev):
         assert(reg_no < 0x18)
         r = self.dev.transfer([ 0x80 | reg_no, 0 ])
 
-        pioutput.debug(f"LTC5584({self.bus_no}, {self.dev_no})Reg {reg_no:2x} {r[1]:2x}")
+        output.debug(f"LTC5584({self.bus_no}, {self.dev_no})Reg {reg_no:2x} {r[1]:2x}")
         
         return r[1];

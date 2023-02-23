@@ -1342,15 +1342,21 @@ Si5382Addr=0x68
 
 class Si5382(CommandObject):
     def __init__(self):
+        self.i2c = None
+        
         for p in glob.glob("/dev/i2c-*"):
             i2c = I2C(p)
             try:
                 msgs = [ I2C.Message([0x00], read=True) ]
                 i2c.transfer(Si5382Addr, msgs)
-                print(f"Found Si5382 on bus {p}")
                 self.i2c = i2c
+                break
             except I2CError as e:
                 continue
+
+        if self.i2c is None:
+            raise RuntimeError("Unable to find Si5382")
+            
 
     @command
     def program(self):
