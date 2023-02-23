@@ -57,7 +57,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self._iq_ax.set_ylim([-1,1])
 
         self._iq_ax.grid(True)
-
         
         # Set up a Line2D.
         self._spectrum, = self._freq_ax.plot(self.f, self.dB)
@@ -78,8 +77,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.N = len(v)
         self.t = np.arange(0, self.N) / self.sample_rate
         self.f = np.fft.fftshift(np.fft.fftfreq(self.N)) * self.sample_rate
-        self.fft = np.fft.fftshift(np.fft.fft(v)) / self.N
-        self.dB = np.nan_to_num(10 * np.log10(np.abs(self.fft)), nan=-100, posinf=100, neginf=-100)
+        self.fft = np.abs(np.fft.fftshift(np.fft.fft(v))) / self.N
+
+        self.fft[self.fft == 0] = 1e-100
+        
+        self.dB = np.nan_to_num(10 * np.log10(self.fft), nan=-100, posinf=100, neginf=-100)
         
     def _update(self):
         while not self.monitor.queue.empty():

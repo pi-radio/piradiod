@@ -3,6 +3,7 @@ import time
 import atexit
 
 from periphery import SPI
+from periphery.spi import SPIError
 from piradio.output import output
 from piradio.command import CommandObject, command
 
@@ -36,7 +37,7 @@ class SPIDev(CommandObject):
         while self.dev is None and i < 3:
             try:
                 self.dev = SPI(self.device_file, mode, speed)
-            except periphery.spi.SPIError:
+            except SPIError:
                 i += 1
 
         if self.dev is None:

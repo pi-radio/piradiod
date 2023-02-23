@@ -208,13 +208,17 @@ class SampleBuffer(UIO):
 
         while (self.csr[1] & 3) not in [ 0, 1, 2 ]:
             time.sleep(0.001)
-        
+
+    def monitor_timeout(self):
+        self.capture()
+        self.plot()
+            
     @command
     def monitor(self):
         self.one_shot(True)
-        self.monitor_task = self.task_group.create_task(2.5, self.capture)
-
-
+        self.monitor_task = self.task_group.create_task(2.5, self.monitor_timeout)
+        
+        
     @command
     def dump(self):
         self.samples.dump()
