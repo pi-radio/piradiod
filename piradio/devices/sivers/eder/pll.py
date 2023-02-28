@@ -141,8 +141,6 @@ class PLL(EderChild):
 
         # Set vco amplitude according to temperature 
         self.alc_th=int((self.alc_th_v + (25-T)*2.4e-3)/self.dac_ref*255)  # VCO amplitude threshold
-
-        output.info(f"ALC TH: {self.alc_th}")
         
         self.regs.vco_alc_hi_th = self.alc_th
         
@@ -155,8 +153,6 @@ class PLL(EderChild):
         else:
             self.vtune_th=int((T*67e-4+1.066)*255/self.dac_ref)
             
-        output.info(f'vco_vtune_atc_lo_th: {vtune_th:04x} ({vtune_th*self.dac_ref/255:1.3f}) V)')
-        output.info(f'vco_tune_ctrl: {self.regs.vco_tune_ctrl:x}')
         self.regs.vco_vtune_atc_lo_th = vtune_th
         
         self.regs.pll_divn = self.freq_to_divn(f)
@@ -170,9 +166,6 @@ class PLL(EderChild):
         vco_tune_status = self.regs.vco_tune_status
         vco_tune_det_status = self.regs.vco_tune_det_status
         vco_tune_freq_cnt = self.regs.vco_tune_freq_cnt
-        output.info(f'vco_tune_status [0x7e]: {self.regs.vco_tune_status:x}')
-        output.info(f'vco_tune_det_status[0] [1]: {self.regs.vco_tune_det_status:x}')
-        output.info(f'vco_tune_freq_cnt [0x7ff +/-11]: {self.regs.vco_tune_freq_cnt}')
         
         if self.eder.cid == self.eder.CID_EDER_B_MMF:
             #Set pll_chp to 0x00 if digtune between 28 and 64 or 92 and 128
@@ -187,7 +180,6 @@ class PLL(EderChild):
             (vco_tune_freq_cnt < 0x7f4)):
             output.info('VCO tune FAILED')
         else:
-            output.info('VCO tune OK.')
             self.regs.vco_tune_ctrl = set_bits(0x04)
 
         self._freq = self.divn_to_freq(self.regs.pll_divn)

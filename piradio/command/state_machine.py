@@ -38,7 +38,7 @@ class StateInst:
     def out_trans(self):
         return self.state.out_trans
         
-    def __call__(self):
+    def __call__(self, obj=None):
         p = self.state.find_path_from(self.obj.cur_state)
 
         for s in p[1:]:
@@ -75,7 +75,7 @@ class State:
             return t
 
         return make_transition
-        
+
     def __get__(self, obj, objtype=None):
         if obj == None:
             return self

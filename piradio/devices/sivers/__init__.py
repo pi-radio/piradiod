@@ -1,1 +1,1 @@
-from .eder import Eder
+from .eder import Eder, EderChipNotFoundError

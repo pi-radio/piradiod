@@ -71,6 +71,12 @@ class Freq:
         assert not isinstance(other, Freq)
         
         return Freq(self.hz * other)
+
+    def __rmul__(self, other):
+        assert not isinstance(other, Freq)
+        
+        return Freq(self.hz * other)
+
     
     def __truediv__(self, other):
         if isinstance(other, Freq):

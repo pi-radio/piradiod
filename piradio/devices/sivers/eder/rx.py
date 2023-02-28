@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 from piradio.output import output
 from piradio.devices.sivers.eder.registers import attach_registers, set_bits, clear_bits
@@ -175,10 +176,12 @@ class RX(Beamformer):
     @property
     def regs(self):
         return self.eder.regs
-        
+    
     def startup(self):
+        print("RX startup")
+        
         self.regs.trx_rx_on = 0x1FFFFF
-
+        
         if self.eder.mmf:
             self.regs.bias_rx = 0xAA9
         else:
@@ -187,14 +190,18 @@ class RX(Beamformer):
         self.regs.bias_ctrl = set_bits(0x7F)
         self.regs.bias_lo = set_bits(0x22)
 
+        gain = ((0,0),(1,1),(1,1),(7,7))        
+
+        gain = ((6, 6), (7, 7), (1, 1), (7, 7))
+
+        gain = ((6, 6), (7, 7), (1, 1), (15, 15))
+        
         self.regs.rx_bb_biastrim = 0x00
         self.regs.rx_gain_ctrl_mode = 0x13
         self.regs.rx_dco_en = 0x01
-        self.regs.rx_gain_ctrl_bb1 = 0x77
-        self.regs.rx_gain_ctrl_bb2 = 0x11
-        self.regs.rx_gain_ctrl_bb3 = 0x77
-        self.regs.rx_gain_ctrl_bfrf = 0x66
 
+        self.set_gain(gain)
+        
         output.info("RX calibrating baseband")
 
         self.regs.trx_ctrl = 0
@@ -203,16 +210,11 @@ class RX(Beamformer):
         self.regs.rx_dco_en = 0x01
         self.regs.rx_bb_i_dco = 0x40
         self.regs.rx_bb_q_dco = 0x40
-
-        gain = ((0,0),0x11,0x11,0x77)
         
         #bfrf_gain = self.regs.rx_gain_ctrl_bfrf
 
-        self.regs.rx_gain_ctrl_bfrf = (gain[0][0] << 4) | gain[0][1]
-        self.regs.rx_gain_ctrl_bb1 = 0x11
-        self.regs.rx_gain_ctrl_bb2 = 0x11
-        self.regs.rx_gain_ctrl_bb3 = 0x77
-                
+        self.set_gain(gain)
+
         self.I.drv_cal()
         self.Q.drv_cal()
 
@@ -221,17 +223,32 @@ class RX(Beamformer):
 
         self.I.dco_cal()
         self.Q.dco_cal()
-
         
-        ## Stupid SIVERS code restores registers here, which should be wholly unnecessary
+        self.regs.trx_rx_on = 0x1FFFFF
+
+        self.set_gain(gain)
         
         output.info("RX startup complete")
+        self.omni = True
         self.update_beamformer()
 
+    def set_gain(self, gain):
+        self.regs.rx_gain_ctrl_bfrf = (gain[0][0] << 4) | gain[0][1]
+        self.regs.rx_gain_ctrl_bb1 = (gain[1][0] << 4) | gain[1][1]
+        self.regs.rx_gain_ctrl_bb2 = (gain[2][0] << 4) | gain[2][1]
+        self.regs.rx_gain_ctrl_bb3 = (gain[3][0] << 4) | gain[3][1]
+        
+        
     def ready(self):
+        pass
+        
+    def enable(self):
         # Go ahead and turn on the LNA
         self.lna_state = True
 
+    def disable(self):
+        # Go ahead and turn on the LNA
+        self.lna_state = False
         
     @property
     def lna_state(self):

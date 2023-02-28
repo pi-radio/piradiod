@@ -27,7 +27,8 @@ class AbstractRegister:
     SPI_CMD_TOGGLE = 3
     SPI_CMD_READ   = 4
 
-    def __init__(self, addr, size):
+    def __init__(self, name, addr, size):
+        self.name = name
         self.addr = addr
         self.size = size
 
@@ -48,6 +49,7 @@ class AbstractRegister:
         return v
             
     def __set__(self, obj, x):
+        #print(f"Abstract set {self.name} {x}")
         cmd = self.SPI_CMD_WRITE
         if isinstance(x, bitop):
             cmd = x.cmd
@@ -59,7 +61,7 @@ class AbstractRegister:
         
 class Register(AbstractRegister):
     def __init__(self, name, addr, size, default, mask=None):
-        super().__init__(addr, size)
+        super().__init__(name, addr, size)
         self.name = name
         setattr(Registers, name, self)
         Registers.registers[name] = self
@@ -77,25 +79,26 @@ class BFAzEntry:
 
     def set(self, v):
         assert len(v) == 32
-        AbstractRegister(self.addr, 32).__set__(self, v)
+        AbstractRegister("Az", self.addr, 32).__set__(self, v)
         
         
     def __getitem__(self, n):
         assert n < 16
-        AbstractRegister(self.addr + 2 * n, 2).__get__(self)
+        AbstractRegister("Az", self.addr + 2 * n, 2).__get__(self)
         
     def __setitem__(self, n, v):
         assert n < 16
-        AbstractRegister(self.addr + 2 * n, 2).__set__(self, v)
+        AbstractRegister("Az", self.addr + 2 * n, 2).__set__(self, v)
 
         
 class BFRegisterInst:
-    def __init__(self, spi, addr):
+    def __init__(self, spi, name, addr):
         self.spi = spi
+        self.name = name
         self.addr = addr
 
     def set(self, v):
-        AbstractRegister(self.addr, 64 * 16 * 2).__set__(self, v)
+        AbstractRegister("Bf", self.addr, 64 * 16 * 2).__set__(self, v)
 
     def __getitem__(self, n):
         assert n < 64
@@ -103,7 +106,7 @@ class BFRegisterInst:
         
     def __setitem__(self, n, v):
         assert n < 64
-        AbstractRegister(self.addr + 32 * n, 32).__set__(self, v)
+        AbstractRegister("Bf", self.addr + 32 * n, 32).__set__(self, v)
         
         
             
@@ -116,10 +119,11 @@ class BFRegister:
         self.default = 0
 
     def __get__(self, obj, objtype=None):
-        return BFRegisterInst(obj.spi, self.addr)
+        return BFRegisterInst(obj.spi, self.name, self.addr)
 
     def __set__(self, obj, v):
-        BFRegisterInst(obj.spi, self.addr).set(v)
+        print(f"Setting {self.name} to {v}")
+        BFRegisterInst(obj.spi, self.name, self.addr).set(v)
     
 class bitop:
     def __init__(self, v):
@@ -128,12 +132,21 @@ class bitop:
 class toggle_bits(bitop):
     cmd = Register.SPI_CMD_TOGGLE
 
+    def __repr__(self):
+        return f"<toggle: {self.v:x}>"
+    
 class set_bits(bitop):
     cmd = Register.SPI_CMD_SET
 
+    def __repr__(self):
+        return f"<set: {self.v:x}>"
+    
 class clear_bits(bitop):
     cmd = Register.SPI_CMD_CLEAR
 
+    def __repr__(self):
+        return f"<clear: {self.v:x}>"
+    
 def modify_bits(test, value):
     if test:
         return set_bits(value)

@@ -14,6 +14,9 @@ from piradio.devices.sivers.eder.pll import FreqRef, PLL
 def KtoC(K):
     return K - 273.15
 
+class EderChipNotFoundError(RuntimeError):
+    pass
+
 class Eder(StateMachine):
     CID_EDER_B = 0x02731803
     CID_EDER_B_MMF = 0x02741812
@@ -25,8 +28,9 @@ class Eder(StateMachine):
     HWCTRL = State("HWCTRL")
     RX = State("RX")
     TX = State("TX")
+    LOOP = State("LOOP")
     
-    def __init__(self, spi, i2c=None):
+    def __init__(self, spi, _N, i2c=None):
         super().__init__()
         self.task_group = TaskGroup()
         
@@ -43,8 +47,7 @@ class Eder(StateMachine):
         elif self.cid == self.CID_EDER_B_MMF:
             output.info("Found Eder B MMF")
         else:
-            output.info(f"Unkown SIVERS CID: {self.cid}")
-            raise RuntimeError("Unknown SIVERS chip")
+            raise EderChipNotFoundError(f"Unknown SIVERS chip {self.cid}")
 
         self.ref = FreqRef(self)
         self.pll = PLL(self)
@@ -115,7 +118,6 @@ class Eder(StateMachine):
             prevT = curT
             time.sleep(1)
             curT = self.Tj
-            output.info(f"Temp: {curT:.1f} C")
 
         self.task_group.create_task(5, self.monitor)
             
@@ -124,48 +126,55 @@ class Eder(StateMachine):
                     
         output.info("Eder initialized")
         
-    @command
     @transition(INIT, SX)
     @precondition(lambda obj: obj.freq != 0.0)
     def init_to_SX(self):
         self.rx.ready()
         self.tx.ready()
 
-    @command
     @transition(SX, HWCTRL)
     def SX_to_HWCTRL(self):
         self.regs.trx_ctrl = set_bits(8)
 
-    @command
     @transition(HWCTRL, SX)
     def HWCTRL_to_SX(self):
         self.regs.trx_ctrl = clear_bits(8)
+
+    @transition(SX, LOOP)
+    def SX_to_LOOP(self):
+        self.regs.trx_ctrl = set_bits(1)
+        self.tx.loopback()
         
-    @command
+    @transition(LOOP, SX)
+    def LOOP_to_SX(self):
+        self.regs.trx_ctrl = 0
+
+        
     @transition(SX, RX)
     def SX_to_RX(self):
         self.regs.trx_ctrl = set_bits(1)
+        self.rx.enable()
 
-    @command
     @transition(RX, SX)
     def RX_to_SX(self):
         self.regs.trx_ctrl = clear_bits(1)
+        self.rx.disable()
         
 
-    @command
     @transition(SX, TX)
     def SX_to_TX(self):
         self.regs.trx_ctrl = set_bits(2)
 
-    @command
     @transition(TX, SX)
     def TX_to_SX(self):
         self.regs.trx_ctrl = clear_bits(2)
 
 
     def monitor(self):
-        print(f"Radio {self.name} temp: {self.Tj:.1f} C")
-        
+        if self.Tj > 85:
+            print("Overtemp event on radio {self.N}: {self.Tj:.1f} C")
+            self.SX()
+                    
     def bringup_tests(self):
         self_test(eder)
         agc_test(eder)

@@ -9,8 +9,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from piradio.output import output
-from piradio.command import command, TaskGroup
+from piradio.command import command, cmdproperty, TaskGroup
 from piradio.devices.uio import UIO
+from piradio.util import Freq
 
 dt_uint32 = struct.Struct(">i")
 
@@ -60,7 +61,7 @@ class Samples:
  
     def __setitem__(self, n, v):
         if self._format == IQ_SAMPLES:
-            self.sbuf._samples[n] = uint32.unpack(iq.pack(*v))[0]
+            self.sbuf._samples[n] = ((v[0] & 0xFFFF) << 16) | (v[1] & 0xFFFF) # uint32.unpack(iq.pack(*v))[0]
         else:
             raise RuntimeException("Not implemented")
 
@@ -143,6 +144,14 @@ class SampleBuffer(UIO):
     def size_bytes(self):
         return self.csr[5]
 
+    @property
+    def trigger_count(self):
+        return self.csr[6]
+
+    @property
+    def write_count(self):
+        return self.csr[7]
+    
     @cached_property
     def bytes_per_stream_word(self):
         return self.size_bytes // self.stream_depth
@@ -175,7 +184,7 @@ class SampleBuffer(UIO):
         if v:
             self.csr[1] = (self.csr[1] & ~0x1) | 2
         else:
-            self.csr[1] &= ~3
+            self.csr[1] = self.csr[1] & ~3
     
     @command
     def trigger(self):
@@ -216,15 +225,27 @@ class SampleBuffer(UIO):
     @command
     def monitor(self):
         self.one_shot(True)
-        self.monitor_task = self.task_group.create_task(2.5, self.monitor_timeout)
+        self.monitor_task = self.task_group.create_task(1, self.monitor_timeout)
         
         
     @command
     def dump(self):
         self.samples.dump()
-        
+
+    @cmdproperty
+    def fundamental_freq(self):
+        return self.sample_rate / (self.end_sample - self.start_sample)
+
+    @property
+    def t(self):
+        return np.arange(0, self.nsamples) / self.sample_rate
+
+    @property
+    def T(self):
+        return self.nsamples / self.sample_rate
+    
     @command
-    def fill_sine(self, freq: float, phase : float = 0):
+    def fill_sine(self, freq: Freq, phase : float = 0):
         if self.samples._format == IQ_SAMPLES:
             phase_advance = 2 * math.pi * freq / self.sample_rate
             phi = phase
@@ -237,6 +258,26 @@ class SampleBuffer(UIO):
         else:
             raise RuntimeException("Not implemented")
 
+    @command
+    def fill_chirp(self, freqA: Freq, freqB: Freq, phase : float = 0, N : int=1):
+        if self.samples._format == IQ_SAMPLES:
+            T = self.T / N
+            
+            c = (freqB - freqA) / T        
+            t = np.arange(0, self.nsamples / N) / self.sample_rate
+
+            t = np.tile(t, N)
+            
+            phi = phase + 2 * np.pi * (t * c + freqA) * t
+            
+            v = (np.sin(phi) - 1.0j * np.cos(phi)) * 0x7FFF
+            
+            for i, x in zip(range(self.start_sample, self.end_sample), v):
+                self.samples[i] = (int(x.real), int(x.imag))
+        else:
+            raise RuntimeException("Not implemented")
+
+        
     @property
     def array(self):
         if self.sample_format == IQ_SAMPLES:

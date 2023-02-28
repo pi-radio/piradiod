@@ -32,7 +32,10 @@ class TX(Beamformer):
 
     def ready(self):
         pass
-        
+
+    def loopback(self):
+        self.regs.tx_ctrl = set_bits(0x40)
+    
     @property
     def beamweights_reg(self):
         return self.regs.bf_tx_awv

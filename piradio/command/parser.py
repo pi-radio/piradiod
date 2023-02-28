@@ -168,8 +168,12 @@ class Property:
 class Command:
     def __init__(self, obj, name):
         self.obj = obj
-        self.func = partial(self.obj.picommands[name], self.obj)
-
+        try:
+            self.func = partial(getattr(obj, name))
+        except Exception as e:
+            print(f"Failed to get partial: {obj} {name} {self.obj.picommands[name]}")
+            raise e
+            
     def push_arg(self, arg):
         self.func = partial(self.func, arg)
         return self
