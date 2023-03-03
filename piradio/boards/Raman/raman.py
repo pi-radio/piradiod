@@ -16,6 +16,7 @@ from piradio.devices import SampleBufferIn, SampleBufferOut
 from piradio.devices import Trigger
 from piradio.devices.sivers import Eder, EderChipNotFoundError
 from piradio.util import MHz
+from piradio.zcu111 import zcu111
 
 sysfs_dt_path = Path("/sys/firmware/devicetree/base")
 sysfs_devices_path = Path("/sys/devices/platform")
@@ -25,6 +26,8 @@ class Raman(CommandObject):
     def __init__(self):
         print("Initializing C.V. Raman (a.k.a. SDRv2)...")
 
+        NCO_freq = MHz(1000)
+        
         # setup GPIOs
         self.children.gpio = AXI_GPIO("pl_gpio")
 
@@ -49,8 +52,15 @@ class Raman(CommandObject):
 
         self.children.clk_root.program()
         
-        self.children.lo_root = LMX2595Dev("LO Root", 2, 24, f_src=MHz(45), A=MHz(1000), B=MHz(1000), Apwr=15, Bpwr=15)
-        
+        self.children.lo_root = LMX2595Dev("LO Root", 2, 24, f_src=MHz(45), A=NCO_freq, B=NCO_freq, Apwr=15, Bpwr=15)
+
+        for i, adc in enumerate(zcu111.children.rfdc.children.ADC):
+            adc.nco_freq = NCO_freq
+
+        for dac in zcu111.children.rfdc.children.DAC:
+            dac.nco_freq = NCO_freq
+
+            
         self.children.lo_root.program()
 
         print("Detecting radios...")

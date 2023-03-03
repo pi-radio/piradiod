@@ -15,7 +15,7 @@ from piradio.devices.uio import UIO, reg, window, window_array
 
 from .config import RFDCConfigParams
 from .adc import ADCBlock
-#from .dac import DACTile
+from .dac import DACBlock
     
 ###
 ### Register map:
@@ -56,11 +56,9 @@ class TileWindow(window_array):
     def __init__(self, offset):
         super().__init__(offset, 0x4000, 0x4000, 4)
     
-    
-
-
 class RFDC(UIO):
     ADCRegs: TileWindow(0x14000)
+    DACRegs: TileWindow(0x04000)
     
     IP_VERSION: reg(0x0000)
     MASTER_RESET: reg(0x0004)
@@ -100,7 +98,9 @@ class RFDC(UIO):
 
         if self.high_speed_ADC:
             self.children.ADC = [ ADCBlock(self, i, j) for i in range(4) for j in [0, 2] ]
-        
+
+        self.children.DAC = [ DACBlock(self, i, j) for i in range(2) for j in range(4) ]
+            
     @property
     def high_speed_ADC(self):
         return self.params.ADC[0].slices == 2

@@ -45,7 +45,7 @@ class ADCBlock(CommandObject):
     def nco_freq(self, f : Freq):
         assert f < self.sampling_rate
         assert f >= MHz(0.0)
-        
+
         v = int(f * self.NCO_DIV / self.sampling_rate)
 
         self.DRP.NCO_FQWD_LOW = v & 0xFFFF

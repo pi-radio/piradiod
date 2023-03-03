@@ -90,10 +90,7 @@ class window(RegisterTreeObject):
         self.size = size
 
     def get(self, obj, name):
-        del obj.regs[name]
-        retval = window_inst(obj, self)
-        setattr(obj, name, retval)
-        return retval
+        return window_inst(obj, self)
 
     def __repr__(self):
         return f"<Abstract window {self.offset:x} {self.size:x}>"
@@ -131,11 +128,7 @@ class window_array(RegisterTreeObject):
         self.n = n
 
     def get(self, obj, name):
-        del obj.regs[name]
-
-        retval = window_array_inst(obj, self)
-        setattr(obj, name, retval)
-        return retval
+        return window_array_inst(obj, self)
     
 
 # Let's just assume 32-bit access
