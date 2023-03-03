@@ -136,7 +136,7 @@ class Raman(CommandObject):
         self.children.trigger.trigger()
 
         self.children.input_samples[0].plot()
-        
+
         self.children.radios[0].SX()
         self.children.radios[1].SX()
 
@@ -179,3 +179,25 @@ class Raman(CommandObject):
         print(f"Max freq: {fmax} t: {tp*1e9}ns")
         
         plt.show()
+
+    @command
+    def sounder_test(self):
+        self.children.radios[0].INIT()
+        self.children.radios[1].INIT()
+
+        self.children.radios[0].freq = 60e9
+        self.children.radios[1].freq = 60e9
+        
+        self.children.radios[0].RX()
+
+        self.children.radios[1].TX()
+
+        self.children.output_samples[1].fill_Zadoff_Chu(512, 1, 1)
+
+        self.children.trigger.trigger()
+        
+        self.children.input_samples[0].plot()
+        
+        self.children.radios[0].SX()
+        self.children.radios[1].SX()
+

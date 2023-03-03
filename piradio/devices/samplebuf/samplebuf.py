@@ -278,6 +278,21 @@ class SampleBuffer(UIO):
             raise RuntimeException("Not implemented")
 
         
+    def fill_Zadoff_Chu(self, Nzc : int, u : int, q : int):
+        c_f = Nzc & 1
+
+        a = np.arange(0, Nzc)
+
+        seq = 0x7FFF * np.exp(-1.0j * np.pi * u * a * (a + c_f + 2 * q) / Nzc)
+
+        print(seq)
+
+        for i, v in enumerate(seq):
+            self.samples[self.start_sample + i] = (int(x.real), int(x.imag))
+        
+        for i in range(self.start_sample + Nzc, self.end_sample):
+            self.samples[i] = 0
+
     @property
     def array(self):
         if self.sample_format == IQ_SAMPLES:
