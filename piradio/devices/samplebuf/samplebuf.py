@@ -288,11 +288,13 @@ class SampleBuffer(UIO):
         print(seq)
 
         for i, v in enumerate(seq):
-            self.samples[self.start_sample + i] = (int(x.real), int(x.imag))
+            self.samples[self.start_sample + i] = (int(v.real), int(v.imag))
         
         for i in range(self.start_sample + Nzc, self.end_sample):
-            self.samples[i] = 0
+            self.samples[i] = (0,0)
 
+    fill_zc = fill_Zadoff_Chu
+            
     @property
     def array(self):
         if self.sample_format == IQ_SAMPLES:

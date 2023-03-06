@@ -72,6 +72,7 @@ class Raman(CommandObject):
                 try:
                     n =  2*card + radio
                     eder = Eder(SPIDev(2, 6 * card + 2 * radio + 1, mode=0), n)
+                    print(f"Found radio {n}")
                     self.children.radios[n] = eder
                     eder.INIT()
                     eder.freq = 60e9
@@ -182,17 +183,15 @@ class Raman(CommandObject):
 
     @command
     def sounder_test(self):
-        self.children.radios[0].INIT()
-        self.children.radios[1].INIT()
-
-        self.children.radios[0].freq = 60e9
-        self.children.radios[1].freq = 60e9
-        
         self.children.radios[0].RX()
 
         self.children.radios[1].TX()
 
-        self.children.output_samples[1].fill_Zadoff_Chu(512, 1, 1)
+        Nzc = 512
+        
+        os = self.children.output_samples[1]
+        
+        os.fill_Zadoff_Chu(Nzc, 1, 1)
 
         self.children.trigger.trigger()
         
@@ -201,3 +200,13 @@ class Raman(CommandObject):
         self.children.radios[0].SX()
         self.children.radios[1].SX()
 
+        zc = os.array[:Nzc]
+
+        corr = np.correlate(self.children.input_samples[0].array, zc)
+
+        fig, axs = plt.subplots(nrows=2, ncols=1)
+        
+        axs[0].plot(os.t[:len(corr)], np.abs(corr))
+        axs[1].plot(os.t[:len(corr)], np.angle(corr))
+
+        plt.show()
