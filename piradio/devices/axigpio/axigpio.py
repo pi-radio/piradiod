@@ -1,6 +1,6 @@
 import os
 
-from piradio.command import CommandObject, command
+from piradio.command import CommandObject, command, cmdproperty
 from piradio.devices.sysfs import SysFS
 
 class GPIOPin(CommandObject):
@@ -10,7 +10,7 @@ class GPIOPin(CommandObject):
     def __init__(self, ctrl, n):
         self.ctrl = ctrl
         self.n = self.ctrl.gpion + n
-
+        
     @property
     def basepath(self):
         return self.ctrl.gpio_path / f"gpio{self.n}"
@@ -23,13 +23,10 @@ class GPIOPin(CommandObject):
     def valpath(self):
         return self.basepath / "value"
 
-    @property
+    @cmdproperty
     def dir(self):
-        print(self.dirpath)
         with open(self.dirpath, "r") as f:
             s = f.readline().strip()
-            print(s)
-            print(self.dirpath)
             if s == "out":
                 return self.OUT
             assert s == "in", f"{s} is an invalid direction"
@@ -45,7 +42,7 @@ class GPIOPin(CommandObject):
             else:
                 raise RuntimeError("Invalid direction")
 
-    @property
+    @cmdproperty
     def val(self):
         with open(self.valpath, "r") as f:
             return int(f.read().strip())
@@ -53,7 +50,7 @@ class GPIOPin(CommandObject):
     @val.setter
     def val(self, v):
         with open(self.valpath, "w") as f:
-            f.write(f"{v}")
+            f.write(f"{v}\n")
         
         
 class AXI_GPIO(CommandObject):
@@ -71,16 +68,24 @@ class AXI_GPIO(CommandObject):
         self.gpion = int(chippath.stem[len("gpiochip"):])
 
         self.gpio_path = chippath / "subsystem"
-            
+
+        self.pins = [ None for i in range(32) ]
+        
         for i in range(32):
-            try:
-                with open(self.gpio_path / "export", "w") as f:
-                    f.write(f"{self.gpion + i}\n")
-            except OSError as e:
-                if e.errno == 16:
-                    continue
-                print(e)
+            if not (self.gpio_path / f"gpio{self.gpion + i}").exists():
+                try:
+                    with open(self.gpio_path / "export", "w") as f:
+                        f.write(f"{self.gpion + i}\n")
+                except OSError as e:
+                    print(f"Failed to open GPIO {i}")
+                    if e.errno == 16:
+                        continue
+                    print(e)
+            self.pins[i] = GPIOPin(self, i)
+
+        self.children.pins = self.pins
         
     def __getitem__(self, n):
-        return GPIOPin(self, n)
+        return self.pins[n]
+        #return GPIOPin(self, n)
             

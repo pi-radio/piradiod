@@ -10,3 +10,4 @@ from .LMX2595 import LMX2595Dev
 from .Renesas_8T49N240 import Renesas_8T49N240
 from .MAX11300 import MAX11300Dev
 from .rfdc import RFDC
+from .HMC630x import HMC6300, HMC6301

@@ -3,13 +3,15 @@ import time
 from piradio.devices.spidev import SPIDev
 
 from .config import LMXConfig
-from piradio.command import command, cmdproperty
+from piradio.command import command, cmdproperty, CommandObject
 from piradio.util import Freq
 
-class LMX2595Dev(SPIDev):
-    def __init__(self, name, bus_no, dev_no, **kwargs):
-        super().__init__(bus_no, dev_no, speed=250000, mode=0)
+class LMX2595Dev(CommandObject):
+    def __init__(self, name, spidev, **kwargs):
+        #super().__init__(bus_no, dev_no, speed=250000, mode=0)
 
+        self.spidev = spidev
+        
         self.reset()
         
         self.config = LMXConfig(self.name, **kwargs)
@@ -21,7 +23,7 @@ class LMX2595Dev(SPIDev):
             
         v = self.active_regs[r]
         
-        self.dev.transfer([ r, (v >> 8) & 0xFF, v & 0xFF ])
+        self.spidev.xfer([ r, (v >> 8) & 0xFF, v & 0xFF ])
 
     @command
     def dump_regs(self):
@@ -34,12 +36,12 @@ class LMX2595Dev(SPIDev):
     @command
     def reset(self):
         # put the device into reset
-        self.dev.transfer([ 0, 0, 7 ])
+        self.spidev.xfer([ 0, 0, 7 ])
 
         time.sleep(0.01)
 
         # put the device into reset
-        self.dev.transfer([ 0, 0, 4 ])
+        self.spidev.xfer([ 0, 0, 4 ])
         
     @command
     def program(self):

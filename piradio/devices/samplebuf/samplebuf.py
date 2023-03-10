@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from piradio.output import output
 from piradio.command import command, cmdproperty, TaskGroup
 from piradio.devices.uio import UIO
-from piradio.util import Freq
+from piradio.util import Freq, GHz
 
 dt_uint32 = struct.Struct(">i")
 
@@ -79,7 +79,7 @@ class Samples:
             
     
 class SampleBuffer(UIO):
-    def __init__(self, n, direction, sample_rate=2e9, sample_format=IQ_SAMPLES):
+    def __init__(self, n, direction, sample_rate=GHz(2), sample_format=IQ_SAMPLES):
         self.direction = direction
         self.n = n
         self.sample_rate=sample_rate
@@ -245,7 +245,7 @@ class SampleBuffer(UIO):
         return self.nsamples / self.sample_rate
     
     @command
-    def fill_sine(self, freq: Freq, phase : float = 0):
+    def fill_sine(self, freq: Freq, phase : float = 0.0):
         if self.samples._format == IQ_SAMPLES:
             phase_advance = 2 * math.pi * freq / self.sample_rate
             phi = phase
