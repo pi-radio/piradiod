@@ -50,6 +50,7 @@ class UCSB(CommandObject):
 
         self.children.LTC5584 = [ LTC5584Dev(2, i) for i in range(8) ]
         self.children.input_samples = [ SampleBufferIn(i) for i in range(8) ]
+        self.children.output_samples = [ SampleBufferOut(i) for i in range(8) ]
 
         self.children.RX = RX()
         self.children.TX = TX()
@@ -59,15 +60,28 @@ class UCSB(CommandObject):
         self._center_freq = GHz(135)
         self._offset_freq = MHz(10)
         self._udconv_div = 12
-        
-        self.children.LMX_Eravant = LMX2595Dev("Eravant", 2, 12, f_src=MHz(100), A=self.f_eravant, B=self.f_eravant/16, Apwr=3, Bpwr=0, Apd=False, Bpd=True)
-        self.children.LMX_RX = LMX2595Dev("RX LO", 2, 13, f_src=MHz(100), A=self.f_UCSB, B=self.f_udconv, Apwr=0, Bpwr=32)
-        self.children.LMX_TX = LMX2595Dev("TX LO", 2, 14, f_src=MHz(100), A=self.f_UCSB, B=self.f_udconv, Apwr=0, Bpwr=0)
+
+        # 18 is 10dBm per port
+        self.children.LMX_Eravant = LMX2595Dev("Eravant", 2, 12, f_src=MHz(100), A=self.f_UCSB, B=self.f_UCSB, Apwr=18, Bpwr=0, Apd=False, Bpd=True)
+        self.children.LMX_RX = LMX2595Dev("RX LO", 2, 13, f_src=MHz(100), A=self.f_udconv, B=self.f_udconv, Apwr=0, Bpwr=32)
+        self.children.LMX_TX = LMX2595Dev("TX LO", 2, 14, f_src=MHz(100), A=self.f_udconv, B=self.f_udconv, Apwr=0, Bpwr=32)
 
         self.update_frequency_plan()
+        self.print_frequency_plan()
 
+        f = self.children.output_samples[0].fundamental_freq * 512
+
+        print(f"Output frequency: {f}")
+
+        self.children.output_samples[0].fill_sine(f)
+                
+        #self.children.output_samples[0].fill_Zadoff_Chu(512, 1, 1)
+        self.children.output_samples[0].one_shot(False)
+        self.children.output_samples[0].trigger()
+        
+        
     def update_RX(self):
-        self.children.LMX_RX.tune(self.f_UCSB, self.f_udconv)
+        self.children.LMX_RX.tune(self.f_udconv, self.f_udconv)
         self.children.LMX_RX.program()        
         zcu111.children.rfdc.children.ADC[0].nco_freq = self.f_udconv
 
@@ -113,7 +127,7 @@ class UCSB(CommandObject):
         return self.f_UCSB / self._udconv_div
     
     def update_eravant(self):
-        self.children.LMX_Eravant.tune(self.f_eravant)
+        self.children.LMX_Eravant.tune(self.f_UCSB)
         
         self.children.LMX_Eravant.program()
 

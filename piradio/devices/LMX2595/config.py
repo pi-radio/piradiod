@@ -305,7 +305,7 @@ class LMXConfig:
             
         # One, find a VCO frequency that even works
         if A > MHz(15000):
-            if B > A / 2:
+            if 2 * B > A:
                 raise Exception(f"B must be <= A/2 if doubler enabled: A: {A} B: {B}")
             # We need the doubler here
             self.AMUX.source = 2
@@ -333,10 +333,10 @@ class LMXConfig:
         if VCOFreq is None:
             raise Exception(f"Could not find proper VCO frequency for {A}MHz on port A");
 
-        if B >= MHz(7500):
-            if B != VCOFreq:
-                raise Exception(f"Could not match VCO for port B {B} VCO: {VCOFreq}")
-            self.BMUX.source = 1          
+        if B == VCOFreq:
+            self.BMUX.source = 1            
+        elif B > VCOFreq / 2:
+            raise Exception(f"Could not match VCO for port B {B} VCO: {VCOFreq}")
         else:
             if self.AMUX.source == 0 and A != B:
                 raise Exception(f"A must equal B for divided frequencies")
@@ -353,7 +353,7 @@ class LMXConfig:
                 
             self.PLLDIV.den = rden
 
-            self.f_vco = VCOFreq
+        self.f_vco = VCOFreq
         
         
     @property
