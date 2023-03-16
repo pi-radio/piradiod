@@ -3,7 +3,7 @@ import time
 
 from piradio.command import CommandObject, command
 from piradio.output import output
-from piradio.devices import SPIDev, LTC5584Dev, LMX2595Dev, MAX11300Dev
+from piradio.devices import SPIDev, MAX11300Dev
 
 class HCPort(CommandObject):
     def __init__(self, chip, ports, maxV):

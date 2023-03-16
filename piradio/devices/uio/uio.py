@@ -19,8 +19,8 @@ class RegisterTreeObject:
     def __getattr__(self, name):
         if name in self.regs:
             return self.regs[name].get(self, name)
-    
-        raise AttributeError(f"{name} not defined")
+
+        return super().__getattr__(name)
 
     def __setattr__(self, name, val):
         if 'regs' not in self.__dict__:
@@ -219,8 +219,8 @@ class UIO(CommandObject):
 
         if name in self.regs:
             return self.regs[name].get(self, name)
-    
-        raise AttributeError(f"{name} not defined")
+
+        return super().__getattr__(name)
 
     def __setattr__(self, name, val):
         if 'regs' not in self.__dict__:

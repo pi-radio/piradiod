@@ -109,15 +109,22 @@ class CommandChildren:
         return iter(self.__dict__["__children"])
     
 class CommandObject(metaclass=CommandMetaclass):
+    def __getattr__(self, n):
+        if n == "_pichildren":
+            self._pichildren = CommandChildren()
+            return self._pichildren
+        
+        if n in self._pichildren:
+            return self._pichildren[n]
+
+        return super().__getattr__(self, n)
+    
     @property
     def name(self):
         return self.piname
     
     @property
     def children(self):
-        if not hasattr(self, "_pichildren"):
-            self._pichildren = CommandChildren()
-
         return self._pichildren
 
     @property

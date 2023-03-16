@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from piradio.output import output
-from piradio.command import command, cmdproperty, TaskGroup
+from piradio.command import command, cmdproperty
 from piradio.devices.uio import UIO
 from piradio.util import Freq, GHz
 
@@ -84,9 +84,6 @@ class SampleBuffer(UIO):
         self.n = n
         self.sample_rate=sample_rate
         self.sample_format = sample_format
-        self.task_group = TaskGroup()
-        self.monitor_task = None
-        self._monitor = None
         path = None
 
         for p in Path("/sys/bus/platform/devices").glob(f"*.axis_sample_buffer_{direction}"):
@@ -191,42 +188,21 @@ class SampleBuffer(UIO):
         self.csr[1] |= 1
 
     @command
+    def capture(self):
+        self.trigger()
+
+        while(self.csr[1] & 3) not in [0, 1, 2]:
+            time.sleep(0.001)
+
+        return self.array
+            
+    @command
     def save(self, name : str):
         self.capture()
 
         with open(name, "w") as f:
             for r in self.array:
                 print(r, file=f)
-        
-    @command
-    def plot(self):
-        if self._monitor is None:
-            from piradio.monitor import get_monitor
-            self._monitor = get_monitor()
-
-        self._monitor.send(self.array)
-        
-
-    @command
-    def plot_local(self):
-        pass
-        
-    @command
-    def capture(self):
-        self.trigger()
-
-        while (self.csr[1] & 3) not in [ 0, 1, 2 ]:
-            time.sleep(0.001)
-
-    def monitor_timeout(self):
-        self.capture()
-        self.plot()
-            
-    @command
-    def monitor(self):
-        self.one_shot(True)
-        self.monitor_task = self.task_group.create_task(1, self.monitor_timeout)
-        
         
     @command
     def dump(self):

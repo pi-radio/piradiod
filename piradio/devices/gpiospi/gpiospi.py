@@ -50,6 +50,15 @@ class GPIOSPIDevice:
         self.controller = controller
         self.cs_gpio = cs_gpio
 
+    def shift(self, bit_out):
+        self.controller.shift(bit_out)
+
+    def dead_cycle(self):
+        self.cs_gpio.val = 1
+
+        self.controller.shift(0)
+
+        self.cs_gpio.val = 0
         
     def xfer(self, txn):
         self.controller.begin()
@@ -63,6 +72,6 @@ class GPIOSPIDevice:
 
         bits_out, bits_in = self.controller.end()
 
-        #print(f"Out: {bits_out} => In: {bits_in}")
+        print(f"Out: {bits_out} => In: {bits_in}")
         
         return retval

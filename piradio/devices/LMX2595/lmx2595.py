@@ -109,6 +109,6 @@ class LMX2595Dev(CommandObject):
         v = int(v)
         assert v >= 0 and v < 64
         self.disable_output("B")
-        self.config.Apwr = v
+        self.config.Bpwr = v
         self.write_reg(45)
         self.enable_output("B")

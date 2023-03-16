@@ -4,7 +4,6 @@ import time
 from piradio.command import CommandObject, command
 from piradio.output import output
 from piradio.devices import SPIDev
-from piradio.devices import LTC5584Dev
 from piradio.devices import LMX2595Dev
 from piradio.devices import MAX11300Dev
 

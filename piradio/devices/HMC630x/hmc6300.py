@@ -9,35 +9,65 @@ class HMC6300(HMC630x):
         self.configure()
 
     def configure(self):
-        self.write_reg(1, 0x4A)
-        self.write_reg(2, 0xF2)
+        # binary 1100_1010 for normal operation
+        self.write_reg(1, 0xCA)
+
+        # 1111_1100 -- PA differential, TX PDET
+        self.write_reg(2, 0xFC)
+
+        # 1111_0110 -- High gain no temp
         self.write_reg(3, 0xF6)
+        # POwer everything on here
         self.write_reg(4, 0x00)
-        self.write_reg(5, 0xBF)
-        self.write_reg(6, 0x6C)
+        # 1111_1111 -- normal operation
+        self.write_reg(5, 0xFF)
+        # 1110_1100 -- normal operation
+        self.write_reg(6, 0xEC)
         # Highest Gain
         self.write_reg(7, 0x0F)        
 
-        # All presets
+        # 1000_1111
         self.write_reg(8, 0x8F)
 
         # Widest bandwidth (lowest Q)
+        # 1110_0000
         self.write_reg(9, 0xE0)
 
         # Digital IFVGA gain, power down temp sensor?
+        # 0101_0001
         self.write_reg(10, 0x51)
 
         # Highest RF gain
+        # 0000_0011
         self.write_reg(11, 0x03)
 
+        # 0110_0100
+        self.write_reg(12, 0x64)
+
+        
         # Turn off synthesizer
+        # 0000_0000
         self.write_reg(16, 0x00)
+
+        # 0000_000 -- disabled synth
         self.write_reg(17, 0x00)
+
+        # 0101_0000
         self.write_reg(18, 0x50)
+
+        # 0000_0010
         self.write_reg(19, 0x02)
+
+        # 0000_0000
         self.write_reg(20, 0x00)
+
+        # 0001_0010
         self.write_reg(21, 0x12)
+
+        # 0000_0000
         self.write_reg(22, 0x00)
+
+        # 0110_0010
         self.write_reg(23, 0x62)
         
     def startup(self):

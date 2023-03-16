@@ -9,7 +9,7 @@ class HMC6301(HMC630x):
         self._power = True
 
 
-        self.bb_att1 = 0x3
+        self.bb_att1 = 0x0
         self.i_fine_att = 0
         self.q_fine_att = 0
         self.bb_att2 = 0x3
@@ -32,10 +32,16 @@ class HMC6301(HMC630x):
         # Can set high and low pass here
         self.write_reg(3, 0x03)
         self.write_reg(4, 0x9F)
+
+        # HIghest IF gain
         self.write_reg(5, 0x0F)
+        
         self.write_reg(6, 0xBF)
         self.write_reg(7, 0x6D)
+
+        # Highest LNA gain
         self.write_reg(8, 0x80)
+        
         self.write_reg(9, 0x40)
         self.write_reg(16, 0x36)
         self.write_reg(17, 0xBB)
