@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
+import base64
 import click
 
 from io import BytesIO
@@ -38,13 +39,13 @@ class PiRadio_NRT_XMLRPC(xmlrpc.XMLRPC):
         else:
             raise xmlrpc.Fault(123, "Invalid direction")
 
-        return f.getvalue()
+        return base64.b64encode(f.getvalue())
 
     def xmlrpc_set_samples(self, n, samples):
         if n < 0 or n > 7:
             raise xmlrpc.Fault(123, "Invalid buffer number")
 
-        a = npf.read_array(BytesIO(samples.data))
+        a = npf.read_array(base64.b64decode(samples))
 
         self.output_samples[n].array = a
 
