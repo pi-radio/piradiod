@@ -45,7 +45,7 @@ class PiRadio_NRT_XMLRPC(xmlrpc.XMLRPC):
         if n < 0 or n > 7:
             raise xmlrpc.Fault(123, "Invalid buffer number")
 
-        a = npf.read_array(base64.b64decode(samples))
+        a = npf.read_array(BytesIO(base64.b64decode(samples)))
 
         self.output_samples[n].array = a
 
