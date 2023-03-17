@@ -8,26 +8,21 @@ class GPIOSPIController:
 
         sck_gpio.dir = "out"
         sck_gpio.val = 0
+
         mosi_gpio.dir = "out"
-        sck_gpio.val = 0
+        mosi_gpio.val = 0
+        
         miso_gpio.dir = "in"
 
-    def begin(self):
-        self.bits_out = []
-        self.bits_in = []
-        
     def shift(self, bit_out):
-        self.bits_out.append(bit_out)
-        
         self.mosi_gpio.val = bit_out
-        time.sleep(0.0001)
+        self.delay()
         self.sck_gpio.val = 1
         retval = self.miso_gpio.val
-        time.sleep(0.0001)
+        self.delay()
         self.sck_gpio.val = 0
-        time.sleep(0.0001)
+        self.delay()
 
-        self.bits_in.append(retval)
         return retval
 
     def xfer_byte(self, v):
@@ -39,39 +34,55 @@ class GPIOSPIController:
 
         return retval
     
-    def end(self):
-        return (self.bits_out, self.bits_in)
-
     def get_device(self, cs_gpio):
         return GPIOSPIDevice(self, cs_gpio)
+
+    def delay(self):
+        time.sleep(0.0001)
     
 class GPIOSPIDevice:
     def __init__(self, controller, cs_gpio):
         self.controller = controller
         self.cs_gpio = cs_gpio
 
+        self.cs_gpio.dir = "out"
+        self.cs_gpio.val = 1
+
+    def delay(self):
+        self.controller.delay()
+
+    def long_delay(self):
+        time.sleep(0.001)
+        
+    def begin(self):
+        self.cs_gpio.val = 0
+        self.long_delay()
+                
+    def end(self):
+        self.cs_gpio.val = 1
+        self.long_delay()
+        
     def shift(self, bit_out):
-        self.controller.shift(bit_out)
+        return self.controller.shift(bit_out)
 
     def dead_cycle(self):
         self.cs_gpio.val = 1
+        self.long_delay()
 
         self.controller.shift(0)
 
+        self.long_delay()
         self.cs_gpio.val = 0
+        self.long_delay()
         
-    def xfer(self, txn):
-        self.controller.begin()
-        
+    def xfer(self, txn):        
         self.cs_gpio.val = 0
-        time.sleep(0.001)
+        self.long_delay()
 
         retval = [ self.controller.xfer_byte(byte) for byte in txn ]
                 
+        self.long_delay()
         self.cs_gpio.val = 1
-
-        bits_out, bits_in = self.controller.end()
-
-        print(f"Out: {bits_out} => In: {bits_in}")
+        self.long_delay()
         
         return retval

@@ -11,12 +11,6 @@ class LTC5594Dev(CommandObject):
     def __init__(self, spidev):
         self.spidev = spidev
 
-        self.program()
-        
-        self.regs = [ self.read_reg(i) for i in range(0x18) ]
-
-        print(self.regs)
-
 
     @command
     def program(self):
@@ -36,14 +30,18 @@ class LTC5594Dev(CommandObject):
 
         for i in range(16):
             self.write_reg(i, 0x80)
-        
+
+    @command
+    def dump_regs(self):
+        for i in range(0x18):
+            v = self.read_reg(i)
+            output.print(f"{i}: {v:02x}")
+            
     @command
     def read_reg(self, reg_no : int):
         assert(reg_no < 0x18)
         r = self.spidev.xfer([ 0x80 | int(reg_no), 0 ])
 
-        #output.print(f"LTC5594 Reg {reg_no:2x} {r[1]:2x}")
-        
         return r[1]
 
     @command

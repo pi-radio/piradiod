@@ -1,5 +1,7 @@
 import os
 
+import gpiod
+
 from piradio.command import CommandObject, command, cmdproperty
 from piradio.devices.sysfs import SysFS
 
@@ -8,20 +10,9 @@ class GPIOPin(CommandObject):
     OUT = 1
     
     def __init__(self, ctrl, n):
-        self.ctrl = ctrl
-        self.n = self.ctrl.gpion + n
+        self.line = line
+ 
         
-    @property
-    def basepath(self):
-        return self.ctrl.gpio_path / f"gpio{self.n}"
-        
-    @property
-    def dirpath(self):
-        return self.basepath / "direction"
-        
-    @property
-    def valpath(self):
-        return self.basepath / "value"
 
     @cmdproperty
     def dir(self):
@@ -45,47 +36,102 @@ class GPIOPin(CommandObject):
     @cmdproperty
     def val(self):
         with open(self.valpath, "r") as f:
-            return int(f.read().strip())
+            s = f.read().strip()
+            print(s)
+            return int(s)
 
     @val.setter
     def val(self, v):
         with open(self.valpath, "w") as f:
             f.write(f"{v}\n")
+
+
+class InputPin:
+    def __init__(self, ctrl, n):
+        config = gpiod.line_request()
+        config.consumer = "piradio"
+        config.request_type = gpiod.line_request.DIRECTION_INPUT
+
+        self.line = ctrl.chip.get_line(n)
+        self.line.request(config)
+
+    @property
+    def val(self):
+        retval = self.line.get_value()
+
+        if retval != 0:
+            print(retval)
+
+        return retval
         
+class OutputPin:
+    def __init__(self, ctrl, n):
+        config = gpiod.line_request()
+        config.consumer = "piradio"
+        config.request_type = gpiod.line_request.DIRECTION_OUTPUT
+        
+        self.line = ctrl.chip.get_line(n)
+        self.line.request(config)
+
+    @property
+    def val(self):
+        return self.line.get_value()
+
+    @val.setter
+    def val(self, v):
+        self.line.set_value(v)
         
 class AXI_GPIO(CommandObject):
     def __init__(self, name):
         devpath = SysFS.find_device(name)
 
-        l = list((devpath / "gpio").iterdir())
+        l = list(devpath.glob("gpiochip*"))
 
         assert(len(l) == 1)
 
         chippath = l[0]
 
-        assert chippath.stem.startswith("gpiochip")
-
         self.gpion = int(chippath.stem[len("gpiochip"):])
 
+        print(f"Opening GPIO chip {self.gpion} {chippath}")
+        
+        self.chip = gpiod.chip(self.gpion) #, gpiod.chip.OPEN_BY_NUMBER)
+        
         self.gpio_path = chippath / "subsystem"
 
-        self.pins = [ None for i in range(32) ]
+        self.pins = {}
         
-        for i in range(32):
-            if not (self.gpio_path / f"gpio{self.gpion + i}").exists():
-                try:
-                    with open(self.gpio_path / "export", "w") as f:
-                        f.write(f"{self.gpion + i}\n")
-                except OSError as e:
-                    print(f"Failed to open GPIO {i}")
-                    if e.errno == 16:
-                        continue
-                    print(e)
-            self.pins[i] = GPIOPin(self, i)
+        class Inputs:
+            def __getitem__(cls, n):
+                if n in self.pins:
+                    if not isinstance(self.pins[n], InputPin):
+                        raise RuntimeError(f"Pin {n} already opened as output")
+                    return self.pins[n]
 
-        self.children.pins = self.pins
-        
+                self.pins[n] = InputPin(self, n)
+                return self.pins[n] 
+
+        class Outputs:
+            def __getitem__(cls, n):
+                if n in self.pins:
+                    if not isinstance(self.pins[n], OutputPin):
+                        raise RuntimeError(f"Pin {n} already opened as output")
+                    return self.pins[n]
+
+                self.pins[n] = OutputPin(self, n)
+                return self.pins[n] 
+                
+        self._inputs = Inputs()
+        self._outputs = Outputs()        
+
+    @property
+    def inputs(self):
+        return self._inputs
+
+    @property
+    def outputs(self):
+        return self._outputs
+    
     def __getitem__(self, n):
         return self.pins[n]
-        #return GPIOPin(self, n)
             

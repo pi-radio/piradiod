@@ -219,58 +219,7 @@ class SampleBuffer(UIO):
     @property
     def T(self):
         return self.nsamples / self.sample_rate
-    
-    @command
-    def fill_sine(self, freq: Freq, phase : float = 0.0):
-        if self.samples._format == IQ_SAMPLES:
-            phase_advance = 2 * math.pi * freq / self.sample_rate
-            phi = phase
-
-            v = np.arange(0, self.nsamples) * phase_advance + phase
-            v = (np.sin(v) - 1.0j * np.cos(v)) * 0x7FFF
-            
-            for i, x in zip(range(self.start_sample, self.end_sample), v):
-                self.samples[i] = (int(x.real), int(x.imag))
-        else:
-            raise RuntimeException("Not implemented")
-
-    @command
-    def fill_chirp(self, freqA: Freq, freqB: Freq, phase : float = 0, N : int=1):
-        if self.samples._format == IQ_SAMPLES:
-            T = self.T / N
-            
-            c = (freqB - freqA) / T        
-            t = np.arange(0, self.nsamples / N) / self.sample_rate
-
-            t = np.tile(t, N)
-            
-            phi = phase + 2 * np.pi * (t * c + freqA) * t
-            
-            v = (np.sin(phi) - 1.0j * np.cos(phi)) * 0x7FFF
-            
-            for i, x in zip(range(self.start_sample, self.end_sample), v):
-                self.samples[i] = (int(x.real), int(x.imag))
-        else:
-            raise RuntimeException("Not implemented")
-
-        
-    def fill_Zadoff_Chu(self, Nzc : int, u : int, q : int):
-        c_f = Nzc & 1
-
-        a = np.arange(0, Nzc)
-
-        seq = 0x7FFF * np.exp(-1.0j * np.pi * u * a * (a + c_f + 2 * q) / Nzc)
-
-        print(seq)
-
-        for i, v in enumerate(seq):
-            self.samples[self.start_sample + i] = (int(v.real), int(v.imag))
-        
-        for i in range(self.start_sample + Nzc, self.end_sample):
-            self.samples[i] = (0,0)
-
-    fill_zc = fill_Zadoff_Chu
-            
+                        
     @property
     def array(self):
         if self.sample_format == IQ_SAMPLES:
@@ -279,7 +228,19 @@ class SampleBuffer(UIO):
             return v[...,0] + 1j * v[...,1]
         else:
             raise RuntimeException("Not implemented")
-        
+
+    @array.setter
+    def array(self, v):
+        if self.sample_format == IQ_SAMPLES:
+            v = v * 0x7FFF
+
+            rearr = np.real(v).astype(int)
+            imarr = np.imag(v).astype(int)
+
+            v = zip(rearr, imarr)
+            
+            for i, s in enumerate(v):
+                self.samples[i] = s
             
             
     

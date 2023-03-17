@@ -12,8 +12,6 @@ from piradio.output import output
 from piradio.devices import SysFS, SPIDev
 from piradio.devices import Renesas_8T49N240, LMX2595Dev
 from piradio.devices import AXI_GPIO
-from piradio.devices import SampleBufferIn, SampleBufferOut
-from piradio.devices import Trigger
 from piradio.devices import HMC6300, HMC6301
 from piradio.devices.gpiospi import GPIOSPIController
 from piradio.util import MHz, GHz
@@ -27,28 +25,29 @@ sysfs_devices_path = Path("/sys/devices/platform")
 
 class Lamarr(CommandObject):
     def __init__(self):
-        print("Initializing C.V. Raman (a.k.a. SDRv2)...")
-
-        self.children.input_samples = [ SampleBufferIn(i) for i in range(8) ]
-        self.children.output_samples = [ SampleBufferOut(i) for i in range(8) ]
-
+        print("Initializing Hedy Lamarr (a.k.a. SDRv3)...")
         
         # setup GPIOs
         self.children.gpio = AXI_GPIO("pl_gpio")
 
-        self.obs_gpio = self.children.gpio[0]
+        self.obs_gpio = self.children.gpio.outputs[0]
 
-        self.obs_gpio.dir = "out"
         self.obs_gpio.val = 0
+
+        sclk = self.gpio.outputs[3]
+        mosi = self.gpio.outputs[2]
+        miso_1v35 = self.gpio.inputs[1]
+        miso_1v8 = self.gpio.inputs[30]
         
-        for i in range(4, 29):
-            self.children.gpio[i].dir = "out"
-            self.children.gpio[i].val = 1
+        self.spi = GPIOSPIController(sclk, mosi, miso_1v35)
+        self.spi_1V8 = GPIOSPIController(sclk, mosi, miso_1v8)
 
-        spi = GPIOSPIController(self.children.gpio[3], self.children.gpio[2], self.children.gpio[1])
-        spi_1V8 = GPIOSPIController(self.children.gpio[3], self.children.gpio[2], self.children.gpio[30])
+        self.children.LTC5594 = [ LTC5594Dev(self.spi_1V8.get_device(self.gpio.outputs[20+i])) for i in range(8) ]
+        self.children.HMC6301 = [ HMC6301(self.spi.get_device(self.gpio.outputs[4+i])) for i in range(8) ]
+        self.children.HMC6300 = [ HMC6300(self.spi.get_device(self.gpio.outputs[12+i])) for i in range(8) ]        
 
-        lmx_spi = spi.get_device(self.children.gpio[28])
+
+        lmx_spi = self.spi.get_device(self.gpio.outputs[28])
 
         print("Programming clock tree and LO...")
 
@@ -73,19 +72,16 @@ class Lamarr(CommandObject):
 
         
         print("Programming LTC5594s...")
-        self.children.LTC5594 = [ LTC5594Dev(spi_1V8.get_device(self.children.gpio[20+i])) for i in range(8) ]
-        
-
+        for c in self.LTC5594:
+            c.program()
         
         print("Programming HMC6301s...")
-        self.children.HMC6301 = [ HMC6301(spi, self.children.gpio[4+i]) for i in range(8) ]
+        for c in self.HMC6301:
+            c.program()
+            
         print("Programming HMC6300s...")
-        self.children.HMC6300 = [ HMC6300(spi, self.children.gpio[12+i]) for i in range(8) ]
-        
-        
-        self.children.trigger = Trigger()
-
-    
+        for c in self.HMC6300:
+            c.program()
 
     @property
     def HMC_IF_freq(self):
@@ -109,29 +105,30 @@ class Lamarr(CommandObject):
                 yield r
 
     @command
-    def silence(self):
-        for i in range(8):
-            self.children.output_samples[0].one_shot(True)
-                    
+    def blank_spi(self):
+        for i in range(10000):
+            self.spi.shift(0)
+                
     @command
-    def tone_test(self):
-        f = self.children.output_samples[0].fundamental_freq * 128
-
-        print(f"Output frequency: {f}")
-
-        for i in range(1):
-            self.children.output_samples[i].fill_sine(f)                
-            #self.children.output_samples[0].fill_Zadoff_Chu(512, 1, 1)
-            self.children.output_samples[0].one_shot(False)
-            
-        self.children.trigger.trigger()
-
-        
-        os.fill_sine(os.fundamental_freq * 32)
-
-        os.one_shot(False)
-
-        os.trigger()
+    def powerdown_RX(self):
+        for c in self.HMC6301:
+            c.powerdown()
+ 
+    @command
+    def powerup_RX(self):
+        for c in self.HMC6301:
+            c.powerup()
+                
+    @command
+    def powerdown_TX(self):
+        for c in self.HMC6300:
+            c.powerdown()
+ 
+    @command
+    def powerup_TX(self):
+        for c in self.HMC6300:
+            c.powerup()
+   
 
     @command
     def radar_test(self):

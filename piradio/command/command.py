@@ -117,8 +117,11 @@ class CommandObject(metaclass=CommandMetaclass):
         if n in self._pichildren:
             return self._pichildren[n]
 
-        return super().__getattr__(self, n)
-    
+        try:
+            return super().__getattr__(self, n)
+        except AttributeError as e:
+            raise AttributeError(f"{self.name} has no attribute or child {n}")
+            
     @property
     def name(self):
         return self.piname
