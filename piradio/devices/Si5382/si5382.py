@@ -1360,13 +1360,27 @@ class Si5382(CommandObject):
 
     @command
     def program(self):
-        try:
-            msgs = [I2C.Message([0x01, 0x00]),
-                    I2C.Message([0x02]), I2C.Message([0x00, 0x00], read=True),
-                    I2C.Message([0x03]), I2C.Message([0x00], read=True)]
-            self.i2c.transfer(Si5382Addr, msgs)
-        except I2CError as e:
-            print(f"I2C error while programming Si5382: {msgs} {e}")
+        def transfer_harder(msgs):
+            complete = False
+            count = 0
+            error = None
+            while not complete and count < 5:
+                count += 1
+                try:
+                    self.i2c.transfer(Si5382Addr, msgs)
+                    complete = True
+                except I2CError as e:
+                    error = e
+
+            if not complete:
+                print(f"I2C error while programming Si5382: {msgs} {error}")
+
+                    
+        msgs = [I2C.Message([0x01, 0x00]),
+                I2C.Message([0x02]), I2C.Message([0x00, 0x00], read=True),
+                I2C.Message([0x03]), I2C.Message([0x00], read=True)]
+
+        transfer_harder(msgs)
                         
         config = si_122_88
 
@@ -1374,9 +1388,8 @@ class Si5382(CommandObject):
             if page == -1:
                 time.sleep(1)
             else:
+                complete = False
                 msgs = [ I2C.Message([0x01, page]), I2C.Message([reg, val]) ]
-                try:
-                    self.i2c.transfer(Si5382Addr, msgs)
-                except I2CError as e:
-                    print(f"I2C error while programming Si5382: {msgs} {e}")
+                
+                transfer_harder(msgs)
 
