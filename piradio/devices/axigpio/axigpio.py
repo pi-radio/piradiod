@@ -37,7 +37,6 @@ class GPIOPin(CommandObject):
     def val(self):
         with open(self.valpath, "r") as f:
             s = f.read().strip()
-            print(s)
             return int(s)
 
     @val.setter
@@ -57,12 +56,7 @@ class InputPin(CommandObject):
 
     @cmdproperty
     def val(self):
-        retval = self.line.get_value()
-
-        if retval != 0:
-            print(retval)
-
-        return retval
+        return self.line.get_value()
         
 class OutputPin(CommandObject):
     def __init__(self, ctrl, n):
@@ -101,7 +95,7 @@ class AXI_GPIO(CommandObject):
 
         self.pins = {}
         
-        class Inputs:
+        class Inputs(CommandObject):
             def __getitem__(cls, n):
                 if n in self.pins:
                     if not isinstance(self.pins[n], InputPin):
@@ -111,7 +105,7 @@ class AXI_GPIO(CommandObject):
                 self.pins[n] = InputPin(self, n)
                 return self.pins[n] 
 
-        class Outputs:
+        class Outputs(CommandObject):
             def __getitem__(cls, n):
                 if n in self.pins:
                     if not isinstance(self.pins[n], OutputPin):
@@ -120,17 +114,9 @@ class AXI_GPIO(CommandObject):
 
                 self.pins[n] = OutputPin(self, n)
                 return self.pins[n] 
-                
-        self._inputs = Inputs()
-        self._outputs = Outputs()        
 
-    @property
-    def inputs(self):
-        return self._inputs
-
-    @property
-    def outputs(self):
-        return self._outputs
+        self.children.inputs = Inputs()
+        self.children.outputs = Outputs()
     
     def __getitem__(self, n):
         return self.pins[n]

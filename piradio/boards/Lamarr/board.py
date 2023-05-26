@@ -14,7 +14,7 @@ from piradio.devices import Renesas_8T49N240, LMX2595Dev
 from piradio.devices import AXI_GPIO
 from piradio.devices import HMC6300, HMC6301
 from piradio.devices.gpiospi import GPIOSPIController
-from piradio.util import MHz, GHz
+from piradio.util import Freq, MHz, GHz
 from piradio.devices import LTC5594Dev
 from piradio.zcu111 import zcu111
 
@@ -46,30 +46,12 @@ class Lamarr(CommandObject):
         self.children.HMC6301 = [ HMC6301(self.spi.get_device(self.gpio.outputs[4+i])) for i in range(8) ]
         self.children.HMC6300 = [ HMC6300(self.spi.get_device(self.gpio.outputs[12+i])) for i in range(8) ]        
 
+        self.lmx_spi = self.spi.get_device(self.gpio.outputs[28])
 
-        lmx_spi = self.spi.get_device(self.gpio.outputs[28])
-
-        print("Programming clock tree and LO...")
-
-        center_frequency = GHz(60)
+        self.mmlo_freq = GHz(60) / 3.5
+        self.children.lo_root = LMX2595Dev("LO Root", self.lmx_spi, f_src=MHz(40), A=self.mmlo_freq, B=self.NCO_freq, Apwr=0, Bpwr=15)
         
-        self.mmlo_freq = center_frequency / 3.5
-
-        print(f"Frequency plan:")
-        print(f"HMC LO freq: {self.mmlo_freq}")
-        print(f"HMC IF freq: {self.HMC_IF_freq} RF LO Freq: {self.HMC_LO_freq} RF freq: {self.HMC_RF_freq}")
-        print(f"On-board IF freq: {self.NCO_freq}")
-        
-        self.children.lo_root = LMX2595Dev("LO Root", lmx_spi, f_src=MHz(40), A=self.mmlo_freq, B=self.NCO_freq, Apwr=0, Bpwr=25)
-
-        for i, adc in enumerate(zcu111.children.rfdc.children.ADC):
-            adc.nco_freq = self.NCO_freq
-
-        for dac in zcu111.children.rfdc.children.DAC:
-            dac.nco_freq = self.NCO_freq
-            
-        self.children.lo_root.program()
-
+        self.tune(GHz(60))
         
         print("Programming LTC5594s...")
         for c in self.LTC5594:
@@ -104,6 +86,28 @@ class Lamarr(CommandObject):
             if r is not None:
                 yield r
 
+    @command
+    def tune(self, f: Freq):
+        print("Programming clock tree and LO...")
+
+        self.mmlo_freq = f / 3.5
+        
+        print(f"Frequency plan:")
+        print(f"HMC LO freq: {self.mmlo_freq}")
+        print(f"HMC IF freq: {self.HMC_IF_freq} RF LO Freq: {self.HMC_LO_freq} RF freq: {self.HMC_RF_freq}")
+        print(f"On-board IF freq: {self.NCO_freq}")
+
+        self.lo_root.tune(self.mmlo_freq, self.NCO_freq)
+
+        for i, adc in enumerate(zcu111.children.rfdc.children.ADC):
+            adc.nco_freq = self.NCO_freq
+
+        for dac in zcu111.children.rfdc.children.DAC:
+            dac.nco_freq = self.NCO_freq
+            
+        self.children.lo_root.program()
+        
+                
     @command
     def blank_spi(self):
         for i in range(10000):

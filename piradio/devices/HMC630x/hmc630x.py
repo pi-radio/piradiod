@@ -13,8 +13,9 @@ class HMC630x(CommandObject):
     def __init__(self, spidev):
         #super().__init__(bus_no, dev_no)
         self.spidev = spidev
-
-    def prolog(self, reg, v):
+ 
+        
+    def prolog(self, reg, v, rw):
         self.spidev.begin()
         
         for i in range(8):
@@ -25,7 +26,7 @@ class HMC630x(CommandObject):
             self.spidev.shift(reg & 1)
             reg >>= 1
 
-        self.spidev.shift(1)
+        self.spidev.shift(rw)
 
         c = self.chip_addr
 
@@ -38,7 +39,7 @@ class HMC630x(CommandObject):
         reg = int(reg)
         v = int(v)
 
-        self.prolog(reg, v)
+        self.prolog(reg, v, 1)
 
         self.spidev.end()
         
@@ -46,7 +47,7 @@ class HMC630x(CommandObject):
     def read_reg(self, reg : int):
         reg = int(reg)
 
-        self.prolog(reg, 0)
+        self.prolog(reg, 0, 0)
 
         self.spidev.dead_cycle()
         

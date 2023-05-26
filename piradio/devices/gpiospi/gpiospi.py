@@ -6,13 +6,8 @@ class GPIOSPIController:
         self.mosi_gpio = mosi_gpio
         self.miso_gpio = miso_gpio
 
-        sck_gpio.dir = "out"
         sck_gpio.val = 0
-
-        mosi_gpio.dir = "out"
         mosi_gpio.val = 0
-        
-        miso_gpio.dir = "in"
 
     def shift(self, bit_out):
         self.mosi_gpio.val = bit_out
@@ -55,6 +50,7 @@ class GPIOSPIDevice:
         time.sleep(0.001)
         
     def begin(self):
+        self.controller.cs_sck = 0
         self.cs_gpio.val = 0
         self.long_delay()
                 

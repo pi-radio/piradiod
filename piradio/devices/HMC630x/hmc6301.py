@@ -12,15 +12,15 @@ class HMC6301(HMC630x):
         self.bb_att1 = 0x0
         self.i_fine_att = 0
         self.q_fine_att = 0
-        self.bb_att2 = 0x3
-        self.bb_amp_hp = 0x11
-        self.bb_amp_lp = 0x10
+        self.bb_att2 = 0x0
+        self.bb_amp_hp = 0x00
+        self.bb_amp_lp = 0x00
         
     @command
     def program(self):
         if self._power:
             self.write_reg(0, 0)
-            self.write_reg(1, 0x10 | (self.bb_att1 << 2))
+            self.write_reg(1, 0x00 | (self.bb_att1 << 2))
         else:
             self.write_reg(0, 0xFF)
             self.write_reg(1, 0xF0 | (self.bb_att1 << 2))
@@ -38,7 +38,7 @@ class HMC6301(HMC630x):
         self.write_reg(7, 0x6D)
 
         # Highest LNA gain
-        self.write_reg(8, 0x80)
+        self.write_reg(8, 0x87)
         
         self.write_reg(9, 0x40)
 

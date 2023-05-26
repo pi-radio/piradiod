@@ -19,6 +19,9 @@ class LTC5594Dev(CommandObject):
         self.write_reg(self.REG_CTRL, 0xFC)
         self.write_reg(self.REG_CTRL, 0xF4)
 
+        #for i in range(16):
+        #    self.write_reg(i, 0x80)
+
         # Set Band, CF1, LF1, CF2
         # 1046-1242 = 1, 31, 3, 31
         band = 1
@@ -28,9 +31,7 @@ class LTC5594Dev(CommandObject):
         self.write_reg(self.REG_LVCM_CF1, (lvcm << 5) | cf1)
         self.write_reg(self.REG_BAND, (band << 7) | (lf1 << 5) | cf2)
 
-        for i in range(16):
-            self.write_reg(i, 0x80)
-
+            
     @command
     def dump_regs(self):
         for i in range(0x18):
