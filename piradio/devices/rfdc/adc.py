@@ -34,6 +34,7 @@ class ADCBlock(CommandObject):
     
     @cmdproperty
     def nco_freq(self):
+        print(f"Get NCO freq {self.tile} {self.block}")
         upp = self.DRP.NCO_FQWD_UPP
         mid = self.DRP.NCO_FQWD_MID
         low = self.DRP.NCO_FQWD_LOW
@@ -53,7 +54,9 @@ class ADCBlock(CommandObject):
         self.DRP.NCO_FQWD_UPP = (v >> 32) & 0xFFFF
 
         self.DRP.NCO_UPDT = (self.DRP.NCO_UPDT & ~self.NCO_UPDATE_MODE_MASK) | self.EVENT_SOURCE_IMMEDIATE
-        self.DRP.ADC_UPDATE_DYN |= self.UPDATE_EVENT_NCO
+        self.DRP.ADC_UPDATE_DYN = (self.DRP.ADC_UPDATE_DYN & ~0xF) |  self.UPDATE_EVENT_NCO
+        self.DRP.ADC_UPDATE_DYN = 1
+        
 
 
 class ADCTile:

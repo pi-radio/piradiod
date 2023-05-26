@@ -30,12 +30,12 @@ class Eder(StateMachine):
     TX = State("TX")
     LOOP = State("LOOP")
     
-    def __init__(self, spi, _N, i2c=None):
+    def __init__(self, spi, N, i2c=None):
         super().__init__()
         self.task_group = TaskGroup()
-        
+        self.N = N
         self.spi = spi
-
+        
         self.eeprom = EEPROM(i2c)
         
         attach_registers(self)
@@ -47,6 +47,7 @@ class Eder(StateMachine):
         elif self.cid == self.CID_EDER_B_MMF:
             output.info("Found Eder B MMF")
         else:
+            self.spi = None
             raise EderChipNotFoundError(f"Unknown SIVERS chip {self.cid}")
 
         self.ref = FreqRef(self)
@@ -57,10 +58,11 @@ class Eder(StateMachine):
         
     def __del__(self):
         if self.spi is not None:
-            self.regs.trx_ctrl = clear_bits(0xB)
+            self.SX()
+            self.regs.trx_ctrl = clear_bits(0x3)
         
     def __setattr__(self, name, value):
-        if hasattr(self, "regs") and name in self.regs.registers:
+        if "regs" in self.__dict__ and name in self.regs.registers:
             raise RuntimeError("Attempt to assign to variable with reg name on object")
 
         return super().__setattr__(name, value)
@@ -77,10 +79,31 @@ class Eder(StateMachine):
             self.INIT()
             
         self.pll.freq = v
-        self.rx.freq = v
-        self.tx.freq = v
-        
+        self.rx.load_weights()
+        self.tx.load_weights()
 
+    @command
+    def steer(self, angle : float):
+        if self.cur_state == self.TX:
+            self.tx.azimuth = angle
+        elif self.cur_state == self.RX:
+            self.rx.azimuth = angle
+        else:
+            output.warn(f"Not in mode to steer {self.cur_state}")
+            
+    @command
+    def omni(self):
+        if self.cur_state == self.TX:
+            self.tx.omni = True
+        elif self.cur_state == self.RX:
+            self.rx.omni = True
+        else:
+            output.warn(f"Not in mode to steer {self.cur_state}")
+
+    @command
+    def tx_status(self):
+        self.tx.pdet_dump()
+            
     @cmdproperty
     def Tj(self):
         return KtoC(self.adc.tj)
@@ -148,7 +171,7 @@ class Eder(StateMachine):
     @transition(LOOP, SX)
     def LOOP_to_SX(self):
         self.regs.trx_ctrl = 0
-
+        self.tx.loopback_off()
         
     @transition(SX, RX)
     def SX_to_RX(self):
@@ -169,16 +192,26 @@ class Eder(StateMachine):
     def TX_to_SX(self):
         self.regs.trx_ctrl = clear_bits(2)
 
-
+    @command
+    def get_tx_pwr(self):
+        print(" ".join([f"{i:03x}" for i in self.adc.tx_pdet]))
+        print(" ".join([f"{i}" for i in self.adc.tx_pdet]))
+        print(" ".join([f"{i:03x}" for i in self.adc.tx_env_pdet]))
+        print(" ".join([f"{i}" for i in self.adc.tx_env_pdet]))
+        
     def monitor(self):
         if self.Tj > 85:
-            print("Overtemp event on radio {self.N}: {self.Tj:.1f} C")
+            print(f"Overtemp event on radio {self.N}: {self.Tj:.1f} C")
             self.SX()
                     
     def bringup_tests(self):
         self_test(eder)
         agc_test(eder)
 
-
+    def post_transition(self, start, end):
+        print(f"Transition: {start}=>{end}")
+        print(f"trx_ctrl: {self.regs.trx_ctrl}")
+        print(f"tx_ctrl: {self.regs.tx_ctrl}")
+        
     
         

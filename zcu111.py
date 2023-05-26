@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
-from piradio.zcu111 import zcu111
+from piradio.zcu111 import ZCU111ClockTree
 
-zcu111.program()
+ct = ZCU111ClockTree()
+
+ct.program()
+

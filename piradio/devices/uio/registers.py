@@ -53,7 +53,7 @@ class UIOWindowSet:
         self.obj = obj
 
     def __getitem__(self):
-        
+        pass
         
     def __get__(self, obj, objtype):
         return self.__class__(self.n, self.offset, self.size, self.stride, obj)

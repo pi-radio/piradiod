@@ -51,5 +51,5 @@ class DACBlock(CommandObject):
         self.DRP.NCO_FQWD_UPP = (v >> 32) & 0xFFFF
 
         self.DRP.NCO_UPDT = (self.DRP.NCO_UPDT & ~self.NCO_UPDATE_MODE_MASK) | self.EVENT_SOURCE_IMMEDIATE
-        self.DRP.ADC_UPDATE_DYN |= self.UPDATE_EVENT_NCO
+        self.DRP.DAC_UPDATE_DYN |= self.UPDATE_EVENT_NCO
 

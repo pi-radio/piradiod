@@ -1,4 +1,5 @@
 from functools import reduce
+from piradio.output import output
 
 def ffs(x):
     return (x&-x).bit_length()-1
@@ -16,9 +17,17 @@ def decode(v, n=2):
 
 class Registers:
     registers = dict()
-    def __init__(self, obj):
+    def __init__(self, obj, log_registers):
         self.spi = obj.spi
+        self.log_registers = log_registers
 
+    def xfer(self, x):
+        result = obj.spi.xfer(x)
+
+        if self.log_registers:
+            output.print("SPI: {x}=>{result}")
+
+        return result
 
 class AbstractRegister:
     SPI_CMD_WRITE  = 0
@@ -49,7 +58,9 @@ class AbstractRegister:
         return v
             
     def __set__(self, obj, x):
-        #print(f"Abstract set {self.name} {x}")
+        if obj.log_registers:
+            output.print(f"Register Set {self.name} {x}")
+            
         cmd = self.SPI_CMD_WRITE
         if isinstance(x, bitop):
             cmd = x.cmd
@@ -76,6 +87,7 @@ class BFAzEntry:
     def __init__(self, spi, addr):
         self.spi = spi
         self.addr = addr
+        self.log_registers = False
 
     def set(self, v):
         assert len(v) == 32
@@ -153,8 +165,8 @@ def modify_bits(test, value):
     else:
         return clear_bits(value)
     
-def attach_registers(obj):
-    obj.regs = Registers(obj)
+def attach_registers(obj, log_registers=False):
+    obj.regs = Registers(obj, log_registers)
             
 def generate_fake():
     l = [ 0 for i in range(1 << 13) ]

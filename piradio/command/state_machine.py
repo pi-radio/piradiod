@@ -39,10 +39,18 @@ class StateInst:
         return self.state.out_trans
         
     def __call__(self, obj=None):
+        if self.state == self.obj.cur_state:
+            return
+        
         p = self.state.find_path_from(self.obj.cur_state)
 
+        if p is None:
+            raise RuntimeError(f"No path from state {self.obj.cur_state} to {self.state}")
+
         for s in p[1:]:
+            start = self.obj.cur_state
             self.obj.cur_state.out_trans[s.name].invoke(self.obj)
+            self.obj.post_transition(start, s)
                 
     def __repr__(self):
         return f"<State {self.state.name}@{self.obj}>"
@@ -128,7 +136,9 @@ class StateMachine(CommandObject, metaclass=StateMachineMetaclass):
     @property
     def cur_state(self):
         return self._state
-        
+
+    def post_transition(self, start_state, end_state):
+        pass
 
 def transition(from_state, to_state):
     def make_transition(f):

@@ -34,28 +34,28 @@ class Trigger(UIO):
             DELAY_MAP_BASE = 3
 
             def __getitem__(self, n):
-                return self.trigger.csr[self.DELAY_MAP_BASE + n]
+                return self.trigger.csr[4 * (self.DELAY_MAP_BASE + n)]
 
             def __setitem__(self, n, v):
-                self.trigger.csr[self.DELAY_MAP_BASE + n] = v
+                self.trigger.csr[4 * (self.DELAY_MAP_BASE + n)] = v
 
         class EnableMap:
             trigger = self
 
             def __getitem__(self, n):
-                return True if (self.trigger.csr[1] >> n) & 1 == 1 else False
+                return True if (self.trigger.csr[4 * 1] >> n) & 1 == 1 else False
 
             def __setitem__(self, n, v):
                 if v:
-                    self.trigger.csr[1] |= (1 << n)
+                    self.trigger.csr[4 * 1] |= (1 << n)
                 else:
-                    self.trigger.csr[1] &= ~(1 << n)
+                    self.trigger.csr[4 * 1] &= ~(1 << n)
 
         self._delays = DelayMap()
         self._enables = EnableMap()
 
         for i in range(16):
-            self.csr[3 + i] = 1
+            self.csr[4 * (3 + i)] = 1
 
         
     @property
@@ -68,11 +68,11 @@ class Trigger(UIO):
 
     @command
     def enable_all(self):
-        self.csr[1] = 0xFFFFFFFF
+        self.csr[4 * 1] = 0xFFFFFFFF
 
     @command
     def trigger(self):
-        self.csr[2] = 0
+        self.csr[4 * 2] = 0
 
     @command
     def status(self):

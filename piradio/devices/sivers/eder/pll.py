@@ -131,7 +131,7 @@ class PLL(EderChild):
 
     @freq.setter
     def freq(self, f):
-        output.info(f'Setting frequency to {f} GHz'.format(f/1e9))
+        output.info(f'Setting frequency to {f/1e9} GHz')
 
         self.vco.set_bias_vco_x3(f)
 
@@ -154,7 +154,9 @@ class PLL(EderChild):
             self.vtune_th=int((T*67e-4+1.066)*255/self.dac_ref)
             
         self.regs.vco_vtune_atc_lo_th = vtune_th
-        
+
+        divn = self.freq_to_divn(f)
+
         self.regs.pll_divn = self.freq_to_divn(f)
         
         self.regs.vco_tune_ctrl = toggle_bits(0x02)
@@ -163,15 +165,15 @@ class PLL(EderChild):
         # Increased to 2 ms from 0.5 ms
         time.sleep(0.002)
         
-        vco_tune_status = self.regs.vco_tune_status
-        vco_tune_det_status = self.regs.vco_tune_det_status
-        vco_tune_freq_cnt = self.regs.vco_tune_freq_cnt
-        
         if self.eder.cid == self.eder.CID_EDER_B_MMF:
             #Set pll_chp to 0x00 if digtune between 28 and 64 or 92 and 128
             digtune=self.regs.vco_tune_dig_tune
             if (0x5C < digtune) or (0x1D < digtune < 0x40):
                 self.regs.pll_chp = clear_bits(0x03)
+
+        vco_tune_status = self.regs.vco_tune_status
+        vco_tune_det_status = self.regs.vco_tune_det_status
+        vco_tune_freq_cnt = self.regs.vco_tune_freq_cnt
                 
         # Check if tuning has succeeded
         if ((vco_tune_status != 0x7e) or
@@ -182,7 +184,11 @@ class PLL(EderChild):
         else:
             self.regs.vco_tune_ctrl = set_bits(0x04)
 
+        readback = self.regs.pll_divn
+        
         self._freq = self.divn_to_freq(self.regs.pll_divn)
+
+        print(f"Tuned to frequency: {self._freq}")
             
         #self.monitor('Vtune')
         

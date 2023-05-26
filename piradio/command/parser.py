@@ -169,15 +169,27 @@ class Command:
     def __init__(self, obj, name):
         self.obj = obj
         try:
-            self.func = partial(getattr(obj, name))
+            self.func = partial(getattr(obj, name))            
         except Exception as e:
-            print(f"Failed to get partial: {obj} {name} {self.obj.picommands[name]}")
+            output.error(f"Failed to get partial: {obj} {name} {self.obj.picommands[name]}")
             raise e
             
     def push_arg(self, arg):
-        self.func = partial(self.func, arg)
-        return self
+        try:
+            sig = inspect.signature(self.func)
+            _, param = next(iter(sig.parameters.items()))
+            print(param)
+
+            if param.annotation != inspect.Parameter.empty:
+                arg = param.annotation(arg)
         
+            self.func = partial(self.func, arg)
+        
+            return self
+        except Exception as e:
+            print(f"Error pusing arg: {arg} {sig}")
+            traceback.print_exception(e)
+            
     def __call__(self):
         self.func()
         
@@ -289,7 +301,7 @@ class PCCompleter(Completer):
                 for c in r.c:
                     yield Completion(c, start_position=-r.l)
         except Exception as e:
-            print(f"Completer exception {e}")
+            output.error(f"Completer exception {e}")
                     
 class PCValidator(Validator):
     def __init__(self, parser):
@@ -340,7 +352,9 @@ class PCLexer(Lexer):
                 
             return retval        
         except UnexpectedCharacters as e:
-            return [ ('#ffffff', t.value) for t in e.token_history ] + [('#ff0000', doc.lines[lno][e.column-1:])]
+            if e.token_history is not None:
+                return [ ('#ffffff', t.value) for t in e.token_history ] + [('#ff0000', doc.lines[lno][e.column-1:])]
+            return [ ('#ff0000', doc.lines[lno]) ]
         except Exception as e:
             return [ ('#ff0000', doc.lines[lno]) ]
         

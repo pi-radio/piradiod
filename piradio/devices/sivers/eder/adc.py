@@ -5,6 +5,10 @@ from piradio.output import output
 from piradio.devices.sivers.eder.child import EderChild
 from .registers import set_bits, clear_bits, modify_bits, toggle_bits
 
+def sign_extend(x, bits):
+    sign_bit = 1 << (bits - 1)
+    return (value & (sign_bit - 1)) - (value & sign_bit)
+
 class DieTemp:
     def __init__(self, adc):
         self.adc = adc
@@ -42,7 +46,7 @@ class ADCMux:
         assert self.mux_attr is not None
 
         if self.mux2 is not None:
-            return ADCMux(self.mux1, self.mux_addr, self.mux2 + v)
+            return ADCMux(self.mux1, self.mux_attr, self.mux2 + v)
 
         return ADCMux(self.mux1, self.mux_attr, v)
 
@@ -209,7 +213,8 @@ class ADC(EderChild):
             def __init__(self, adc):
                 self.adc = adc
                 self.eder = adc.eder
-
+                self.ready = False
+                
                 adc.lock()
 
                 assert self.adc.regs.adc_ctrl & 0x80 == 0
@@ -218,7 +223,7 @@ class ADC(EderChild):
 
                 if val.mux_attr is not None:
                     assert val.mux2 is not None
-                    setattr(adc.regs, val.mux_attr, val.mux2)
+                    setattr(adc.regs, val.mux_attr, val.mux2 | 0x80)
                     
 
                 self.adc.regs.adc_num_samples = l2samps
@@ -229,12 +234,17 @@ class ADC(EderChild):
                 self.adc.unlock()
                 
             def wait(self):
+                if self.ready:
+                    return
+                
                 i = 0
                 while self.adc.regs.adc_ctrl & 0x80 == 0:
                     time.sleep(0.001)
                     i += 1
                     if i == 1000:
                         raise RuntimeError("Timeout on ADC conversion")
+
+                self.ready = True
                 
             @property
             def mean(self):
@@ -273,6 +283,22 @@ class ADC(EderChild):
         retval = [ self.acquire(self.pdet[i], 7).mean for i in range(0, 16) ]
 
         self.unlock()
+
+        retval = [ sign_extend(x, 12) for x in retval ]
                 
+        return retval
+
+    @property
+    def tx_env_pdet(self):
+        retval = []
+
+        self.lock()
+
+        retval = [ self.acquire(self.env_pdet[i], 7).mean for i in range(0, 16) ]
+
+        self.unlock()
+
+        retval = [ sign_extend(x, 12) for x in retval ]
+        
         return retval
 

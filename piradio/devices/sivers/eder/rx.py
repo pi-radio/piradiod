@@ -15,50 +15,49 @@ class RXChannel(EderChild):
 
     def drv_cal(self):
         found = False
+
+        def meas_drv_offset(v):
+            self.drv_offset = v
+            return self.dco_diff
+
+        self.start_dco = -31
+        self.end_dco = 31
+
+        self.drv_offset = self.start_dco
+        self.start_meas = self.dco_diff
+
+        self.drv_offset = self.end_dco
+        self.end_meas = self.dco_diff
+
+        if np.sign(self.start_meas) == np.sign(self.end_meas):
+            output.warn("Unable to adjust RX DCO Drive control -- out of range")
+            
+            if abs(self.start_meas) < abs(self.end_meas):
+                self.drv_off = self.start_dco
+            else:
+                self.drv_off = self.end_dco
+
+            return
         
-        for dco_sign in [ 0, (1 << 5) ]:
-            self.drv_offset = dco_sign
-            v0 = self.dco_diff
-            self.drv_offset = (dco_sign) | 0x1F
-            v1 = self.dco_diff
-
-            if np.sign(v0) != np.sign(v1):
-                found = True
-                break
-
-        if not found:
-            raise RuntimeError("RX DRV DCO calibration failed")
-
-        self.start_dco = 0
-        self.end_dco = 0x1F
-
-        self.drv_offset = (dco_sign) | self.start_dco
-        self.start_diff = self.dco
-        
-        self.drv_offset = dco_sign | self.end_dco
-        self.end_diff = self.dco
-
         while abs(self.end_dco - self.start_dco) > 1:
             mean_dco = int(round((self.start_dco + self.end_dco) / 2))
-            self.drv_offset = dco_sign | mean_dco
-            diff = self.dco
+            self.drv_offset = mean_dco
+            mean_meas = self.dco_diff
 
-            if np.sign(diff) == np.sign(self.start_diff):
-                self.start_dco = mean_dco
-                self.start_diff = diff
-            if np.sign(diff) == np.sign(self.end_diff):
+            if np.sign(mean_meas) != np.sign(self.start_meas):
                 self.end_dco = mean_dco
-                self.end_diff = diff
-            elif diff == 0:
-                return
+                self.end_meas = mean_meas
+            elif np.sign(mean_meas) != np.sign(self.end_meas):
+                self.start_dco = mean_dco
+                self.start_meas = mean_meas
             else:
-                raise RuntimeError("DCO search broken")
+                raise RuntimeError("Drive control search broken")
 
-        if abs(self.end_diff) < abs(self.start_diff):
-            self.drv_offset = dco_sign | self.end_dco
+        if abs(self.start_meas) < abs(self.end_meas):
+            self.drv_offset = self.start_dco
         else:
-            self.drv_offset = dco_sign | self.start_dco
-
+            self.drv_offset = self.end_dco
+            
 
     def dco_cal(self):
         found = False
@@ -86,7 +85,7 @@ class RXChannel(EderChild):
         self.dco_reg = mult | shift | self.start_dco
         self.start_diff = self.dco
         
-        self.drv_reg = mult | shift | self.end_dco
+        self.dco_reg = mult | shift | self.end_dco
         self.end_diff = self.dco
 
         while abs(self.end_dco - self.start_dco) > 1:
@@ -130,12 +129,18 @@ class RX_I(RXChannel):
     
     @property
     def drv_offset(self):
-        return (self.regs.rx_drv_dco >> 14) & 0x3F
+        v = (self.regs.rx_drv_dco >> 14) & 0x3F
+
+        if (v & 32):
+            return -(v & 0x1F)
+
+        return (v & 0x1F)
 
     @drv_offset.setter
     def drv_offset(self, v):
+        b = (abs(v) & 0x1F) | (0x20 if v > 0 else 0)
         self.regs.rx_drv_dco = clear_bits(0x3F << 14)
-        self.regs.rx_drv_dco = set_bits((v & 0x3F) << 14)
+        self.regs.rx_drv_dco = set_bits(b << 14)
 
     @property
     def meas(self):
@@ -156,8 +161,9 @@ class RX_Q(RXChannel):
 
     @drv_offset.setter
     def drv_offset(self, v):
+        b = (abs(v) & 0x1F) | (0x20 if v > 0 else 0)
         self.regs.rx_drv_dco = clear_bits(0x3F << 8)
-        self.regs.rx_drv_dco = set_bits((v & 0x3F) << 8)
+        self.regs.rx_drv_dco = set_bits(b << 8)
 
     @property
     def meas(self):
@@ -167,7 +173,6 @@ class RX(Beamformer):
     
     def __init__(self, eder):
         super().__init__(eder, RXWeights)
-        self._freq = 0
         self._omni = True
 
         self.I = RX_I(self)
@@ -190,11 +195,9 @@ class RX(Beamformer):
         self.regs.bias_ctrl = set_bits(0x7F)
         self.regs.bias_lo = set_bits(0x22)
 
-        gain = ((0,0),(1,1),(1,1),(7,7))        
-
-        gain = ((6, 6), (7, 7), (1, 1), (7, 7))
-
-        gain = ((6, 6), (7, 7), (1, 1), (15, 15))
+        #gain = ((0, 0), (7, 7), (3, 3), (15, 15))
+        gain = ((0, 0), (7, 7), (7, 7), (15, 15))
+        #gain = ((0, 0), (15, 15), (15, 15), (15, 15))
         
         self.regs.rx_bb_biastrim = 0x00
         self.regs.rx_gain_ctrl_mode = 0x13
@@ -212,7 +215,7 @@ class RX(Beamformer):
         self.regs.rx_bb_q_dco = 0x40
         
         #bfrf_gain = self.regs.rx_gain_ctrl_bfrf
-
+        
         self.set_gain(gain)
 
         self.I.drv_cal()
@@ -225,8 +228,11 @@ class RX(Beamformer):
         self.Q.dco_cal()
         
         self.regs.trx_rx_on = 0x1FFFFF
-
+        self.regs.trx_rx_off = 0x000000
+        
         self.set_gain(gain)
+
+        self.regs.trx_ctrl = 0x0
         
         output.info("RX startup complete")
         self.omni = True
@@ -289,105 +295,6 @@ class RX(Beamformer):
 
     
 """
-    def dco_split(self, rx_drv_dco_reg):
-        return {'sign':(rx_drv_dco_reg>>5)&0x1, 'offset':rx_drv_dco_reg&0x1f}
-    
-    def dco(self, sign, offset):
-            return ((sign&0x1)<<5) + offset&0x1f
-
-
-    def rx_drv_dco_cal(self, iq, mtype='sys'):
-        if iq == 'i':
-            diff = 'idiff'
-        elif iq == 'q':
-            diff = 'qdiff'
-        else:
-            print ('Invalid argument.')
-            return
-
-        sign = lambda x: x and (1, -1)[x < 0]
-
-        selected_sign = -1
-
-        START = 0
-        MID = 1
-        END = 2
-
-        for offset_sign in range(0,2):
-            self.set_drv_offset(iq, (offset_sign<<5))
-            measured_values_0 = self.iq_meas.meas(meas_type=mtype)
-            self.set_drv_offset(iq, (offset_sign<<5)|0x1f)
-            measured_values_1 = self.iq_meas.meas(meas_type=mtype)
-            if sign(measured_values_0[diff]) != sign(measured_values_1[diff]):
-                selected_sign = offset_sign
-                break
-
-        if selected_sign == -1:
-            self.logger.log_error('RX DRV DCO calibration failed!',2)
-            return 0
-
-        rx_drv_dco = [0,0,0]
-        dco_diff = [0,0,0]
-
-        rx_drv_dco[START] = 0
-        rx_drv_dco[END] = 0x1F
-
-        average = (rx_drv_dco[START] + rx_drv_dco[END]) / 2
-        rx_drv_dco[MID] = int(round(average, 0))
-
-        self.set_drv_offset(iq, (selected_sign<<5)|rx_drv_dco[START])
-        measured_values = self.iq_meas.meas(meas_type=mtype)
-        dco_diff[START] = measured_values[diff]
-
-        self.set_drv_offset(iq, (selected_sign<<5)|rx_drv_dco[MID])
-        measured_values = self.iq_meas.meas(meas_type=mtype)
-        dco_diff[MID] = measured_values[diff]
-
-        self.set_drv_offset(iq, (selected_sign<<5)|rx_drv_dco[END])
-        measured_values = self.iq_meas.meas(meas_type=mtype)
-        dco_diff[END] = measured_values[diff]
-
-        while (abs(rx_drv_dco[START]-rx_drv_dco[MID]) > 1) or (abs(rx_drv_dco[MID]-rx_drv_dco[END]) > 1):
-            if sign(dco_diff[START]) == sign(dco_diff[MID]):
-                rx_drv_dco[START] = rx_drv_dco[MID]
-                average = (rx_drv_dco[START] + rx_drv_dco[END]) / 2
-                rx_drv_dco[MID] = int(round(average, 0))
-                dco_diff[START] = dco_diff[MID]
-                self.set_drv_offset(iq, (selected_sign<<5)|rx_drv_dco[MID])
-                measured_values = self.iq_meas.meas(meas_type=mtype)
-                dco_diff[MID] = measured_values[diff]
-            elif sign(dco_diff[END]) == sign(dco_diff[MID]):
-                rx_drv_dco[END] = rx_drv_dco[MID]
-                average = (rx_drv_dco[START] + rx_drv_dco[END]) / 2
-                rx_drv_dco[MID] = int(round(average, 0))
-                dco_diff[END] = dco_diff[MID]
-                self.set_drv_offset(iq, (selected_sign<<5)|rx_drv_dco[MID])
-                measured_values = self.iq_meas.meas(meas_type=mtype)
-                dco_diff[MID] = measured_values[diff]
-            else:
-                # mid_dco diff is 0'
-                # Doubble check
-                if dco_diff[MID] == 0:
-                    self.set_drv_offset(iq, (selected_sign<<5)|rx_drv_dco[MID])
-                    break
-                else:
-                    print (iq)
-                    self.logger.log_info('Something went wrong!!!!',2)
-                    return 0
-
-        dco_diff = list(map(abs, dco_diff))
-        i = dco_diff.index(min(dco_diff))
-        self.set_drv_offset(iq, (selected_sign<<5)|rx_drv_dco[i])
-
-        return (selected_sign<<5)|rx_drv_dco[i]
-
-    def run(self, trx_ctrl=0x00, rx_dco_en=0x01, trx_rx_on=0x1E0000, trx_rx_off=0x1E0000, gain=((0,0),0x11,0x11,0x77), verbose=1):
-        if verbose >= 0:
-            self.logger.log_info('Rx DRV DCO calibration')
-        if verbose >= 1:
-            self.logger.log_info('Rx DRV DCO status before calibration start:')
-            self.report()
-
         # Backup register values
         trx_ctrl_save   = self.regs.rd('trx_ctrl')
         rx_dco_en_save  = self.regs.rd('rx_dco_en')

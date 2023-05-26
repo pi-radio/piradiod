@@ -43,16 +43,17 @@ class reg_inst:
 class reg:
     __uio__ = True
     def __init__(self, offset):
+        assert offset & 3 == 0
         self.offset = offset
 
     def __get__(self, obj, objtype):
         print("reg get")
 
     def get(self, obj, name):
-        return obj.csr[self.offset >> 2]
+        return obj.csr[self.offset]
 
     def set(self, obj, name, val):
-        obj.csr[self.offset >> 2] = val
+        obj.csr[self.offset] = val
         
     def attach(self, obj):
         return reg_inst(obj, self.offset)
@@ -72,10 +73,10 @@ class window_inst(RegisterTreeObject):
         return self
 
     def __getitem__(self, n):
-        return self.obj.csr[(self.window.offset >> 2) + n]
+        return self.obj.csr[self.window.offset + n]
 
     def __setitem__(self, n, v):
-        self.obj.csr[(self.window.offset >> 2) + n] = v
+        self.obj.csr[self.window.offset + n] = v
 
     
     def __repr__(self):
@@ -93,7 +94,7 @@ class window(RegisterTreeObject):
         return window_inst(obj, self)
 
     def __repr__(self):
-        return f"<Abstract window {self.offset:x} {self.size:x}>"
+        return f"<Abstract window  {self.offset:x} {self.size:x}>"
         
 class window_array_inst:
     __uio__ = True
@@ -122,6 +123,8 @@ class window_array(RegisterTreeObject):
 
     def __init__(self, offset, size, stride, n, obj=None):
         super().__init__()
+        assert offset & 3 == 0
+        assert size & 3 == 0
         self.offset = offset
         self.size = size
         self.stride = stride
@@ -150,10 +153,14 @@ class UIOMap:
         self.mv32 = self.mv.cast('I')
         
     def __getitem__(self, n):
-        return self.mv32[n]
+        output.debug(f"Reading register @{n:08x}")
+        assert n & 3 == 0        
+        return self.mv32[n >> 2]
 
     def __setitem__(self, n, v):
-        self.mv32[n] = v
+        output.debug(f"Writing {v:08x} to register @{n:08x}")
+        assert n & 3 == 0
+        self.mv32[n >> 2] = v
 
 uint32 = struct.Struct("I")
 
@@ -161,6 +168,7 @@ uint32 = struct.Struct("I")
 class UIO(CommandObject):
     def __init__(self, path, attach=False):
         self.path = path
+        self.debug = False
 
         l = list((self.path / "uio").glob("uio*"))
 
@@ -204,6 +212,7 @@ class UIO(CommandObject):
             with open(p / "size") as f:
                 size = int(f.read().strip(), 16)
 
+            assert offset == 0
             output.debug(f"{p.stem}: 0x{addr:x} 0x{offset:x} 0x{size:x}")
             self.maps.append(UIOMap(self, n, addr, offset, size))
 

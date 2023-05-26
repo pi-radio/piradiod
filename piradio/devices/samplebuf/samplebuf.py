@@ -49,7 +49,7 @@ class Samples:
         self._format = sample_format
        
     def __getitem__(self, n):
-        s = self.sbuf._samples[n]
+        s = self.sbuf._samples[4 * n]
         
         if self._format == IQ_SAMPLES:
             if isinstance(s, list):
@@ -61,7 +61,7 @@ class Samples:
  
     def __setitem__(self, n, v):
         if self._format == IQ_SAMPLES:
-            self.sbuf._samples[n] = ((v[0] & 0xFFFF) << 16) | (v[1] & 0xFFFF) # uint32.unpack(iq.pack(*v))[0]
+            self.sbuf._samples[4 * n] = ((v[0] & 0xFFFF) << 16) | (v[1] & 0xFFFF) # uint32.unpack(iq.pack(*v))[0]
         else:
             raise RuntimeException("Not implemented")
 
@@ -123,31 +123,31 @@ class SampleBuffer(UIO):
 
     @property
     def ctrl_stat(self):
-        return self.csr[1]
+        return self.csr[1 * 4]
         
     @property
     def start_offset(self):
-        return self.csr[2]
+        return self.csr[2 * 4]
 
     @property
     def end_offset(self):
-        return self.csr[3]
+        return self.csr[3 * 4]
 
     @cached_property
     def stream_depth(self):
-        return self.csr[4]
+        return self.csr[4 * 4]
 
     @cached_property
     def size_bytes(self):
-        return self.csr[5]
+        return self.csr[5 * 4]
 
     @property
     def trigger_count(self):
-        return self.csr[6]
+        return self.csr[6 * 4]
 
     @property
     def write_count(self):
-        return self.csr[7]
+        return self.csr[7 * 4]
     
     @cached_property
     def bytes_per_stream_word(self):
@@ -167,31 +167,31 @@ class SampleBuffer(UIO):
 
     @command
     def status(self):
-        print(f"IP id: {self.csr[0]:08x}")
-        print(f"CTRLSTAT: {self.csr[1]:08x}")
-        print(f"START OFFSET: {self.csr[2]:08x}")
-        print(f"END OFFSET: {self.csr[3]:08x}")
-        print(f"STREAM DEPTH: {self.csr[4]:08x}")
-        print(f"SIZE BYTES: {self.csr[5]:08x}")
-        print(f"TRIGGER COUNT: {self.csr[6]:08x}")
-        print(f"WRITE COUNT: {self.csr[7]:08x}")
+        print(f"IP id: {self.csr[4 * 0]:08x}")
+        print(f"CTRLSTAT: {self.csr[4 * 1]:08x}")
+        print(f"START OFFSET: {self.csr[4 * 2]:08x}")
+        print(f"END OFFSET: {self.csr[4 * 3]:08x}")
+        print(f"STREAM DEPTH: {self.csr[4 * 4]:08x}")
+        print(f"SIZE BYTES: {self.csr[4 * 5]:08x}")
+        print(f"TRIGGER COUNT: {self.csr[4 * 6]:08x}")
+        print(f"WRITE COUNT: {self.csr[4 * 7]:08x}")
     
     @command
     def one_shot(self, v : bool = True):
         if v:
-            self.csr[1] = (self.csr[1] & ~0x1) | 2
+            self.csr[4 * 1] = (self.csr[4 * 1] & ~0x1) | 2
         else:
-            self.csr[1] = self.csr[1] & ~3
+            self.csr[4 * 1] = self.csr[4 * 1] & ~3
     
     @command
     def trigger(self):
-        self.csr[1] |= 1
+        self.csr[4 * 1] |= 1
 
     @command
     def capture(self):
         self.trigger()
 
-        while(self.csr[1] & 3) not in [0, 1, 2]:
+        while(self.csr[4 * 1] & 3) not in [0, 1, 2]:
             time.sleep(0.001)
 
         return self.array
@@ -223,7 +223,7 @@ class SampleBuffer(UIO):
     @property
     def array(self):
         if self.sample_format == IQ_SAMPLES:
-            v = np.array([ self.samples[i] for i in range(self.start_sample, self.end_sample) ]) / 0x7FFF
+            v = np.array([ self.samples[4 * i] for i in range(self.start_sample, self.end_sample) ]) / 0x7FFF
             
             return v[...,0] + 1j * v[...,1]
         else:
@@ -240,7 +240,7 @@ class SampleBuffer(UIO):
             v = zip(rearr, imarr)
             
             for i, s in enumerate(v):
-                self.samples[i] = s
+                self.samples[4 * i] = s
             
             
     

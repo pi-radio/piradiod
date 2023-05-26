@@ -24,6 +24,12 @@ class PiRadio_NRT_XMLRPC(xmlrpc.XMLRPC):
         self.output_samples = [ SampleBufferOut(i) for i in range(8) ]
         self.trigger = Trigger()
 
+        for s in self.input_samples:
+            s.one_shot(True)
+
+        for s in self.output_samples:
+            s.one_shot(False)
+            
         super().__init__(allowNone=True)
         
     def xmlrpc_get_samples(self, direction, n):

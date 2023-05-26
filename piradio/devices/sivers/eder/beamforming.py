@@ -5,20 +5,19 @@ class Beamformer(EderChild):
         super().__init__(eder)
         self._book = book
         self._omni = True
-        self._freq = 0.0
         self._azimuth = 0.0
         self._table = self._book[0]
         self.load_weights()
         
     def load_weights(self):
+        self._table = self._book[self.freq]
         for i, wv in enumerate(self._table.wvecs):
             self.beamweights_reg[i].set(wv.weights)
-                
+            
     def update_beamformer(self):
-        self._table = self._book[self._freq]
         self._index = self._table.get_index(azimuth=self._azimuth, omni=self._omni)
         self.bf_idx_reg = self._index
-
+        
     @property
     def omni(self):
         return self._omni
@@ -40,15 +39,8 @@ class Beamformer(EderChild):
 
     @property
     def freq(self):
-        return self._freq
+        return self.eder.freq
         
-    @freq.setter
-    def freq(self, v):
-        self._freq = v
-        self._table = self._book[self._freq]
-        self.load_weights()
-        
-        self.update_beamformer()
 
         
 class Beambook:
@@ -56,7 +48,9 @@ class Beambook:
         self.table = args
 
     def get_table(self, freq):
-        return min(self.table, key=lambda x: abs(x.freq - freq))
+        freq /= 1e3
+        print(f"Searching for freq {freq}")
+        return min(self.table, key=lambda x: abs(x.freq - freq/1e3))
 
     def __getitem__(self, freq):
         return self.get_table(freq)
@@ -92,9 +86,15 @@ class BeamformingTable:
                 retval += w.to_bytes(2, 'big')
 
         return retval
+
+    def __repr__(self):
+        return f"<Table: freq: {self.freq} " + " ".join([ str(wv) for wv in self.wvecs ]) + ">"
         
 class BeamWeights:
     def __init__(self, weights, azimuth=0.0, omni=False):
         self.weights = weights
         self.azimuth = azimuth
         self.omni = omni
+
+    def __repr__(self):
+        return f"<{self.weights} {self.azimuth} {self.omni}>"

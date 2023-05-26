@@ -33,10 +33,20 @@ from .dac import DACBlock
 
 # BLOCK_BASE gives DRP base
 
-    
+"""
+#define XRFDC_DAC_TILE_DRP_ADDR(X) (0x6000U + (X * 0x4000U))
+#define XRFDC_DAC_TILE_CTRL_STATS_ADDR(X) (0x4000U + (X * 0x4000U))
+#define XRFDC_ADC_TILE_DRP_ADDR(X) (0x16000U + (X * 0x4000U))
+#define XRFDC_ADC_TILE_CTRL_STATS_ADDR(X) (0x14000U + (X * 0x4000U))
+#define XRFDC_CTRL_STATS_OFFSET 0x0U
+#define XRFDC_HSCOM_ADDR 0x1C00U
+#define XRFDC_BLOCK_ADDR_OFFSET(X) (X * 0x400U)
+#define XRFDC_TILE_DRP_OFFSET 0x2000U
+"""    
     
 class BlockDRP(window_array):
-    ADC_UPDATE_DYN:    reg(0x01C) # ADC Update Dynamic Register 
+    ADC_UPDATE_DYN:    reg(0x1C) # ADC Update Dynamic Register
+    DAC_UPDATE_DYN:    reg(0x20)  # DAC Update Dynamic Register
     NCO_FQWD_UPP:      reg(0x94)  # ADC NCO Frequency Word[47:32] Register
     NCO_FQWD_MID:      reg(0x98)  # ADC NCO Frequency Word[31:16] Register
     NCO_FQWD_LOW:      reg(0x9C)  # ADC NCO Frequency Word[15:0] Register
@@ -47,7 +57,7 @@ class BlockDRP(window_array):
     ADC_NCO_PHASE_MOD: reg(0x0A8) # ADC NCO Phase Mode Register
 
     def __init__(self):
-        super().__init__(0x2000, 0x2000, 0x2000, 4)
+        super().__init__(0x2000, 0x400, 0x400, 4)
         
 
 class TileWindow(window_array):

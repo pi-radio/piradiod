@@ -1,3 +1,4 @@
+from piradio.output import output
 from .adc import ADC
 
 class DPMeasurement:

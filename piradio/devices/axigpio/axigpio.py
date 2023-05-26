@@ -46,7 +46,7 @@ class GPIOPin(CommandObject):
             f.write(f"{v}\n")
 
 
-class InputPin:
+class InputPin(CommandObject):
     def __init__(self, ctrl, n):
         config = gpiod.line_request()
         config.consumer = "piradio"
@@ -55,7 +55,7 @@ class InputPin:
         self.line = ctrl.chip.get_line(n)
         self.line.request(config)
 
-    @property
+    @cmdproperty
     def val(self):
         retval = self.line.get_value()
 
@@ -64,7 +64,7 @@ class InputPin:
 
         return retval
         
-class OutputPin:
+class OutputPin(CommandObject):
     def __init__(self, ctrl, n):
         config = gpiod.line_request()
         config.consumer = "piradio"
@@ -73,7 +73,7 @@ class OutputPin:
         self.line = ctrl.chip.get_line(n)
         self.line.request(config)
 
-    @property
+    @cmdproperty
     def val(self):
         return self.line.get_value()
 

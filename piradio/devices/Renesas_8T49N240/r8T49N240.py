@@ -335,6 +335,8 @@ class Renesas_8T49N240(CommandObject):
         if nregs:
             self.write_reg(start_addr, d)
 
+        time.sleep(0.5)
+            
         i = 0
         while not self.locked:
             time.sleep(0.5)

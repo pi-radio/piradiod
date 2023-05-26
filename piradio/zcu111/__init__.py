@@ -1,1 +1,1 @@
-from .zcu111 import zcu111
+from .zcu111 import zcu111, ZCU111ClockTree

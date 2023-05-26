@@ -7,12 +7,11 @@ import numpy as np
 import scipy.signal as signal
 from pathlib import Path
 
-from piradio.command import CommandObject, command
+from piradio.command import CommandObject, command, cmdproperty
 from piradio.output import output
 from piradio.devices import SysFS, SPIDev
 from piradio.devices import Renesas_8T49N240, LMX2595Dev
 from piradio.devices import AXI_GPIO
-from piradio.devices import SampleBufferIn, SampleBufferOut
 from piradio.devices import Trigger
 from piradio.devices.sivers import Eder, EderChipNotFoundError
 from piradio.util import MHz
@@ -26,51 +25,54 @@ class Raman(CommandObject):
     def __init__(self):
         print("Initializing C.V. Raman (a.k.a. SDRv2)...")
 
-        NCO_freq = MHz(1000)
+        self._NCO_freq = MHz(1035)
         
         # setup GPIOs
         self.children.gpio = AXI_GPIO("pl_gpio")
 
-        self.children.input_samples = [ SampleBufferIn(i) for i in range(8) ]
-        self.children.output_samples = [ SampleBufferOut(i) for i in range(8) ]
-
-        self.children.trigger = Trigger()
-
         print("Resetting board...")
 
-        self.children.reset = self.children.gpio[0]
+        self.children.reset = self.gpio.outputs[0]
 
-        self.children.reset.dir = "out"
-        self.children.reset.val = 0
+        self.reset.val = 0
         time.sleep(0.25)
-        self.children.reset.val = 1
+        self.reset.val = 1
         time.sleep(0.25)
 
         print("Programming clock tree and LO...")
         
         self.children.clk_root = Renesas_8T49N240()
 
-        self.children.clk_root.program()
+        self.clk_root.program()
         
-        self.children.lo_root = LMX2595Dev("LO Root", 2, 24, f_src=MHz(45), A=NCO_freq, B=NCO_freq, Apwr=15, Bpwr=15)
+        self.children.lo_root = LMX2595Dev("LO Root", SPIDev(2, 24), f_src=MHz(45), A=self.NCO_freq, B=self.NCO_freq, Apwr=20, Bpwr=20)
 
-        for i, adc in enumerate(zcu111.children.rfdc.children.ADC):
-            adc.nco_freq = NCO_freq
+        for i, adc in enumerate(zcu111.rfdc.ADC):
+            print(f"Cur ADC {i} NCO Freq: {adc.nco_freq}")
+            adc.nco_freq = self.NCO_freq
 
-        for dac in zcu111.children.rfdc.children.DAC:
-            dac.nco_freq = NCO_freq
-
+        for i, dac in enumerate(zcu111.rfdc.DAC):
+            print(f"Cur DAC {i} NCO Freq: {dac.nco_freq}")
+            dac.nco_freq = self.NCO_freq
             
-        self.children.lo_root.program()
-
-        print("Detecting radios...")
+        self.lo_root.program()
 
         self.children.radios = [ None ] * 8
         
+        print("Detecting radios...")
+
+        self.detect_radios()
+        
+    @command
+    def detect_radios(self):
         for card in range(4):
-            for radio in range(2):                
+            for radio in range(2):
+                n =  2*card + radio
+
+                if self.children.radios[n] is not None:
+                    continue
+                
                 try:
-                    n =  2*card + radio
                     eder = Eder(SPIDev(2, 6 * card + 2 * radio + 1, mode=0), n)
                     print(f"Found radio {n}")
                     self.children.radios[n] = eder
@@ -87,6 +89,27 @@ class Raman(CommandObject):
             if r is not None:
                 yield r
 
+    @cmdproperty
+    def NCO_freq(self):
+        return self._NCO_freq
+
+    @NCO_freq.setter
+    def NCO_freq(self, v):
+        print(f"Changing NCO freq to {v}")
+        self._NCO_freq = v
+        self.children.lo_root.tune(self._NCO_freq, self._NCO_freq)
+
+        for i, adc in enumerate(zcu111.children.rfdc.children.ADC):
+            adc.nco_freq = self._NCO_freq
+
+        for dac in zcu111.children.rfdc.children.DAC:
+            dac.nco_freq = self._NCO_freq
+
+    @command
+    def listen(self, n : int):
+        self.children.radios[n].RX()
+        self.children.input_samples[n].monitor
+            
     @command
     def TX_test(self):
         for r in self.all_radios():
@@ -113,7 +136,18 @@ class Raman(CommandObject):
         
         self.children.output_samples[0].one_shot(False)
         self.children.output_samples[0].trigger()
-                
+
+    @command
+    def send_tone(self, tx_radio : int):
+        self.children.radios[tx_radio].TX()
+
+        os = self.children.output_samples[tx_radio];
+
+        os.fill_sine(os.fundamental_freq * 256)
+
+        os.one_shot(False)
+        os.trigger()
+        
     @command
     def radar_test(self):
         self.children.radios[0].RX()
