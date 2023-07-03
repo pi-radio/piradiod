@@ -144,9 +144,14 @@ class Eder(StateMachine):
 
         self.task_group.create_task(5, self.monitor)
             
-        self.rx.startup()
-        self.tx.startup()
-                    
+        try:
+            self.rx.startup()
+            self.tx.startup()
+        except RuntimeError as e:
+            output.warn("Intialization failed")
+            self.regs.trx_ctrl = 0
+            return
+            
         output.info("Eder initialized")
         
     @transition(INIT, SX)
