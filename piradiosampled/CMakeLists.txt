@@ -48,6 +48,9 @@ add_custom_command(
 # Include generated *.pb.h files
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libsamplebuf/include")
+link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libsamplebuf/build")
+
 # sampled_grpc_proto
 add_library(sampled_grpc_proto
   ${sampled_grpc_srcs}
@@ -56,8 +59,11 @@ add_library(sampled_grpc_proto
   ${sampled_proto_hdrs})
 target_link_libraries(sampled_grpc_proto
   ${_REFLECTION}
-  ${_GRPC_GRPCPP}
-  ${_PROTOBUF_LIBPROTOBUF})
+  grpc++
+  protobuf
+  samplebuf
+  fmt
+  )
 
 # sampled_helper
 #add_library(sampled_helper

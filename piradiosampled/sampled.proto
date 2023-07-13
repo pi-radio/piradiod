@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+message SampleBufferInfo {
+  uint32 nbuffers = 1;
+  uint32 nsamples = 2;
+  float sample_rate = 3;
+}
+
+message SampleData {
+  uint32 buffer_number = 1;
+  uint32 nsamples = 2;
+  string samples = 3; 
+}
+
+message GetSamplesRequest {
+  uint32 buffer_number = 1;
+}
+
+message SetSamplesResponse {
+  int32 result = 1;
+}
+
+service PiRadioSampled {
+  rpc GetSampleInfo(google.protobuf.Empty) returns (SampleBufferInfo);
+  rpc SetSamples(SampleData) returns (SetSamplesResponse);
+  rpc GetSamples(GetSamplesRequest) returns (SampleData);
+}
