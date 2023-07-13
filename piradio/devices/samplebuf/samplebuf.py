@@ -49,7 +49,7 @@ class Samples:
         self._format = sample_format
        
     def __getitem__(self, n):
-        s = self.sbuf._samples[4 * n]
+        s = self.sbuf._samples[n]
         
         if self._format == IQ_SAMPLES:
             if isinstance(s, list):
@@ -61,7 +61,7 @@ class Samples:
  
     def __setitem__(self, n, v):
         if self._format == IQ_SAMPLES:
-            self.sbuf._samples[4 * n] = ((v[0] & 0xFFFF) << 16) | (v[1] & 0xFFFF) # uint32.unpack(iq.pack(*v))[0]
+            self.sbuf._samples[n] = ((v[0] & 0xFFFF) << 16) | (v[1] & 0xFFFF) # uint32.unpack(iq.pack(*v))[0]
         else:
             raise RuntimeException("Not implemented")
 
