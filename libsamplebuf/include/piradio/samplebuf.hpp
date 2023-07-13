@@ -74,7 +74,7 @@ namespace piradio
   
 
 
-  class sample_buffer_base
+  class sample_buffer
   {
   public:
     typedef enum {
@@ -83,11 +83,35 @@ namespace piradio
     } direction_e;
       
     
-    sample_buffer_base(direction_e _direction, int _n);
+    sample_buffer(direction_e _direction, int _n);
 
 
     size_t nbytes() { return csr->size_bytes; }
 
+    friend class view;
+    
+    template <class _sample_type>
+    class view
+    {
+    public:
+      using sample_type = _sample_type;
+      sample_buffer &buffer;
+    
+      view(sample_buffer &_buffer) : buffer(_buffer) {};
+
+      size_t nsamples() { return buffer.nbytes() / sizeof(sample_type); }
+
+      sample_type &operator[](off_t n)
+      {
+	return buffer.maps[1]->buffer<sample_type>()[n];
+      }
+    };
+    
+    template <class sample_type>
+    view<sample_type> get_view()
+    {
+      return view<sample_type>(*this);
+    };
     
   protected:
     direction_e direction;
@@ -104,23 +128,4 @@ namespace piradio
     
     std::string get_uio_name();
   };
-
-  template <class _sample_type>
-  class sample_buffer : public sample_buffer_base
-  {
-  public:
-    using sample_type = _sample_type;
-    
-    sample_buffer(direction_e _direction, int _n) : sample_buffer_base(_direction, _n) {};
-
-    size_t nsamples() { return nbytes() / sizeof(sample_type); }
-
-    sample_type &operator[](off_t n)
-    {
-      return maps[1]->buffer<sample_type>()[n];
-    }
-  };
-
-  typedef sample_buffer<real_sample> real_sample_buffer;
-  typedef sample_buffer<complex_sample> complex_sample_buffer;
 };

@@ -57,7 +57,7 @@ namespace piradio
   }
 
   
-  sample_buffer_base::sample_buffer_base(direction_e _direction, int _n) : direction(_direction), n(_n), fd(-1)
+  sample_buffer::sample_buffer(direction_e _direction, int _n) : direction(_direction), n(_n), fd(-1)
   {    
     const  std::filesystem::path devices_path{"/sys/bus/platform/devices"};
 
@@ -136,7 +136,7 @@ namespace piradio
     }
   }
 
-  std::string sample_buffer_base::get_uio_name()
+  std::string sample_buffer::get_uio_name()
   {
     std::string uio_name;
     

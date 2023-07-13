@@ -5,13 +5,16 @@
 
 int main(int argc, char **argv)
 {
-  piradio::sample_buffer<piradio::complex_sample> tb(piradio::sample_buffer_base::OUT, 0);
+  piradio::sample_buffer tb(piradio::sample_buffer::OUT, 0);
 
-  std::cout << "Number of Samples: " << tb.nsamples() << std::endl;
+  auto v = tb.get_view<piradio::complex_sample>();
+
+  std::cout << "Number of Samples: " << v.nsamples() << std::endl;
+
   
-  for (int i = 0; i < tb.nsamples(); i++) {
+  for (int i = 0; i < v.nsamples(); i++) {
     
     
-    std::cout << fmt::format("{:04x} {:04x}", (uint32_t)tb[i].re, (uint32_t)tb[i].im) << std::endl;
+    std::cout << fmt::format("{:04x} {:04x}", (uint32_t)v[i].re, (uint32_t)v[i].im) << std::endl;
   }
 }

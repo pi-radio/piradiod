@@ -9,35 +9,15 @@
 namespace po = boost::program_options;
 
 template <class sample_type>
-void fill_samples(piradio::sample_buffer<sample_type> &buffer, const sample_type &val)
+void fill_samples(piradio::sample_buffer::view<sample_type> &buffer, const sample_type &val)
 {
   for (int i = 0; i < buffer.nsamples(); i++) {
     buffer[i] = val;
   }
 }
 
-void fill_zeros(piradio::sample_buffer<piradio::real_sample> &buffer)
-{
-  fill_samples(buffer, piradio::real_sample(0));
-}
-
-void fill_zeros(piradio::sample_buffer<piradio::complex_sample> &buffer)
-{
-  fill_samples<piradio::complex_sample>(buffer, piradio::complex_sample(0, 0));
-}
-
-void fill_ones(piradio::sample_buffer<piradio::real_sample> &buffer)
-{
-  fill_samples(buffer, piradio::real_sample(0x7FFF));
-}
-
-void fill_ones(piradio::sample_buffer<piradio::complex_sample> &buffer)
-{
-  fill_samples<piradio::complex_sample>(buffer, piradio::complex_sample(0x7FFF, 0));
-}
-
 template <class sample_type>
-void fill_sine(piradio::sample_buffer<sample_type> &buffer)
+void fill_sine(piradio::sample_buffer::view<sample_type> &buffer)
 {
   double freq = 100e6;
   double sample_rate = 2e9;
@@ -55,20 +35,22 @@ void fill_sine(piradio::sample_buffer<sample_type> &buffer)
 template <class sample_type>
 int parse_for_format(po::variables_map &vm, po::parsed_options &parsed)
 {  
-  piradio::sample_buffer<sample_type> buffer(piradio::sample_buffer_base::OUT, vm["buffer_number"].as<int>());
+  piradio::sample_buffer buffer(piradio::sample_buffer::OUT, vm["buffer_number"].as<int>());
 
+  auto view = buffer.get_view<sample_type>();
+  
   std::string fill_type = vm["fill_type"].as<std::string>();
 
   std::cout << "Fill Type: " << fill_type  << std::endl;
 
   if (fill_type == "zeros") {
-    fill_samples(buffer, sample_type::zero());
+    fill_samples(view, sample_type::zero());
     return 0;
   } else if (fill_type == "ones") {
-    fill_samples(buffer, sample_type::one());
+    fill_samples(view, sample_type::one());
     return 0;
   } else if(fill_type == "sine") {
-    fill_sine(buffer);
+    fill_sine(view);
     return 0;
   }
 
