@@ -23,8 +23,10 @@ public:
   int n_adc_buffers() { return adc_buffers.size(); }
   int n_dac_buffers() { return dac_buffers.size(); }
 
+  std::tuple<grpc::Status, piradio::sample_buffer *> get_buffer(const BufferId &id); 
+  
   virtual grpc::Status GetSampledInfo(grpc::ServerContext* context, const ::google::protobuf::Empty* request, ::SampledInfo* response);
-  virtual grpc::Status GetSampleInfo(grpc::ServerContext* context, const ::SampleBufferInfoQuery* request, ::SampleBufferInfo* response);
+  virtual grpc::Status GetSampleBufferInfo(grpc::ServerContext* context, const ::SampleBufferInfoQuery* request, ::SampleBufferInfo* response);
   virtual grpc::Status SetSamples(grpc::ServerContext* context, const ::SampleData* request, ::SetSamplesResponse* response);
   virtual grpc::Status GetSamples(grpc::ServerContext* context, const ::GetSamplesRequest* request, ::SampleData* response);
 };
@@ -42,6 +44,30 @@ sampled::sampled()
   }
 }
 
+std::tuple<grpc::Status, piradio::sample_buffer *> sampled::get_buffer(const BufferId &id)
+{
+  piradio::sample_buffer *buffer;
+
+  if (id.direction() == ADC) {
+    if (id.buffer_no() >= n_adc_buffers()) {
+      return std::make_tuple(grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Buffer number invalid"), nullptr);
+    }
+
+    buffer = adc_buffers[id.buffer_no()];
+  } else if(id.direction() == DAC) {
+    if (id.buffer_no() >= n_dac_buffers()) {
+      return std::make_tuple(grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Buffer number invalid"), nullptr);
+    }
+
+    buffer = dac_buffers[id.buffer_no()];
+  } else {
+    return std::make_tuple(grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Direction invalid"), nullptr);
+  }
+  
+  return std::make_tuple(grpc::Status::OK, buffer);
+}
+
+
 grpc::Status sampled::GetSampledInfo(grpc::ServerContext* context, const ::google::protobuf::Empty* request, ::SampledInfo* response)
 {
   response->set_n_adc_buffers(n_adc_buffers());
@@ -50,31 +76,21 @@ grpc::Status sampled::GetSampledInfo(grpc::ServerContext* context, const ::googl
   return grpc::Status::OK;
 }
 
-grpc::Status sampled::GetSampleInfo(grpc::ServerContext* context, const SampleBufferInfoQuery* request, ::SampleBufferInfo* response)
+grpc::Status sampled::GetSampleBufferInfo(grpc::ServerContext* context, const SampleBufferInfoQuery* request, ::SampleBufferInfo* response)
 {
+  grpc::Status retval;
   piradio::sample_buffer *buffer;
 
-  if (request->direction() == ADC) {
-    if (request->buffer_no() > n_adc_buffers()) {
-      return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Buffer number invalid");
-    }
-    
-    response->set_nsamples(4096);
-    response->set_sample_rate(2e9);
-  
-    return grpc::Status::OK;
+  std::tie(retval, buffer) = get_buffer(request->buffer_id());
 
-  } else if(request->direction() == DAC) {
-    if (request->buffer_no() > n_dac_buffers()) {
-      return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Buffer number invalid");
-    }
-    response->set_nsamples(4096);
-    response->set_sample_rate(2e9);
-  
-    return grpc::Status::OK;
+  if (buffer == nullptr) {
+    return retval;
   }
+    
+  response->set_nsamples(buffer->get_view<piradio::complex_sample>().nsamples());
+  response->set_sample_rate(2e9);
   
-  return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Direction invalid");
+  return grpc::Status::OK;
 }
 
 grpc::Status sampled::SetSamples(grpc::ServerContext* context, const ::SampleData* request, ::SetSamplesResponse* response)
@@ -84,6 +100,21 @@ grpc::Status sampled::SetSamples(grpc::ServerContext* context, const ::SampleDat
 
 grpc::Status sampled::GetSamples(grpc::ServerContext* context, const ::GetSamplesRequest* request, ::SampleData* response)
 {
+  grpc::Status retval;
+  piradio::sample_buffer *buffer;
+
+  std::tie(retval, buffer) = get_buffer(request->buffer_id());
+
+  if (buffer == nullptr) {
+    return retval;
+  }
+
+  auto view = buffer->get_view<piradio::complex_sample>();
+  
+  *response->mutable_buffer_id() = request->buffer_id();
+  response->set_nsamples(view.nsamples());
+  response->set_samples(buffer->raw_data<uint8_t>(), buffer->nbytes());
+  
   return grpc::Status::OK;
 }
 

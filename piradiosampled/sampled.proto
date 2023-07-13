@@ -12,14 +12,18 @@ enum BufferDirection {
   DAC = 1;
 };
 
+message BufferId {
+  BufferDirection direction = 1;
+  uint32 buffer_no = 2;
+};
+
 message SampledInfo {
   uint32 n_adc_buffers = 1;
   uint32 n_dac_buffers = 2;
 };
 
 message SampleBufferInfoQuery {
-  uint32 direction = 1;
-  uint32 buffer_no = 2;
+  BufferId buffer_id = 1;
 };
 
 message SampleBufferInfo {
@@ -29,14 +33,13 @@ message SampleBufferInfo {
 }
 
 message SampleData {
-  uint32 buffer_dir = 1;
-  uint32 buffer_number = 2;
-  uint32 nsamples = 3;
-  bytes samples = 4; 
+  BufferId buffer_id = 1;
+  uint32 nsamples = 2;
+  bytes samples = 3; 
 }
 
 message GetSamplesRequest {
-  uint32 buffer_number = 1;
+  BufferId buffer_id = 1;
 }
 
 message SetSamplesResponse {

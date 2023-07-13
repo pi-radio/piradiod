@@ -88,8 +88,9 @@ namespace piradio
 
     size_t nbytes() { return csr->size_bytes; }
 
-    friend class view;
-    
+    template <class T>
+    T *raw_data() { return maps[1]->buffer<T>(); }
+        
     template <class _sample_type>
     class view
     {
@@ -103,7 +104,7 @@ namespace piradio
 
       sample_type &operator[](off_t n)
       {
-	return buffer.maps[1]->buffer<sample_type>()[n];
+	return buffer.raw_data<sample_type>()[n];
       }
     };
     
