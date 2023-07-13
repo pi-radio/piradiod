@@ -4,7 +4,7 @@ import time
 from piradio.command import CommandObject, command, cmdproperty
 from piradio.output import output
 from piradio.devices import SPIDev
-from piradio.devices import LTC5586Dev
+from piradio.devices import LTC5594Dev
 from piradio.devices import LMX2595Dev
 from piradio.devices import MAX11300Dev
 from piradio.devices import SampleBufferIn, SampleBufferOut
@@ -48,10 +48,11 @@ class UCSB(CommandObject):
     def __init__(self):
         print("Initializing 140GHz Bringup Board")
 
-        self.children.LTC5586 = [ LTC5586Dev(2, i) for i in range(8) ]
-        self.children.input_samples = [ SampleBufferIn(i) for i in range(8) ]
-        self.children.output_samples = [ SampleBufferOut(i) for i in range(8) ]
+        self.children.LTC5594 = [ LTC5594Dev(SPIDev(2, i)) for i in range(8) ]
 
+        for c in self.LTC5594:
+            c.program()
+        
         self.children.RX = RX()
         self.children.TX = TX()
 
@@ -62,28 +63,20 @@ class UCSB(CommandObject):
         self._udconv_div = 12
 
         # 18 is 10dBm per port
-        self.children.LMX_Eravant = LMX2595Dev("Eravant", 2, 12, f_src=MHz(100), A=self.f_UCSB, B=self.f_UCSB, Apwr=18, Bpwr=0, Apd=False, Bpd=True)
-        self.children.LMX_RX = LMX2595Dev("RX LO", 2, 13, f_src=MHz(100), A=self.f_udconv, B=self.f_udconv, Apwr=0, Bpwr=32)
-        self.children.LMX_TX = LMX2595Dev("TX LO", 2, 14, f_src=MHz(100), A=self.f_udconv, B=self.f_udconv, Apwr=0, Bpwr=32)
+        self.children.LMX_Eravant = LMX2595Dev("Eravant", SPIDev(2, 12), f_src=MHz(100), A=self.f_UCSB, B=self.f_UCSB, Apwr=18, Bpwr=0, Apd=False, Bpd=True)
+        self.children.LMX_RX = LMX2595Dev("RX LO", SPIDev(2, 13), f_src=MHz(100), A=self.f_udconv, B=self.f_udconv, Apwr=0, Bpwr=32)
+        self.children.LMX_TX = LMX2595Dev("TX LO", SPIDev(2, 14), f_src=MHz(100), A=self.f_udconv, B=self.f_udconv, Apwr=0, Bpwr=32)
 
         self.update_frequency_plan()
         self.print_frequency_plan()
-
-        f = self.children.output_samples[0].fundamental_freq * 512
-
-        print(f"Output frequency: {f}")
-
-        self.children.output_samples[0].fill_sine(f)
-                
-        #self.children.output_samples[0].fill_Zadoff_Chu(512, 1, 1)
-        self.children.output_samples[0].one_shot(False)
-        self.children.output_samples[0].trigger()
         
         
     def update_RX(self):
         self.children.LMX_RX.tune(self.f_udconv, self.f_udconv)
         self.children.LMX_RX.program()        
-        zcu111.children.rfdc.children.ADC[0].nco_freq = self.f_udconv
+        for i, adc in enumerate(zcu111.rfdc.ADC):
+            print(f"Cur ADC {i} NCO Freq: {self.f_udconv}")
+            adc.nco_freq = self.f_udconv
 
         # Why do I have to do this again?
         self.children.LMX_RX.Bpwr=24
@@ -93,7 +86,8 @@ class UCSB(CommandObject):
         print(f" Eravant: f_LO: in: {self.f_eravant} out: {self.f_eravant*self.mult_eravant}")
         print(f" UCSB Freq: in: {self.f_UCSB} out: {self.f_UCSB*self.mult_UCSB}")
         print(f" RX VCO: {self.children.LMX_RX.config.VCO.f_out}")
-        print(f" Converter freq: {self.f_udconv} NCO: {zcu111.children.rfdc.children.ADC[0].nco_freq}")
+        print(f" TX VCO: {self.children.LMX_RX.config.VCO.f_out}")
+        print(f" Converter freq: {self.f_udconv} NCO: {zcu111.rfdc.ADC[0].nco_freq}")
         
     @cmdproperty
     def f_center(self):
@@ -133,6 +127,10 @@ class UCSB(CommandObject):
 
     def update_TX(self):
         self.children.LMX_TX.program()
+
+        for i, dac in enumerate(zcu111.rfdc.DAC):
+            print(f"Cur ADC {i} NCO Freq: {self.f_udconv}")
+            dac.nco_freq = self.f_udconv
         
     def update_frequency_plan(self):
         self.update_eravant()

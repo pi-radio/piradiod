@@ -1,3 +1,9 @@
 [submodule "magic_enum"]
 	path = magic_enum
 	url = https://github.com/Neargye/magic_enum.git
+[submodule "protobuf"]
+	path = protobuf
+	url = https://github.com/protocolbuffers/protobuf.git
+	branch = v23.4
+[submodule "protobuf/"]
+	branch = v23.4

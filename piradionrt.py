@@ -3,6 +3,7 @@ import os
 import sys
 import base64
 import click
+import daemonize
 
 from io import BytesIO
 
@@ -106,7 +107,6 @@ class PiRadio_NRT_XMLRPC(xmlrpc.XMLRPC):
 
     
 
-@click.command()
 def piradionrt():
     with open("/sys/class/fpga_manager/fpga0/state", "r") as f:
         if f.read().strip() != "operating":
@@ -121,5 +121,16 @@ def piradionrt():
     reactor.run()
 
 
+pid_file="/var/run/piradionrt.pid"
+    
 if __name__ == '__main__':
-    piradionrt()
+    if os.getuid() != 0:
+        print("Launching self with sudo")
+        os.system(f"sudo {' '.join(sys.argv)}")
+    else:
+        print("Running as root")
+        #daemon = daemonize.Daemonize(app="piradionrt", pid=pid_file, action=piradionrt)
+        #daemon.start()
+        piradionrt()
+        print("Splorch")
+        #piradionrt()
