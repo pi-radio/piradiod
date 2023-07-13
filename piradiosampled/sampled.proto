@@ -2,16 +2,37 @@ syntax = "proto3";
 
 import "google/protobuf/empty.proto";
 
+enum BufferFormat {
+  REAL = 0;
+  COMPLEX = 1;
+};
+
+enum BufferDirection {
+  ADC = 0;
+  DAC = 1;
+};
+
+message SampledInfo {
+  uint32 n_adc_buffers = 1;
+  uint32 n_dac_buffers = 2;
+};
+
+message SampleBufferInfoQuery {
+  uint32 direction = 1;
+  uint32 buffer_no = 2;
+};
+
 message SampleBufferInfo {
-  uint32 nbuffers = 1;
+  BufferFormat format = 1;
   uint32 nsamples = 2;
   float sample_rate = 3;
 }
 
 message SampleData {
-  uint32 buffer_number = 1;
-  uint32 nsamples = 2;
-  string samples = 3; 
+  uint32 buffer_dir = 1;
+  uint32 buffer_number = 2;
+  uint32 nsamples = 3;
+  bytes samples = 4; 
 }
 
 message GetSamplesRequest {
@@ -23,7 +44,8 @@ message SetSamplesResponse {
 }
 
 service PiRadioSampled {
-  rpc GetSampleInfo(google.protobuf.Empty) returns (SampleBufferInfo);
+  rpc GetSampledInfo(google.protobuf.Empty) returns (SampledInfo);
+  rpc GetSampleBufferInfo(SampleBufferInfoQuery) returns (SampleBufferInfo);
   rpc SetSamples(SampleData) returns (SetSamplesResponse);
   rpc GetSamples(GetSamplesRequest) returns (SampleData);
 }
