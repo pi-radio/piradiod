@@ -166,7 +166,7 @@ uint32 = struct.Struct("I")
 
 
 class UIO(CommandObject):
-    def __init__(self, path, attach=False):
+    def __init__(self, path):
         self.path = path
         self.debug = False
 
@@ -174,23 +174,10 @@ class UIO(CommandObject):
 
         if len(l) > 1:
             raise RuntimeError("Too many uio nodes in directory")
+        elif len(l) == 0:
+            raise RuntimeError(f"Could not find uio device for {self.path}")
         
-        if len(l) == 1:
-            self.uio_name = l[0]
-        elif attach:
-            output.debug(f"Overriding driver for {self.path}")
-            with open(self.path / "driver_override", "w") as f:
-                print("uio_pdrv_genirq", file=f)
-
-            with open("/sys/bus/platform/drivers_probe", "w") as f:
-                print(f"{self.path.name}", file=f)
-                
-            l = list((self.path / "uio").glob("uio*"))
-            
-            self.uio_name = l[0]
-        else:
-            raise RuntimeError(f"No uio node found for {self.path}")
-        
+        self.uio_name = l[0]
         
         maps_path = Path("/sys/class/uio") / self.uio_name / "maps"
 

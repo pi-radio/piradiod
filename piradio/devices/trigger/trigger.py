@@ -21,7 +21,7 @@ class Trigger(UIO):
 
         path = l[0]
 
-        super().__init__(path, attach=True)
+        super().__init__(path)
         
         self.csr = self.maps[0]
 

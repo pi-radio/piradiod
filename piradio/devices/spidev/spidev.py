@@ -22,14 +22,7 @@ class SPIDev(CommandObject):
         self.dev_no = dev_no
 
         if not os.path.exists(self.device_file):
-            with open(self.override_file, "w") as f:
-                f.write("spidev\n")
-
-            with open("/sys/bus/spi/drivers/spidev/bind", "w") as f:
-                f.write(f"spi{self.bus_no}.{self.dev_no}")
-
-            while not os.path.exists(self.device_file):
-                time.sleep(0.1)
+            raise RuntimeError(f"Could not find SPI device for {self.bus_no} {self.dev_no}.  Please check udev configuration.")
 
         self.dev = None
         i = 0
@@ -57,10 +50,3 @@ class SPIDev(CommandObject):
         
         output.debug(f"Tearing down SPI device {self.bus_no}.{self.dev_no}")
         
-        spidev_unbind = open("/sys/bus/spi/drivers/spidev/unbind", "w")
-
-        print(f"spi{self.bus_no}.{self.dev_no}", file=spidev_unbind)
-
-        with open(self.override_file, "w") as f:
-            print("spidev", file=f)
-                

@@ -29,10 +29,6 @@ def check_spidev():
     return False
         
 def initial_setup():
-    if os.geteuid() != 0:
-        print("Must be run as super-user")
-        sys.exit(1)
-    
     with open("/sys/class/fpga_manager/fpga0/state", "r") as f:
         if f.read().strip() != "operating":
             print("FPGA not programmed")

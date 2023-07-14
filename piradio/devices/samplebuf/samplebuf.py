@@ -97,7 +97,7 @@ class SampleBuffer(UIO):
         if path is None:
             raise RuntimeError(f"Could not find sample buffer {direction} {n}")
                 
-        super().__init__(path, attach=True)
+        super().__init__(path)
 
         self.csr = self.maps[0]
         self._samples = self.maps[1]

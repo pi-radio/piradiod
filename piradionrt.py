@@ -124,13 +124,4 @@ def piradionrt():
 pid_file="/var/run/piradionrt.pid"
     
 if __name__ == '__main__':
-    if os.getuid() != 0:
-        print("Launching self with sudo")
-        os.system(f"sudo {' '.join(sys.argv)}")
-    else:
-        print("Running as root")
-        #daemon = daemonize.Daemonize(app="piradionrt", pid=pid_file, action=piradionrt)
-        #daemon.start()
-        piradionrt()
-        print("Splorch")
-        #piradionrt()
+    piradionrt()
