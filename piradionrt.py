@@ -13,22 +13,21 @@ from numpy.lib import format as npf
 from twisted.web import xmlrpc, server
 from twisted.internet import reactor, endpoints
 
+import piradio
+
 from piradio.util import MHz, GHz, Freq
 from piradio.devices import SampleBufferIn, SampleBufferOut, Trigger
 from piradio.devices import Trigger
 
 
-
 class PiRadio_NRT_XMLRPC(xmlrpc.XMLRPC):
     def __init__(self):
-        self.input_samples = [ SampleBufferIn(i) for i in range(8) ]
-        self.output_samples = [ SampleBufferOut(i) for i in range(8) ]
-        self.trigger = Trigger()
+        self.nrt = piradio.NRT()
 
-        for s in self.input_samples:
+        for s in self.nrt.input_samples:
             s.one_shot(True)
 
-        for s in self.output_samples:
+        for s in self.nrt.output_samples:
             s.one_shot(False)
             
         super().__init__(allowNone=True)
@@ -40,9 +39,9 @@ class PiRadio_NRT_XMLRPC(xmlrpc.XMLRPC):
         f = BytesIO()
         
         if direction == 'input':
-            npf.write_array(f, self.input_samples[n].array)
+            npf.write_array(f, self.nrt.input_samples[n].array)
         elif direction == 'output':
-            npf.write_array(f, self.output_samples[n].array)
+            npf.write_array(f, self.nrt.output_samples[n].array)
         else:
             raise xmlrpc.Fault(123, "Invalid direction")
 
@@ -54,7 +53,7 @@ class PiRadio_NRT_XMLRPC(xmlrpc.XMLRPC):
 
         a = npf.read_array(BytesIO(base64.b64decode(samples)))
 
-        self.output_samples[n].array = a
+        self.nrt.output_samples[n].array = a
 
         return True
         
@@ -65,7 +64,7 @@ class PiRadio_NRT_XMLRPC(xmlrpc.XMLRPC):
 
         f = Freq(f)
 
-        self.output_samples[n].fill_sine(f, phase)
+        self.nrt.output_samples[n].fill_sine(f, phase)
 
         return True
 
@@ -75,7 +74,7 @@ class PiRadio_NRT_XMLRPC(xmlrpc.XMLRPC):
 
         f = Freq(f)
 
-        self.output_samples[n].fill_chirp(f, phase)
+        self.nrt.output_samples[n].fill_chirp(f, phase)
 
         return True
     
@@ -83,21 +82,21 @@ class PiRadio_NRT_XMLRPC(xmlrpc.XMLRPC):
         if n < 0 or n > 7:
             raise xmlrpc.Fault(123, "Invalid buffer number")
 
-        self.output_samples[n].fill_Zadoff_Chu(Nzc, u, q)
+        self.nrt.output_samples[n].fill_Zadoff_Chu(Nzc, u, q)
 
         return True
 
     def xmlrpc_global_trigger(self):
-        self.trigger.trigger()
+        self.nrt.trigger.trigger()
 
     def xmlrpc_one_shot(self, n, direction, b):
         if n < 0 or n > 7:
             raise xmlrpc.Fault(123, "Invalid buffer number")
 
         if direction == 'input':
-            self.input_samples[n].one_shot(b)
+            self.nrt.input_samples[n].one_shot(b)
         elif direction == 'output':
-            self.output_samples[n].one_shot(b)
+            self.nrt.output_samples[n].one_shot(b)
         else:
             raise xmlrpc.Fault(123, "Invalid direction")
 

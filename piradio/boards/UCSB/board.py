@@ -8,7 +8,7 @@ from piradio.devices import LTC5594Dev
 from piradio.devices import LMX2595Dev
 from piradio.devices import MAX11300Dev
 from piradio.devices import SampleBufferIn, SampleBufferOut
-from piradio.zcu111 import zcu111
+from piradio import zcu111
 
 from piradio.util import GHz, MHz, Hz
 

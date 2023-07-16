@@ -16,7 +16,7 @@ from piradio.devices import HMC6300, HMC6301
 from piradio.devices.gpiospi import GPIOSPIController
 from piradio.util import Freq, MHz, GHz
 from piradio.devices import LTC5594Dev
-from piradio.zcu111 import zcu111
+from piradio import zcu111
 
 sysfs_dt_path = Path("/sys/firmware/devicetree/base")
 sysfs_devices_path = Path("/sys/devices/platform")

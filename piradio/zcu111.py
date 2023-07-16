@@ -87,4 +87,3 @@ class ZCU111(CommandObject):
     def program(self):
         self.clock_tree.program()
 
-zcu111 = ZCU111()

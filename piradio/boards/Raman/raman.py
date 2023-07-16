@@ -15,7 +15,7 @@ from piradio.devices import AXI_GPIO
 from piradio.devices import Trigger
 from piradio.devices.sivers import Eder, EderChipNotFoundError
 from piradio.util import MHz
-from piradio.zcu111 import zcu111
+from piradio import zcu111
 
 sysfs_dt_path = Path("/sys/firmware/devicetree/base")
 sysfs_devices_path = Path("/sys/devices/platform")
