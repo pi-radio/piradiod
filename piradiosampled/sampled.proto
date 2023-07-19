@@ -46,9 +46,28 @@ message SetSamplesResponse {
   int32 result = 1;
 }
 
+message OneShot {
+  BufferId buffer_id = 1;
+  bool one_shot = 2;
+}
+
+message TriggerDelay {
+  BufferId buffer_id = 1;
+  uint32 delay = 2;
+}
+
 service PiRadioSampled {
   rpc GetSampledInfo(google.protobuf.Empty) returns (SampledInfo);
   rpc GetSampleBufferInfo(SampleBufferInfoQuery) returns (SampleBufferInfo);
+
   rpc SetSamples(SampleData) returns (SetSamplesResponse);
   rpc GetSamples(GetSamplesRequest) returns (SampleData);
+
+  rpc SetOneShot(OneShot) returns (google.protobuf.Empty);
+  rpc GetOneShot(BufferId) returns (OneShot);
+
+  rpc SetTriggerDelay(TriggerDelay) returns (google.protobuf.Empty);
+  rpc GetTriggerDelay(BufferId) returns (TriggerDelay);
+
+  rpc Trigger(google.protobuf.Empty) returns (google.protobuf.Empty);
 }

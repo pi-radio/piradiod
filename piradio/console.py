@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from twisted.web import xmlrpc, server
 from twisted.internet import reactor, endpoints
 
-from piradio.zcu111 import zcu111
+from piradio import zcu111
 from piradio import boards
 from piradio.command import CommandObject, command, command_loop, task_manager
 

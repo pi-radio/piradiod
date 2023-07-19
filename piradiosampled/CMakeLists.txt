@@ -57,8 +57,11 @@ add_library(sampled_grpc_proto
   ${sampled_grpc_hdrs}
   ${sampled_proto_srcs}
   ${sampled_proto_hdrs})
+
+target_link_options(sampled_grpc_proto PRIVATE "LINKER:-no-as-needed")
+
 target_link_libraries(sampled_grpc_proto
-  ${_REFLECTION}
+  grpc++_reflection
   grpc++
   protobuf
   samplebuf

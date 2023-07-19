@@ -7,6 +7,7 @@
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
+#include <grpcpp/ext/proto_server_reflection_plugin.h>
 
 #include <piradio/samplebuf.hpp>
 
@@ -124,6 +125,8 @@ void run_server(void)
 
   sampled service;
 
+  grpc::reflection::InitProtoReflectionServerBuilderPlugin();
+ 
   grpc::ServerBuilder builder;
 
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());

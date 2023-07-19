@@ -5,32 +5,10 @@
 #include <cmath>
 #include <stdint.h>
 
+#include <piradio/uio.hpp>
+
 namespace piradio
 {
-  class uio_map
-  {
-    uint32_t _map_no;
-    uint64_t _addr;
-    uint64_t _offset;
-    uint64_t _size;
-    int fd;
-
-    void *_buffer;
-
-    std::filesystem::path dir_entry;
-    
-  public:
-    uio_map(const std::filesystem::path &map_entry_path, int dev_fd);
-    ~uio_map();
-    
-    uint32_t map_no(void) { return _map_no; }
-    uint64_t addr(void) { return _addr; }
-    uint64_t offset(void) { return _offset; }
-    uint64_t size(void) { return _size; }
-
-    template <class T> T *buffer(void) { return reinterpret_cast<T*>(_buffer); }
-  };
-
   struct sample_buffer_csr
   {
     volatile uint32_t ip_id;
