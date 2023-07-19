@@ -6,7 +6,7 @@ include_directories(./include)
 
 project(libsamplebuf VERSION 0.1.0 DESCRIPTION "Utilities for Pi Radio sample buffers")
 
-set(LIBSAMPLEBUF_SOURCES src/samplebuf.cpp)
+set(LIBSAMPLEBUF_SOURCES src/samplebuf.cpp src/trigger.cpp src/uio.cpp)
 
 add_library(samplebuf STATIC ${LIBSAMPLEBUF_SOURCES})
 

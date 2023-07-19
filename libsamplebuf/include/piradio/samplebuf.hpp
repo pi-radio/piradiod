@@ -52,22 +52,31 @@ namespace piradio
   
 
 
-  class sample_buffer
+  class sample_buffer : public uio_device
   {
+    std::filesystem::path get_sysfs_path(int _dir, int _n);
+
   public:
     typedef enum {
       IN = 0,
       OUT = 1
     } direction_e;
       
-    
     sample_buffer(direction_e _direction, int _n);
 
-
+    bool get_one_shot(void) { return csr->ctrl_stat & 2; }
+    void set_one_shot(bool v = true) {
+      if (v) {
+	csr->ctrl_stat = (csr->ctrl_stat & ~0x1) | 0x2;
+      } else {
+	csr->ctrl_stat = (csr->ctrl_stat & ~0x3);
+      }
+    };
+    
     size_t nbytes() { return csr->size_bytes; }
 
     template <class T>
-    T *raw_data() { return maps[1]->buffer<T>(); }
+    T *raw_data() { return get_map(1)->buffer<T>(); }
         
     template <class _sample_type>
     class view
@@ -95,13 +104,9 @@ namespace piradio
   protected:
     direction_e direction;
     int n;
-    int fd;
-    std::filesystem::path sysfs_path;
     
     volatile uint32_t *reg_buf;
     volatile uint16_t *data_buf;
-
-    uio_map *maps[2];
 
     sample_buffer_csr *csr;
     

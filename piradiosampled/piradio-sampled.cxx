@@ -10,11 +10,13 @@
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 
 #include <piradio/samplebuf.hpp>
+#include <piradio/trigger.hpp>
 
 #include "sampled.grpc.pb.h"
 
 class sampled final : public PiRadioSampled::Service
 {
+  piradio::trigger trigger;
   std::map<int, piradio::sample_buffer *> adc_buffers;
   std::map<int, piradio::sample_buffer *> dac_buffers;
   
@@ -30,6 +32,10 @@ public:
   virtual grpc::Status GetSampleBufferInfo(grpc::ServerContext* context, const ::SampleBufferInfoQuery* request, ::SampleBufferInfo* response);
   virtual grpc::Status SetSamples(grpc::ServerContext* context, const ::SampleData* request, ::SetSamplesResponse* response);
   virtual grpc::Status GetSamples(grpc::ServerContext* context, const ::GetSamplesRequest* request, ::SampleData* response);
+
+  virtual grpc::Status SetOneShot(grpc::ServerContext* context, const ::OneShot * request, ::google::protobuf::Empty* response);
+
+  virtual grpc::Status Trigger(grpc::ServerContext* context, const ::google::protobuf::Empty* request, ::google::protobuf::Empty* response);
 };
 
 sampled::sampled()
@@ -118,6 +124,30 @@ grpc::Status sampled::GetSamples(grpc::ServerContext* context, const ::GetSample
   
   return grpc::Status::OK;
 }
+
+grpc::Status sampled::SetOneShot(grpc::ServerContext* context, const ::OneShot * request, ::google::protobuf::Empty* response)
+{
+  grpc::Status retval;
+  piradio::sample_buffer *buffer;
+
+  std::tie(retval, buffer) = get_buffer(request->buffer_id());
+  
+  if (buffer == nullptr) {
+    return retval;
+  }
+
+  buffer->set_one_shot(request->one_shot());
+
+  return grpc::Status::OK;
+}
+
+grpc::Status sampled::Trigger(grpc::ServerContext* context, const ::google::protobuf::Empty* request, ::google::protobuf::Empty* response)
+{
+  trigger.activate();
+
+  return grpc::Status::OK;
+}
+
 
 void run_server(void)
 {
