@@ -1,0 +1,8 @@
+[Unit]
+Description=Pi Radio FPGA Management Daemon
+
+[Service]
+ExecStart=/usr/bin/piradio-fpgad
+
+[Install]
+WantedBy=multi-user.target

@@ -53,8 +53,6 @@ namespace piradio
 	break;
       }
     }
-
-    std::cout << _sysfs_path << std::endl;
     
     if (_sysfs_path.empty()) {
       throw std::runtime_error(std::string("Unable to find sample buffer ") + dir_s + " " + std::to_string(n));

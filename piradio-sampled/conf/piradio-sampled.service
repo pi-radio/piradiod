@@ -1,0 +1,8 @@
+[Unit]
+Description=Pi Radio Non Real Time sample daemon
+
+[Service]
+ExecStart=/usr/bin/piradio-sampled
+
+#[Install]
+#WantedBy=multi-user.target

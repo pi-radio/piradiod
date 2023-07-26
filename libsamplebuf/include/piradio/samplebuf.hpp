@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <string>
 #include <cmath>
+#include <iostream>
 #include <stdint.h>
 
 #include <piradio/uio.hpp>
@@ -19,6 +20,7 @@ namespace piradio
     volatile uint32_t size_bytes;
     volatile uint32_t trigger_count;
     volatile uint32_t write_count;
+    volatile uint32_t wrap_count;
   } __attribute__((packed, aligned(4)));
   
 
@@ -28,7 +30,7 @@ namespace piradio
   }
   
   struct real_sample {
-    uint16_t v;
+    int16_t v;
 
     real_sample(uint16_t _v) : v(_v) {};
 
@@ -39,8 +41,8 @@ namespace piradio
   } __attribute__((packed, aligned(2)));
 
   struct complex_sample {
-    uint16_t im;
-    uint16_t re;
+    int16_t re;
+    int16_t im;
 
     complex_sample(uint16_t _re, uint16_t _im) : re(_re), im(_im) {}; 
 
@@ -72,6 +74,14 @@ namespace piradio
 	csr->ctrl_stat = (csr->ctrl_stat & ~0x3);
       }
     };
+
+    bool get_active(void) { return (csr->ctrl_stat & 1) != 0; }
+    uint32_t get_ctrl_stat(void) { return csr->ctrl_stat; }
+    
+    uint32_t get_trigger_count(void) { return csr->trigger_count; }
+    uint32_t get_write_count(void) { return csr->write_count; }
+
+    uint32_t get_wrap_count(void) { return csr->wrap_count; }
     
     size_t nbytes() { return csr->size_bytes; }
 
@@ -93,6 +103,8 @@ namespace piradio
       {
 	return buffer.raw_data<sample_type>()[n];
       }
+
+      
     };
     
     template <class sample_type>

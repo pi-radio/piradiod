@@ -1,0 +1,8 @@
+[Unit]
+Description=zcu111d
+
+[Service]
+ExecStart=/usr/bin/zcu111d
+
+[Install]
+WantedBy=multi-user.target
