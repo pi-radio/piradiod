@@ -38,6 +38,12 @@ message SampleData {
   bytes samples = 3; 
 }
 
+message ChannelEnable {
+  BufferId buffer_id = 1;
+  bool I = 2;
+  bool Q = 3;
+}
+
 message GetSamplesRequest {
   BufferId buffer_id = 1;
 }
@@ -69,5 +75,8 @@ service PiRadioSampled {
   rpc SetTriggerDelay(TriggerDelay) returns (google.protobuf.Empty);
   rpc GetTriggerDelay(BufferId) returns (TriggerDelay);
 
+  rpc GetChannelEnable(BufferId) returns (ChannelEnable);
+  rpc SetChannelEnable(ChannelEnable) returns (google.protobuf.Empty);
+  
   rpc Trigger(google.protobuf.Empty) returns (google.protobuf.Empty);
 }

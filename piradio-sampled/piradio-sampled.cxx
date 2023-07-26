@@ -35,6 +35,10 @@ public:
 
   virtual grpc::Status SetOneShot(grpc::ServerContext* context, const ::OneShot * request, ::google::protobuf::Empty* response);
 
+  virtual grpc::Status GetChannelEnable(grpc::ServerContext* context, const ::BufferId* request, ::ChannelEnable* response);
+  virtual grpc::Status SetChannelEnable(grpc::ServerContext* context, const ::ChannelEnable* request, ::google::protobuf::Empty* response);
+
+  
   virtual grpc::Status Trigger(grpc::ServerContext* context, const ::google::protobuf::Empty* request, ::google::protobuf::Empty* response);
 };
 
@@ -44,6 +48,11 @@ sampled::sampled()
   
   for (i = 0; i < 8; i++) {
     adc_buffers[i] = new piradio::sample_buffer(piradio::sample_buffer::IN, i);
+
+    std::cout << i << std::endl;
+
+    adc_buffers[i]->set_i_en(true);
+    adc_buffers[i]->set_q_en(true);
   }
 
   for (i = 0; i < 8; i++) {
@@ -195,11 +204,46 @@ grpc::Status sampled::Trigger(grpc::ServerContext* context, const ::google::prot
   return grpc::Status::OK;
 }
 
+grpc::Status sampled::GetChannelEnable(grpc::ServerContext* context, const ::BufferId* request, ::ChannelEnable* response)
+{
+  grpc::Status retval;
+  piradio::sample_buffer *buffer;
+
+  std::tie(retval, buffer) = get_buffer(*request);
+  
+  if (buffer == nullptr) {
+    return retval;
+  }
+
+  *response->mutable_buffer_id() = *request;
+  response->set_i(buffer->get_i_en());
+  response->set_q(buffer->get_q_en());
+
+  return grpc::Status::OK;
+}
+
+grpc::Status sampled::SetChannelEnable(grpc::ServerContext* context, const ::ChannelEnable* request, ::google::protobuf::Empty* response)
+{
+  grpc::Status retval;
+  piradio::sample_buffer *buffer;
+
+  std::tie(retval, buffer) = get_buffer(request->buffer_id());
+
+  if (buffer == nullptr) {
+    return retval;
+  }
+
+  buffer->set_i_en(request->i());
+  buffer->set_q_en(request->q());
+
+  return grpc::Status::OK;  
+}
+
 
 void run_server(void)
 {
   std::string server_address("0.0.0.0:7778");
-
+  
   sampled service;
 
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();

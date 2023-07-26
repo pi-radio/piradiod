@@ -77,6 +77,32 @@ namespace piradio
 
     bool get_active(void) { return (csr->ctrl_stat & 1) != 0; }
     uint32_t get_ctrl_stat(void) { return csr->ctrl_stat; }
+
+    bool get_i_en(void) { return (csr->ctrl_stat & 0x20) != 0; }
+
+    void set_i_en(bool v) {
+      std::cout << "i_en:" << v << std::endl;
+      if (v) {
+	csr->ctrl_stat = (csr->ctrl_stat & ~0x1) | 0x20;
+      } else {
+	csr->ctrl_stat = (csr->ctrl_stat & ~0x21);
+      }
+    }
+    
+    bool get_q_en(void) { return (csr->ctrl_stat & 0x10) != 0; }
+    
+    void set_q_en(bool v) {
+      std::cout << "q_en:" << v << std::endl;
+      if (v) {
+	csr->ctrl_stat = (csr->ctrl_stat & ~0x1) | 0x10;
+      } else {
+	csr->ctrl_stat = (csr->ctrl_stat & ~0x11);
+      }
+    }
+
+    void clear_iq() {
+      csr->ctrl_stat = (csr->ctrl_stat & ~0x31);
+    }
     
     uint32_t get_trigger_count(void) { return csr->trigger_count; }
     uint32_t get_write_count(void) { return csr->write_count; }
