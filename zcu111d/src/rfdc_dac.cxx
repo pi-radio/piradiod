@@ -5,4 +5,7 @@
 
 namespace piradio
 {
+  DAC::DAC(DACTile &_tile, int _block) : RFDCBlock(_tile, _block)
+  {
+  }
 };

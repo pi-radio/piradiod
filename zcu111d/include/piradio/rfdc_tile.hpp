@@ -17,6 +17,11 @@ namespace piradio
       return f(&rfdc.rfdc, type, tile, args...);
     }
 
+    template <typename F, class... types> int rfdc_func_no_type(F f, types... args)
+    {
+      return f(&rfdc.rfdc, tile, args...);
+    }
+
     int update_tile(int evt)
     {
       return rfdc_func(XRFdc_UpdateEvent, 0, evt);

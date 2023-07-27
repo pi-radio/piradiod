@@ -9,6 +9,7 @@
 #include <grpcpp/server_context.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 
+#include <piradio/pidaemon.hpp>
 #include <piradio/samplebuf.hpp>
 #include <piradio/trigger.hpp>
 
@@ -149,28 +150,6 @@ grpc::Status sampled::GetSamples(grpc::ServerContext* context, const ::GetSample
   }
 
   auto view = buffer->get_view<piradio::complex_sample>();
-
-  if (bid.direction() == ADC && bid.buffer_no() == 2)
-  {
-    std::lock_guard guard(output_mutex);
-    
-    std::cout << "CTRLSTAT: " << bid.direction() << " " << bid.buffer_no() << ": " << std::hex << buffer->get_ctrl_stat() << std::dec << std::endl;
-    std::cout << "TRIG: " << buffer->get_trigger_count() << std::endl;
-    std::cout << "CNT: " << buffer->get_wrap_count() << std::endl;
-    
-    for (int i = 0; i < 32; i++) {
-      std::cout << (4 * i) << ": " // << std::hex
-		<< view[i*4+0].re << " " << view[i*4+0].im << "j | "
-		<< view[i*4+1].re << " " << view[i*4+1].im << "j | "
-		<< view[i*4+2].re << " " << view[i*4+2].im << "j | "
-		<< view[i*4+3].re << " " << view[i*4+3].im << "j | "
-		<< std::dec << std::endl
-	;
-    }
-
-    std::cout << std::endl;
-  }
-
   
   *response->mutable_buffer_id() = request->buffer_id();
   response->set_nsamples(view.nsamples());
@@ -237,24 +216,62 @@ grpc::Status sampled::SetChannelEnable(grpc::ServerContext* context, const ::Cha
   return grpc::Status::OK;  
 }
 
+class sampled_daemon : public piradio::daemon
+{
+public:
+  sampled_daemon() : daemon("io.pi-rad.sampled")
+  {
+    
+  }
+
+  virtual int prepare(void) {
+    std::string server_address("0.0.0.0:7778");
+
+    grpc::reflection::InitProtoReflectionServerBuilderPlugin();
+ 
+    grpc::ServerBuilder builder;
+
+    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+    builder.RegisterService(&grpc_service);
+    
+    grpc_server = builder.BuildAndStart();
+
+    return 0;
+  }
+
+  virtual int service_loop(void) {
+    while(true) {
+      std::shared_ptr<piradio::daemon_event> event = wait_event();
+
+      if (event->is_a<piradio::daemon_reload_event>()) {
+	continue;
+      } else if (event->is_a<piradio::daemon_shutdown_event>()) {
+	break;
+      }
+    }
+
+    return 0;
+  }
+  
+  
+private:
+  sampled grpc_service;
+  
+  std::unique_ptr<grpc::Server> grpc_server;
+};
+
 
 void run_server(void)
 {
-  std::string server_address("0.0.0.0:7778");
   
-  sampled service;
-
-  grpc::reflection::InitProtoReflectionServerBuilderPlugin();
- 
-  grpc::ServerBuilder builder;
-
-  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-  builder.RegisterService(&service);
-  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-  server->Wait();
+  //server->Wait();
 }
 
 int main(int argc, char **argv)
 {
-  run_server();
+  sampled_daemon d;
+
+  d.start();
+
+  return d.wait_on();
 }

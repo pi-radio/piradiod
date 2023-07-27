@@ -11,6 +11,7 @@ namespace piradio
 
   ADCTile::ADCTile(RFDC &_rfdc, int _tile) : RFDCTile(_rfdc, XRFDC_ADC_TILE, _tile)
   {    
+    rfdc_func(XRFdc_SetupFIFO, 1);
   }
 
   DACTile::DACTile(RFDC &_rfdc, int _tile) : RFDCTile(_rfdc, XRFDC_DAC_TILE, _tile)

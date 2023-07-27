@@ -62,6 +62,12 @@ namespace piradio
     {
       return tile.rfdc_func(f, block, args...);
     }
+
+    template <typename F, class... types> int rfdc_func_no_type(F f, types... args)
+    {
+      return tile.rfdc_func_no_type(f, block, args...);
+    }
+
   };
 
 
@@ -73,6 +79,8 @@ namespace piradio
     void set_mixer_passthrough(void);
     void tune_NCO(double freq, double phase=0.0);
 
+    void set_attenuation(bool, float);
+    
     void dump(void);
     
   private:

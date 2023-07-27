@@ -21,6 +21,8 @@ cmake_minimum_required(VERSION 3.8)
 
 project(piradiosampled C CXX)
 
+include(GNUInstallDirs)
+
 #include(../cmake/common.cmake)
 
 # Proto file
@@ -49,7 +51,9 @@ add_custom_command(
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libsamplebuf/include")
-link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libsamplebuf/build")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpidaemon/include")
+#link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libsamplebuf/build")
+#link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libsamplebuf/build")
 
 # sampled_grpc_proto
 add_library(sampled_grpc_proto
@@ -72,9 +76,20 @@ add_executable(piradio-sampled
   src/piradio-sampled.cxx)
 
 target_link_libraries(piradio-sampled 
-    sampled_grpc_proto)
+  sampled_grpc_proto
+  pidaemon
+  )
 #    ${_REFLECTION}
 #    ${_GRPC_GRPCPP}
 #    ${_PROTOBUF_LIBPROTOBUF})
 
+install(FILES conf/io.pi-rad.sampled.conf DESTINATION etc/dbus-1/system.d/ COMPONENT config)
+install(FILES conf/piradio-sampled.service DESTINATION etc/systemd/system COMPONENT config)
+
+set(CPACK_SET_DESTDIR true)
+set(CPACK_INSTALL_PREFIX /)
+set(CPACK_GENERATOR DEB)
+set(CPACK_PACKAGE_NAME "piradio-zcu111d")
+set(CPACK_PACKAGE_VENDOR "Pi Radio Inc.")
+include(CPack)
 

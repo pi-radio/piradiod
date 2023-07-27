@@ -41,18 +41,6 @@ int main(int argc, char **argv)
 {
   int result;
   
-  sigset_t sset;
-  
-  sigemptyset(&sset);
-  sigaddset(&sset, SIGHUP);
-  sigaddset(&sset, SIGTERM);
-  sigaddset(&sset, SIGINT);
-
-  result = sigprocmask(SIG_BLOCK, &sset, NULL);
-
-  if (result != 0){
-    std::cerr << "sigprocmask failed: " << std::strerror(result) << std::endl;
-  }
   
   auto connection = sdbus::createSystemBusConnection(dbus_service_name);
 
@@ -65,6 +53,7 @@ int main(int argc, char **argv)
 
   while (true) {
     int recv_sig;
+    sigset_t sset;
     
     result = sigwait(&sset, &recv_sig);
 
