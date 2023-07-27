@@ -49,8 +49,6 @@ sampled::sampled()
   for (i = 0; i < 8; i++) {
     adc_buffers[i] = new piradio::sample_buffer(piradio::sample_buffer::IN, i);
 
-    std::cout << i << std::endl;
-
     adc_buffers[i]->set_i_en(true);
     adc_buffers[i]->set_q_en(true);
   }

@@ -81,7 +81,6 @@ namespace piradio
     bool get_i_en(void) { return (csr->ctrl_stat & 0x20) != 0; }
 
     void set_i_en(bool v) {
-      std::cout << "i_en:" << v << std::endl;
       if (v) {
 	csr->ctrl_stat = (csr->ctrl_stat & ~0x1) | 0x20;
       } else {
@@ -92,7 +91,6 @@ namespace piradio
     bool get_q_en(void) { return (csr->ctrl_stat & 0x10) != 0; }
     
     void set_q_en(bool v) {
-      std::cout << "q_en:" << v << std::endl;
       if (v) {
 	csr->ctrl_stat = (csr->ctrl_stat & ~0x1) | 0x10;
       } else {

@@ -7,3 +7,6 @@
 	branch = v23.4
 [submodule "protobuf/"]
 	branch = v23.4
+[submodule "interfaces"]
+	path = interfaces
+	url = git@github.com:pi-radio/interfaces.git

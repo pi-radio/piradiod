@@ -24,7 +24,7 @@ project(piradiosampled C CXX)
 #include(../cmake/common.cmake)
 
 # Proto file
-get_filename_component(sampled_proto "sampled.proto" ABSOLUTE)
+get_filename_component(sampled_proto "../interfaces/sampled.proto" ABSOLUTE)
 get_filename_component(sampled_proto_path "${sampled_proto}" PATH)
 
 set(_PROTOBUF_PROTOC protoc)
@@ -68,9 +68,13 @@ target_link_libraries(sampled_grpc_proto
   fmt
   )
 
-add_executable(piradio-sampled piradio-sampled.cxx)
+add_executable(piradio-sampled
+  src/piradio-sampled.cxx)
+
 target_link_libraries(piradio-sampled 
     sampled_grpc_proto)
 #    ${_REFLECTION}
 #    ${_GRPC_GRPCPP}
 #    ${_PROTOBUF_LIBPROTOBUF})
+
+
