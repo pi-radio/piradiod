@@ -11,6 +11,12 @@
 
 #include <sdbus-c++/sdbus-c++.h>
 
+#include <grpc/grpc.h>
+#include <grpcpp/server.h>
+#include <grpcpp/server_builder.h>
+#include <grpcpp/server_context.h>
+#include <grpcpp/ext/proto_server_reflection_plugin.h>
+
 namespace piradio
 {
   class daemon_event
@@ -42,7 +48,7 @@ namespace piradio
     daemon(const std::string &_service_name);
 
     virtual int prepare(void) { return 0; };
-    virtual int service_loop(void) = 0;
+    virtual int service_loop(void);
     virtual int cleanup(void) { return 0; };
     virtual int reload(void) { return 0; };
 
@@ -55,11 +61,11 @@ namespace piradio
 
     daemon_event::ptr wait_event(void);
 
-  private:
+  protected:
     const std::string service_name;
 
-    void launch(void);
-    void sigloop(void);
+    virtual void launch(void);
+    virtual void sigloop(void);
 
     std::mutex daemon_event_mutex;
     std::condition_variable daemon_event_cv;
@@ -68,5 +74,20 @@ namespace piradio
     std::thread service_thread;
     std::thread signal_thread;
     std::promise<int> return_promise;
+  };
+
+  class grpc_daemon : public daemon
+  {
+  public:
+    grpc_daemon(const std::string &_service_name);
+
+  protected:
+    virtual void launch(void);
+
+    void build_grpc_services(void);
+
+    std::vector<std::string> bind_addresses;
+    std::vector<grpc::Service *> grpc_services;
+    std::unique_ptr<grpc::Server> grpc_server;
   };
 };

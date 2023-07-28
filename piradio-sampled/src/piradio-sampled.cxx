@@ -126,8 +126,12 @@ grpc::Status sampled::SetSamples(grpc::ServerContext* context, const ::SampleDat
   if (samples.size() > buffer->nbytes()) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "Buffer too large");
   }
-  
-  memcpy(dst, samples.data(), samples.size());
+
+  auto view = buffer->get_view<piradio::real_sample>();
+
+  for (int i = 0; i < view.nsamples(); i++) {
+    view[i] = samples[i];
+  }
 
   response->set_result(0);
   
@@ -149,11 +153,14 @@ grpc::Status sampled::GetSamples(grpc::ServerContext* context, const ::GetSample
     return retval;
   }
 
-  auto view = buffer->get_view<piradio::complex_sample>();
+  auto view = buffer->get_view<piradio::real_sample>();
   
   *response->mutable_buffer_id() = request->buffer_id();
   response->set_nsamples(view.nsamples());
-  response->set_samples(buffer->raw_data<uint8_t>(), buffer->nbytes());
+
+  for (int i = 0; i < view.nsamples(); i++) {
+    response->add_samples(view[i].v);
+  }
   
   return grpc::Status::OK;
 }
@@ -216,48 +223,21 @@ grpc::Status sampled::SetChannelEnable(grpc::ServerContext* context, const ::Cha
   return grpc::Status::OK;  
 }
 
-class sampled_daemon : public piradio::daemon
+class sampled_daemon : public piradio::grpc_daemon
 {
 public:
-  sampled_daemon() : daemon("io.pi-rad.sampled")
+  sampled_daemon() : grpc_daemon("io.pi-rad.sampled")
   {
-    
+    bind_addresses.push_back("0.0.0.0:7778");
+    grpc_services.push_back(&sampled_service);
   }
 
   virtual int prepare(void) {
-    std::string server_address("0.0.0.0:7778");
-
-    grpc::reflection::InitProtoReflectionServerBuilderPlugin();
- 
-    grpc::ServerBuilder builder;
-
-    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-    builder.RegisterService(&grpc_service);
-    
-    grpc_server = builder.BuildAndStart();
-
     return 0;
-  }
-
-  virtual int service_loop(void) {
-    while(true) {
-      std::shared_ptr<piradio::daemon_event> event = wait_event();
-
-      if (event->is_a<piradio::daemon_reload_event>()) {
-	continue;
-      } else if (event->is_a<piradio::daemon_shutdown_event>()) {
-	break;
-      }
-    }
-
-    return 0;
-  }
-  
+  }  
   
 private:
-  sampled grpc_service;
-  
-  std::unique_ptr<grpc::Server> grpc_server;
+  sampled sampled_service;  
 };
 
 

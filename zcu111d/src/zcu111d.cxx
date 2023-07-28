@@ -6,6 +6,7 @@
 #include <sdbus-c++/sdbus-c++.h>
 
 #include <piradio/rfdc.hpp>
+#include <piradio/clocks.hpp>
 
 piradio::RFDC *g_rfdc;
 
@@ -20,6 +21,8 @@ int main(int argc, char **argv)
 
   auto service_control = sdbus::createObject(*connection, dbus_service_object);
   auto fpga_control = sdbus::createObject(*connection, dbus_fpga_object);
+
+  //piradio::setup_clocks();
   
   int Status;
   u16 Tile;

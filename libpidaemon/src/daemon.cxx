@@ -105,6 +105,21 @@ namespace piradio
     return f.get();
   }
 
+  int daemon::service_loop(void) {
+    while(true) {
+      std::shared_ptr<piradio::daemon_event> event = wait_event();
+
+      if (event->is_a<piradio::daemon_reload_event>()) {
+	continue;
+      } else if (event->is_a<piradio::daemon_shutdown_event>()) {
+	break;
+      }
+    }
+
+    return 0;
+  }
+
+  
   void daemon::start(void)
   {
     signal_thread = std::thread(&daemon::sigloop, this);

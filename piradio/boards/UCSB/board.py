@@ -8,6 +8,7 @@ from piradio.devices import LTC5594Dev
 from piradio.devices import LMX2595Dev
 from piradio.devices import MAX11300Dev
 from piradio.devices import SampleBufferIn, SampleBufferOut
+from piradio.devices import AXI_GPIO
 from piradio import zcu111
 
 from piradio.util import GHz, MHz, Hz
@@ -48,6 +49,8 @@ class UCSB(CommandObject):
     def __init__(self):
         print("Initializing 140GHz Bringup Board")
 
+        self.children.gpio = AXI_GPIO("pl_gpio")
+        
         self.children.LTC5594 = [ LTC5594Dev(SPIDev(2, i)) for i in range(8) ]
 
         for c in self.LTC5594:

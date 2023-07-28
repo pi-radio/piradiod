@@ -11,6 +11,8 @@ namespace piradio
 
   void ADC::dump(void)
   {
+    XRFdc_Mixer_Settings mixer_settings = get_mixer_settings();
+
     std::cout << "ADC " << tile.tile_no() << " " << block << std::endl;
     std::cout << "=====================" << std::endl;
     std::cout << " Mixer settings" << std::endl;
@@ -37,52 +39,39 @@ namespace piradio
   void ADC::set_mixer_passthrough(void)
   {
     int result;
+    XRFdc_Mixer_Settings s;
 	  
-    mixer_settings.Freq = 0;
-    mixer_settings.PhaseOffset = 0;
-    mixer_settings.EventSource = XRFDC_EVNT_SRC_TILE;
-    //mixer_settings.CoarseMixFreq = XRFDC_COARSE_MIX_BYPASS;
-    mixer_settings.CoarseMixFreq = XRFDC_COARSE_MIX_SAMPLE_FREQ_BY_FOUR;
-    mixer_settings.MixerMode = XRFDC_MIXER_MODE_R2C;
-    mixer_settings.FineMixerScale = XRFDC_MIXER_SCALE_1P0;
-    mixer_settings.MixerType = XRFDC_MIXER_TYPE_COARSE;
-	  
-    result = rfdc_func(XRFdc_SetMixerSettings, &mixer_settings);
+    s.Freq = 0;
+    s.PhaseOffset = 0;
+    s.EventSource = XRFDC_EVNT_SRC_TILE;
+    s.CoarseMixFreq = XRFDC_COARSE_MIX_BYPASS;
+    //s.CoarseMixFreq = XRFDC_COARSE_MIX_SAMPLE_FREQ_BY_FOUR;
+    s.MixerMode = XRFDC_MIXER_MODE_R2R;
+    s.FineMixerScale = XRFDC_MIXER_SCALE_1P0;
+    s.MixerType = XRFDC_MIXER_TYPE_COARSE;
 
-    if (result != XRFDC_SUCCESS) {
-      throw std::runtime_error("Failed to update mixers settings");
-    }
-    
-    result = tile.update_tile(XRFDC_EVENT_MIXER);
+    set_mixer_settings(s, true);
 
-    if (result != XRFDC_SUCCESS) {
-      throw std::runtime_error("Failed to trigger tile update");
-    }
-
-    std::cout << "Data type:" << rfdc_func(XRFdc_GetDataType) << std::endl;
+    //tile.update_tile(XRFDC_EVENT_MIXER);
   }
 
   void ADC::tune_NCO(double freq, double phase)
   {
-    XRFdc_Mixer_Settings s(mixer_settings);
+    XRFdc_Mixer_Settings s;
 
     s.Freq = freq / 1e6;
-    mixer_settings.PhaseOffset = phase;
-    mixer_settings.EventSource = XRFDC_EVNT_SRC_TILE;
-    mixer_settings.CoarseMixFreq = XRFDC_COARSE_MIX_OFF;
-    mixer_settings.MixerMode = XRFDC_MIXER_MODE_R2C;
-    mixer_settings.FineMixerScale = XRFDC_MIXER_SCALE_1P0;
-    mixer_settings.MixerType = XRFDC_MIXER_TYPE_FINE;
+    s.PhaseOffset = phase;
+    s.EventSource = XRFDC_EVNT_SRC_TILE;
+    s.CoarseMixFreq = XRFDC_COARSE_MIX_OFF;
+    s.MixerMode = XRFDC_MIXER_MODE_R2C;
+    s.FineMixerScale = XRFDC_MIXER_SCALE_1P0;
+    s.MixerType = XRFDC_MIXER_TYPE_FINE;
 
-    rfdc_func(XRFdc_SetMixerSettings, &s);
+    set_mixer_settings(s, true);
 
+    rfdc_func(XRFdc_ResetNCOPhase);
+    
     tile.update_tile(XRFDC_EVENT_MIXER);
-
-    rfdc_func(XRFdc_GetMixerSettings, &mixer_settings);
-
-    compare_mixer_settings(&s, &mixer_settings);
-
-    std::cout << "Data type:" << rfdc_func(XRFdc_GetDataType) << std::endl;
   }
 
   void ADC::set_attenuation(bool enable_ctrl, float val)
