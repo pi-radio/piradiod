@@ -11,6 +11,11 @@ namespace piradio
   
   daemon::daemon(const std::string &_service_name) : service_name(_service_name)
   {
+    std::cout << "Creating connection!"<< std::endl;
+    sdbus_conn = sdbus::createSystemBusConnection(service_name);
+    
+    sd_journal_print(LOG_INFO, "daemon created");
+    
     sigset_t sset;
     int result;
 
@@ -27,14 +32,35 @@ namespace piradio
       std::cerr << "sigprocmask failed: " << std::strerror(result) << std::endl;
       throw std::runtime_error("Unable to create daemon");
     }
-
-    
   }
 
+  void daemon::create_sdbus_object(const std::string &str)
+  {
+    std::cout << "Creating object " << str << std::endl;
+    
+    sdbus_obj.emplace(str, sdbus::createObject(*sdbus_conn, str));
+  }
+
+  void daemon::register_sdbus_method(const std::string &obj, const std::string &iface,
+				     const std::string &name, const std::string &insig,
+				     const std::string &retsig, std::function<void(sdbus::MethodCall) > f)
+  {
+    std::cout << "Registering method " << obj << " " << iface << " " << insig << " " << retsig << std::endl;
+    sdbus_obj[obj]->registerMethod(iface, name, insig, retsig, f);
+  }
+
+  void daemon::finalize_sdbus_object(const std::string &obj)
+  {
+    std::cout << "Finalizing object " << obj << std::endl;
+    sdbus_obj[obj]->finishRegistration();
+  }
+  
   void daemon::launch(void)
   {
     int result;
 
+    sdbus_conn->enterEventLoopAsync();
+    
     result = prepare();
 
     if (result != 0) {
@@ -43,10 +69,12 @@ namespace piradio
       throw std::runtime_error("Unable to prepare daemon");
     }
     
-    sd_notify(0, "READY=1");
+    sd_notify("READY=1");
 
     int dresult = service_loop();
 
+    sd_notify("STOPPING=1");
+    
     result = cleanup();
 
     if (result != 0) {
@@ -56,6 +84,8 @@ namespace piradio
 	dresult = result;
       }
     }
+
+    sd_notify(fmt::format("EXIT_STATUS={:d}", dresult));
     
     return_promise.set_value(dresult);
   }
@@ -145,9 +175,8 @@ namespace piradio
 
       if (result != 0) {
 	std::cerr << "sigwait failed: " << std::strerror(result) << std::endl;
+	recv_sig = SIGINT;
       }
-
-      std::cout << "Signal: " << recv_sig << std::endl;
 
       if (recv_sig == SIGHUP) {
 	queue_event(daemon_event::ptr(new daemon_reload_event()));

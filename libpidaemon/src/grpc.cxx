@@ -9,6 +9,7 @@ namespace piradio
 {
   grpc_daemon::grpc_daemon(const std::string &_service_name) : daemon(_service_name)
   {
+    std::cout << "grpc_daemon" << std::endl;
   }
 
   void grpc_daemon::launch(void)

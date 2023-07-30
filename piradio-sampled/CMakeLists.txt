@@ -83,13 +83,6 @@ target_link_libraries(piradio-sampled
 #    ${_GRPC_GRPCPP}
 #    ${_PROTOBUF_LIBPROTOBUF})
 
-install(FILES conf/io.pi-rad.sampled.conf DESTINATION etc/dbus-1/system.d/ COMPONENT config)
-install(FILES conf/piradio-sampled.service DESTINATION etc/systemd/system COMPONENT config)
-
-set(CPACK_SET_DESTDIR true)
-set(CPACK_INSTALL_PREFIX /)
-set(CPACK_GENERATOR DEB)
-set(CPACK_PACKAGE_NAME "piradio-zcu111d")
-set(CPACK_PACKAGE_VENDOR "Pi Radio Inc.")
-include(CPack)
+install(FILES conf/io.piradio.sampled.conf DESTINATION etc/dbus-1/system.d/ COMPONENT sampled)
+install(FILES conf/io.piradio.sampled.service DESTINATION etc/systemd/system COMPONENT sampled)
 

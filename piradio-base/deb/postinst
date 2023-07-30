@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -e
+
+groupadd -f spi
+groupadd -f gpio
+groupadd -f piradio
+
+for dir in /etc/piradio /etc/piradio/firmware  ; do
+    echo "Setting ownership and permissions for ${dir}..."
+    chown root:piradio ${dir}
+    chmod 0775 ${dir}
+done
+
+cat <<EOF
+
+If the is the first install of the Pi Radio software, it's highly
+recommended to add a user to the appropriate groups for permission to
+use the radio.  You can do this using the command:
+
+    piradio-admin grant-user <username>
+
+EOF

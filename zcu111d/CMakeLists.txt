@@ -78,16 +78,6 @@ target_link_libraries(zcu111d
 target_compile_options(zcu111d PUBLIC -g)
 target_compile_options(rfdc PUBLIC -g)
 
-install(FILES conf/io.pi-rad.zcu111d.conf DESTINATION etc/dbus-1/system.d/)
-install(FILES conf/zcu111d.service DESTINATION etc/systemd/system)
-
-set(CPACK_SET_DESTDIR true)
-set(CPACK_INSTALL_PREFIX /)
-set(CPACK_GENERATOR DEB)
-set(CPACK_PACKAGE_NAME "piradio-zcu111d")
-set(CPACK_PACKAGE_VENDOR "Pi Radio Inc.")
-set(CPACK_PACKAGE_CONTACT "Michael Zappe <zapman@pi-rad.io>")
-set(CPACK_OUTPUT_CONFIG_FILE "${CMAKE_BINARY_DIR}/zcu111_cpack.cmake")
-
-include(CPack)
+install(FILES conf/io.piradio.zcu111d.conf DESTINATION etc/dbus-1/system.d/ COMPONENT zcu111d)
+install(FILES conf/io.piradio.zcu111d.service DESTINATION etc/systemd/system COMPONENT zcu111d)
 

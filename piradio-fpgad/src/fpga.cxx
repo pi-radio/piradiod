@@ -5,6 +5,7 @@
 #include <fstream>
 #include <string>
 #include <cstdlib>
+#include <chrono>
 
 namespace fs = std::filesystem;
 
@@ -14,6 +15,12 @@ const fs::path fpga0_path = manager_path / "fpga0";
 const fs::path configfs_path = "/configfs";
 const fs::path overlays_path = configfs_path / "device-tree/overlays";
 const fs::path full_overlay_path = overlays_path / "full";
+
+const fs::path firmware_dest_dir = "/lib/firmware";
+const fs::path firmware_filename = "piradio.bit.bin";
+const fs::path firmware_dest = firmware_dest_dir / "piradio.bit.bin";
+const fs::path overlay_filename = "piradio.dtbo";
+const fs::path overlay_dest = firmware_dest_dir / overlay_filename;
 
 namespace piradio
 {
@@ -56,8 +63,64 @@ namespace piradio
     return fs::remove(full_overlay_path);
   }
   
-  bool load_image(const std::filesystem::path &image_path, const std::filesystem::path &overlay_path)
+  bool FPGA::load_image(const std::filesystem::path &image_path)
   {
+    if (!fs::exists("/lib/firmware")) {
+      fs::create_directory("/lib/firmware");
+    }
+      
+    fs::copy_file(image_path, firmware_dest);
+
+    auto start = std::chrono::high_resolution_clock::now();
     
+    {
+      std::ofstream flag_stream(fpga0_path / "flags");
+
+      flag_stream << "0" << std::endl;
+    }
+
+    auto stop = std::chrono::high_resolution_clock::now();
+
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+    std::cout << "FW prog elapsed time: " << duration.count() << std::endl;
+
+    fs::remove(firmware_dest);
+
+    return operating();
+  }
+
+  bool FPGA::load_overlay(const std::filesystem::path &overlay_path)
+  {
+    if (!fs::exists("/lib/firmware")) {
+      fs::create_directory("/lib/firmware");
+    }
+
+    fs::copy_file(overlay_path, overlay_dest);
+
+    fs::create_directory(full_overlay_path);
+    
+    {
+      std::ofstream ovl_stream(full_overlay_path);
+
+      ovl_stream << overlay_filename;
+    }
+
+    fs::remove(overlay_dest);
+
+    // check that the overlay loaded
+    
+    return true;
+  }
+  
+  bool FPGA::load_image(const std::filesystem::path &image_path, const std::filesystem::path &overlay_path)
+  {
+    remove_overlay();
+    
+    //check everything
+    load_image(image_path);
+    load_overlay(overlay_path);
+
+    return operating();
   }
 };

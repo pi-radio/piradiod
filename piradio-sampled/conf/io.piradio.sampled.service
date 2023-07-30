@@ -1,8 +1,10 @@
+[D-BUS Service]
+Name=io.piradio.sampled
+Exec=/usr/bin/piradio-sampled
+
 [Unit]
 Description=Pi Radio Non Real Time sample daemon
 
 [Service]
 ExecStart=/usr/bin/piradio-sampled
 
-#[Install]
-#WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: piradio-base
+Upstream-Contact: <zapman@pi-rad.io>
+Source: https://www.pi-rad.io/
+Comment:
+ This is base package for the Pi Radio Software
+Files: *
+Copyright: 2023, Pi Radio Inc

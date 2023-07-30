@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+
+import os
+import click
+import runpy
+from pathlib import Path
+
+from click_man.core import write_man_pages
+
+
+@click.command()
+@click.argument("path")
+@click.argument("target")
+def cli(target, path):    
+    from importlib import import_module
+    from inspect import getmembers
+
+    m = runpy.run_path(path)
+
+    commands = [ (k, v) for k, v in m.items() if isinstance(v, click.Command) ]
+
+    name, obj = commands[0]
+
+    print(f"Writing man pages to {target}")
+    
+    write_man_pages(Path(path).name, obj, target_dir=target)
+    
+
+if __name__ == '__main__':
+    cli()

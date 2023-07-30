@@ -3,35 +3,51 @@
 #include <cstring>
 #include <cstdlib>
 #include <thread>
+#include <filesystem>
 
 #include <systemd/sd-daemon.h>
 
 #include <sdbus-c++/sdbus-c++.h>
 
 #include <piradio/fpga.hpp>
+#include <piradio/pidaemon.hpp>
 
 #include <signal.h>
 
-const std::string dbus_service_name = "io.pi-rad.fpgad";
-const std::string dbus_service_object = "/io/pi-rad/fpgad/service";
-const std::string dbus_fpga_object = "/io/pi-rad/fpgad/fpga";
+namespace fs = std::filesystem;
 
-class FPGADaemon
+const std::string fpga_obj = "/io/piradio/fpgad/fpga";
+const std::string fpga_iface = "io.piradio.fpgad.fpga";
+
+fs::path fw_path = "/etc/piradio/firmware";
+
+class FPGADaemon : public piradio::grpc_daemon
 {
 public:
-  FPGADaemon() {
-    fpga = new piradio::FPGA();
+  FPGADaemon() : grpc_daemon("io.piradio.fpgad") {
+    std::cout << "FPGA operating: " << fpga.operating() << std::endl;
 
-    std::cout << "FPGA operating: " << fpga->operating() << std::endl;
+    create_sdbus_object(fpga_obj);
+
+    register_sdbus_method(fpga_obj, fpga_iface, "reload_firmware", "", "", [this](sdbus::MethodCall c){ reload_firmware(c); });
+
+    finalize_sdbus_object(fpga_obj);
   }
 
-  int run() {
-    sd_notify(0, "READY=1");
-    while(true);
+  void reload_firmware(sdbus::MethodCall call)
+  {
+    if (fpga.operating()) {
+      fpga.remove_overlay();
+    }
+
+    fpga.load_image(fw_path / "bitstream", fw_path / "overlay");
+    
+    auto reply = call.createReply();
+    reply.send();
   }
   
 private:
-  piradio::FPGA *fpga;  
+  piradio::FPGA fpga;
 };
 
 void sighup(int signal) {
@@ -41,33 +57,9 @@ int main(int argc, char **argv)
 {
   int result;
   
-  
-  auto connection = sdbus::createSystemBusConnection(dbus_service_name);
-
-  auto service_control = sdbus::createObject(*connection, dbus_service_object);
-  auto fpga_control = sdbus::createObject(*connection, dbus_fpga_object);
-
   FPGADaemon daemon;
 
-  std::thread daemon_thread([&daemon]() { daemon.run(); });
+  daemon.start();
 
-  while (true) {
-    int recv_sig;
-    sigset_t sset;
-    
-    result = sigwait(&sset, &recv_sig);
-
-    if (result != 0) {
-      std::cerr << "sigwait failed: " << std::strerror(result) << std::endl;
-    }
-
-    std::cout << "Signal: " << recv_sig << std::endl;
-
-    if (recv_sig == SIGTERM || recv_sig == SIGINT) {
-      std::exit(0);
-    }
-  }
-
-
-  return 0;
+  return daemon.wait_on();
 }

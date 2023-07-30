@@ -1,29 +1,56 @@
 cmake_minimum_required(VERSION 3.8)
 
+project(fpgad C CXX)
+
 include(GNUInstallDirs)
 
-project(piradio-fpgad C CXX)
+#set(CMAKE_INSTALL_PREFIX "/" CACHE PATH "comment")
 
 find_package(sdbus-c++ REQUIRED)
+
+# Proto file
+get_filename_component(zcu111d_proto "../interfaces/zcu111d.proto" ABSOLUTE)
+get_filename_component(zcu111d_proto_path "${zcu111d_proto}" PATH)
+
+set(_PROTOBUF_PROTOC protoc)
+set(_GRPC_CPP_PLUGIN_EXECUTABLE /usr/bin/grpc_cpp_plugin)
+
+# Generated sources
+set(zcu111d_proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/zcu111d.pb.cc")
+set(zcu111d_proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/zcu111d.pb.h")
+set(zcu111d_grpc_srcs "${CMAKE_CURRENT_BINARY_DIR}/zcu111d.grpc.pb.cc")
+set(zcu111d_grpc_hdrs "${CMAKE_CURRENT_BINARY_DIR}/zcu111d.grpc.pb.h")
+add_custom_command(
+      OUTPUT "${zcu111d_proto_srcs}" "${zcu111d_proto_hdrs}" "${zcu111d_grpc_srcs}" "${zcu111d_grpc_hdrs}"
+      COMMAND ${_PROTOBUF_PROTOC}
+      ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
+        --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
+        -I "${zcu111d_proto_path}"
+        --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
+        "${zcu111d_proto}"
+      DEPENDS "${zcu111d_proto}")
+
+
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpidaemon/include")    
+
 
 include_directories("include")
 
 
 add_executable(piradio-fpgad src/fpga.cxx src/fpgad.cxx)
 target_link_libraries(piradio-fpgad
+  pidaemon
+  grpc++_reflection
+  grpc++
+  protobuf
+  fmt
   SDBusCpp::sdbus-c++
   systemd)
 
 target_compile_options(piradio-fpgad PUBLIC -g)
 target_compile_options(piradio-fpgad PUBLIC -g)
 
-install(FILES conf/io.pi-rad.fpgad.conf DESTINATION etc/dbus-1/system.d/)
-install(FILES conf/piradio-fpgad.service DESTINATION etc/systemd/system)
+install(TARGETS piradio-fpgad DESTINATION usr/bin COMPONENT fpgad)
+install(FILES conf/io.piradio.fpgad.conf DESTINATION etc/dbus-1/system.d/ COMPONENT fpgad)
+install(FILES conf/io.piradio.fpgad.service DESTINATION etc/systemd/system COMPONENT fpgad)
 
-set(CPACK_SET_DESTDIR true)
-set(CPACK_INSTALL_PREFIX /)
-set(CPACK_GENERATOR DEB)
-set(CPACK_PACKAGE_NAME "piradio-fpgad")
-set(CPACK_PACKAGE_VENDOR "Pi Radio Inc.")
-set(CPACK_PACKAGE_CONTACT "Michael Zappe <zapman@pi-rad.io>")
-include(CPack)

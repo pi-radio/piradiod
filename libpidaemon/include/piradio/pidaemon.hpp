@@ -2,12 +2,17 @@
 
 #include <thread>
 #include <queue>
+#include <map>
 #include <mutex>
 #include <future>
 #include <memory>
+#include <string>
 #include <condition_variable>
 
+#include <fmt/core.h>
+
 #include <systemd/sd-daemon.h>
+#include <systemd/sd-journal.h>
 
 #include <sdbus-c++/sdbus-c++.h>
 
@@ -41,6 +46,8 @@ namespace piradio
   {
   public:
   };
+
+  
   
   class daemon
   {
@@ -52,6 +59,18 @@ namespace piradio
     virtual int cleanup(void) { return 0; };
     virtual int reload(void) { return 0; };
 
+    void create_sdbus_object(const std::string &str);
+
+    void register_sdbus_method(const std::string &obj, const std::string &iface,
+			       const std::string &name, const std::string &insig,
+			       const std::string &retsig, std::function<void(sdbus::MethodCall) > f);
+
+    void finalize_sdbus_object(const std::string &str);
+    
+    auto sd_notify(const std::string &s) {
+      ::sd_notify(0, s.c_str());
+    }
+    
     void start(void);
 
     int wait_on(void);
@@ -64,9 +83,13 @@ namespace piradio
   protected:
     const std::string service_name;
 
+    std::unique_ptr<sdbus::IConnection> sdbus_conn;
+    
     virtual void launch(void);
     virtual void sigloop(void);
 
+    std::map<std::string, std::unique_ptr<sdbus::IObject> > sdbus_obj;
+    
     std::mutex daemon_event_mutex;
     std::condition_variable daemon_event_cv;
     std::queue<daemon_event::ptr> daemon_event_queue;

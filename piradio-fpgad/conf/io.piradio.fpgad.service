@@ -1,3 +1,7 @@
+[D-BUS Service]
+Name=io.piradio.fpgad
+Exec=/usr/bin/piradio-fpgad
+
 [Unit]
 Description=Pi Radio FPGA Management Daemon
 
