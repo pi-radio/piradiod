@@ -64,7 +64,7 @@ if (USE_CPACK)
   set(CPACK_DEBIAN_PACKAGE_DEBUG ON)
 endif()
 
-foreach(name IN ITEMS piradio-base libsamplebuf libpidaemon piradio-sampled piradio-fpgad zcu111d)
+foreach(name IN ITEMS piradio-base libsamplebuf libpidaemon piradio-sampled piradio-fpgad zcu111d piradio-rfdcd)
   message(STATUS "Adding ${name}")
   add_subdirectory("${name}")
 endforeach()  

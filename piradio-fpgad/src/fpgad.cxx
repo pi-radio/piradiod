@@ -21,6 +21,13 @@ const std::string fpga_iface = "io.piradio.fpgad.fpga";
 
 fs::path fw_path = "/etc/piradio/firmware";
 
+/*
+template<class R, class A>
+std::string get_sdbus_arg_signature(std::function<R(A)> &&f)
+{
+}
+*/
+
 class FPGADaemon : public piradio::grpc_daemon
 {
 public:
@@ -30,7 +37,8 @@ public:
     create_sdbus_object(fpga_obj);
 
     register_sdbus_method(fpga_obj, fpga_iface, "reload_firmware", "", "", [this](sdbus::MethodCall c){ reload_firmware(c); });
-
+    register_sdbus_signal(fpga_obj, fpga_iface, "pre_remove_firmware", "");
+    
     finalize_sdbus_object(fpga_obj);
   }
 

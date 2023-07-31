@@ -65,6 +65,9 @@ namespace piradio
 			       const std::string &name, const std::string &insig,
 			       const std::string &retsig, std::function<void(sdbus::MethodCall) > f);
 
+    void register_sdbus_signal(const std::string &obj, const std::string &iface,
+			       const std::string &name, const std::string &sig);
+    
     void finalize_sdbus_object(const std::string &str);
     
     auto sd_notify(const std::string &s) {

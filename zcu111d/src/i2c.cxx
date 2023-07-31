@@ -5,12 +5,10 @@
 #include <vector>
 #include <fmt/core.h>
 
-#include <piradio/rfdc.hpp>
-#include <piradio/rfdc_dc.hpp>
-
 #include <piradio/i2c.hpp>
 
 #include <sys/ioctl.h>
+#include <fcntl.h>
 #include <linux/i2c-dev.h>
 
 extern "C" {

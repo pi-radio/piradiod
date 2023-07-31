@@ -10,7 +10,8 @@ extern "C" {
 }
 
 #include <piradio/clocks.hpp>
-#include <piradio/rfdc_dc.hpp>
+
+#include <unistd.h>
 
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>

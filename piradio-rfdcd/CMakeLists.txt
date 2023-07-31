@@ -39,22 +39,42 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpidaemon/include")
 
 include_directories("include")
 
+add_library(rfdc STATIC
+  src/xilinx/xrfdc.c
+  src/xilinx/xrfdc_ap.c
+  src/xilinx/xrfdc_dp.c
+  src/xilinx/xrfdc_clock.c
+  src/xilinx/xrfdc_g.c
+  src/xilinx/xrfdc_intr.c
+  src/xilinx/xrfdc_mb.c
+  src/xilinx/xrfdc_mixer.c
+  src/xilinx/xrfdc_mts.c
+  src/xilinx/xrfdc_sinit.c
+)
 
-add_executable(zcu111d
-  src/i2c.cxx
-  src/clocks.cxx
-  src/zcu111d.cxx
+
+add_executable(piradio-rfdcd
+  src/rfdcd.cxx
+  src/rfdc.cxx
+  src/rfdc_tile.cxx
+  src/rfdc_dc.cxx
+  src/rfdc_adc.cxx
+  src/rfdc_dac.cxx
+  src/rfdc_str.cxx
   )
 
 
-target_link_libraries(zcu111d
+target_link_libraries(piradio-rfdcd
   SDBusCpp::sdbus-c++
   pidaemon
+  rfdc
+  metal
   fmt
   i2c
   )
 
-target_compile_options(zcu111d PUBLIC -g)
+target_compile_options(piradio-rfdcd PUBLIC -g)
+target_compile_options(rfdc PUBLIC -g)
 
 install(FILES conf/io.piradio.zcu111d.conf DESTINATION etc/dbus-1/system.d/ COMPONENT zcu111d)
 install(FILES conf/io.piradio.zcu111d.service DESTINATION etc/systemd/system COMPONENT zcu111d)

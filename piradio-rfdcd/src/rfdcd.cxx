@@ -5,7 +5,9 @@
 
 #include <sdbus-c++/sdbus-c++.h>
 
-#include <piradio/clocks.hpp>
+#include <piradio/rfdc.hpp>
+
+piradio::RFDC *g_rfdc;
 
 int main(int argc, char **argv)
 {

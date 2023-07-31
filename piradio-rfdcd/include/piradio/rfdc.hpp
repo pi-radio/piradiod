@@ -2,7 +2,7 @@
 
 #include <map>
 
-#include <piradio/xilinx-zcu111/xrfdc.h>
+#include <piradio/xilinx-rfdc/xrfdc.h>
 
 namespace piradio
 {

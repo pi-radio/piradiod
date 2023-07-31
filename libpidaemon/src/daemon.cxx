@@ -49,6 +49,14 @@ namespace piradio
     sdbus_obj[obj]->registerMethod(iface, name, insig, retsig, f);
   }
 
+  void daemon::register_sdbus_signal(const std::string &obj, const std::string &iface,
+				     const std::string &name, const std::string &insig)
+  {
+    std::cout << "Registering method " << obj << " " << iface << " " << insig << std::endl;
+    sdbus_obj[obj]->registerSignal(iface, name, insig);
+  }
+
+  
   void daemon::finalize_sdbus_object(const std::string &obj)
   {
     std::cout << "Finalizing object " << obj << std::endl;
