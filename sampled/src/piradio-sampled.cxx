@@ -226,7 +226,7 @@ grpc::Status sampled::SetChannelEnable(grpc::ServerContext* context, const ::Cha
 class sampled_daemon : public piradio::grpc_daemon
 {
 public:
-  sampled_daemon() : grpc_daemon("io.pi-rad.sampled")
+  sampled_daemon() : grpc_daemon("io.piradio.sampled")
   {
     bind_addresses.push_back("0.0.0.0:7778");
     grpc_services.push_back(&sampled_service);

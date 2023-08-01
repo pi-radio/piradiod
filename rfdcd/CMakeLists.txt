@@ -1,38 +1,34 @@
-cmake_minimum_required(VERSION 3.8)
+include(../cmake/piradio.cmake)
 
-project(zcu111d
-  VERSION 0.1.0
-  DESCRIPTION "ZCU111 control daemon"
-  HOMEPAGE_URL "https://pi-rad.io/"
-  LANGUAGES CXX)
+piradio_project("piradio-rfdcd" RFDCD)
 
-include(GNUInstallDirs)
-
+include(${MACRO_DIR}/changelog.cmake)
+include(${MACRO_DIR}/copyright.cmake)
 
 find_package(sdbus-c++ REQUIRED)
 
 
 # Proto file
-get_filename_component(zcu111d_proto "../interfaces/zcu111d.proto" ABSOLUTE)
-get_filename_component(zcu111d_proto_path "${zcu111d_proto}" PATH)
+get_filename_component(rfdcd_proto "../interfaces/rfdcd.proto" ABSOLUTE)
+get_filename_component(rfdcd_proto_path "${rfdcd_proto}" PATH)
 
 set(_PROTOBUF_PROTOC protoc)
 set(_GRPC_CPP_PLUGIN_EXECUTABLE /usr/bin/grpc_cpp_plugin)
 
 # Generated sources
-set(zcu111d_proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/zcu111d.pb.cc")
-set(zcu111d_proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/zcu111d.pb.h")
-set(zcu111d_grpc_srcs "${CMAKE_CURRENT_BINARY_DIR}/zcu111d.grpc.pb.cc")
-set(zcu111d_grpc_hdrs "${CMAKE_CURRENT_BINARY_DIR}/zcu111d.grpc.pb.h")
+set(rfdcd_proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/rfdcd.pb.cc")
+set(rfdcd_proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/rfdcd.pb.h")
+set(rfdcd_grpc_srcs "${CMAKE_CURRENT_BINARY_DIR}/rfdcd.grpc.pb.cc")
+set(rfdcd_grpc_hdrs "${CMAKE_CURRENT_BINARY_DIR}/rfdcd.grpc.pb.h")
 add_custom_command(
-      OUTPUT "${zcu111d_proto_srcs}" "${zcu111d_proto_hdrs}" "${zcu111d_grpc_srcs}" "${zcu111d_grpc_hdrs}"
+      OUTPUT "${rfdcd_proto_srcs}" "${rfdcd_proto_hdrs}" "${rfdcd_grpc_srcs}" "${rfdcd_grpc_hdrs}"
       COMMAND ${_PROTOBUF_PROTOC}
       ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
         --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
-        -I "${zcu111d_proto_path}"
+        -I "${rfdcd_proto_path}"
         --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
-        "${zcu111d_proto}"
-      DEPENDS "${zcu111d_proto}")
+        "${rfdcd_proto}"
+      DEPENDS "${rfdcd_proto}")
 
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpidaemon/include")    
@@ -76,6 +72,6 @@ target_link_libraries(piradio-rfdcd
 target_compile_options(piradio-rfdcd PUBLIC -g)
 target_compile_options(rfdc PUBLIC -g)
 
-install(FILES conf/io.piradio.zcu111d.conf DESTINATION etc/dbus-1/system.d/ COMPONENT zcu111d)
-install(FILES conf/io.piradio.zcu111d.service DESTINATION etc/systemd/system COMPONENT zcu111d)
+install(TARGETS piradio-rfdcd DESTINATION usr/bin COMPONENT RFDCD)
+piradio_install_dbus("io.piradio.rfdcd")
 

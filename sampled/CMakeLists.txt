@@ -1,29 +1,9 @@
-# Copyright 2018 gRPC authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-# cmake build file for C++ route_guide example.
-# Assumes protobuf and gRPC have been installed using cmake.
-# See cmake_externalproject/CMakeLists.txt for all-in-one cmake build
-# that automatically builds all the dependencies before building route_guide.
+include(../cmake/piradio.cmake)
 
-cmake_minimum_required(VERSION 3.8)
+piradio_project("piradio-sampled" SAMPLED)
 
-project(piradiosampled C CXX)
-
-include(GNUInstallDirs)
-
-#include(../cmake/common.cmake)
+include(${MACRO_DIR}/changelog.cmake)
+include(${MACRO_DIR}/copyright.cmake)
 
 # Proto file
 get_filename_component(sampled_proto "../interfaces/sampled.proto" ABSOLUTE)
@@ -86,3 +66,5 @@ target_link_libraries(piradio-sampled
 install(FILES conf/io.piradio.sampled.conf DESTINATION etc/dbus-1/system.d/ COMPONENT sampled)
 install(FILES conf/io.piradio.sampled.service DESTINATION etc/systemd/system COMPONENT sampled)
 
+install(TARGETS piradio-sampled DESTINATION usr/bin COMPONENT SAMPLED)
+piradio_install_dbus("io.piradio.sampled")

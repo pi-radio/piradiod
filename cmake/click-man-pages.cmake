@@ -1,12 +1,12 @@
 macro(generate_click_man_pages command component)
   execute_process(COMMAND ${SCRIPT_DIR}/get-click-man-pages ${CMAKE_CURRENT_SOURCE_DIR}/${command}
     OUTPUT_VARIABLE GENERATED_MAN_PAGES)
-
+  
   string(STRIP "${GENERATED_MAN_PAGES}" GENERATED_MAN_PAGES)
   string(REPLACE "\n" ";" GENERATED_MAN_PAGES ${GENERATED_MAN_PAGES})
 
-  message(STATUS "Man Pages: ${GENERATED_MAN_PAGES}")
-
+  message(STATUS "Generating manual pages: ${GENERATED_MAN_PAGES}")
+  
   add_custom_target(compressed_man_pages)
 
   add_custom_command(OUTPUT ${GENERATED_MAN_PAGES}

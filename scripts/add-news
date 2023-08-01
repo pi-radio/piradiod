@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+
+import debian.changelog
+import email
+import datetime
+import click
+
+modules = [ 'base', 'zcu111d', 'fpgad', 'rfdcd', 'sampled' ]
+
+@click.group("add-news")
+def cli():
+    pass
+
+@cli.command("create")
+def create():
+    for module in modules:
+        l = debian.changelog.Changelog()#f"module/CHANGELOG")
+
+        b = l.new_block(package=f"piradio-{module}",
+                        version="0.1.2",
+                        distributions="unstable",
+                        urgency="medium",
+                        date=email.utils.format_datetime(datetime.datetime.now()),
+                        author="Michael Zappe <zapman@pi-rad.io>")
+
+        l.add_change("  initial release")
+
+        fn = f"{module}/CHANGELOG"
+        print(f"Writing to {fn}")
+        with open(fn, "w") as f:
+            l.write_to_open_file(f)
+
+@cli.command("new_block")
+def new_block():
+    for module in modules:
+        l = debian.changelog.Changelog()#f"module/CHANGELOG")
+    
+            
+if __name__ == "__main__":
+    cli()

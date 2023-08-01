@@ -1,15 +1,14 @@
-cmake_minimum_required(VERSION 3.8)
+include(../cmake/piradio.cmake)
 
-project(fpgad C CXX)
+piradio_project("piradio-fpgad" FPGAD)
 
-include(GNUInstallDirs)
-
-#set(CMAKE_INSTALL_PREFIX "/" CACHE PATH "comment")
+include(${MACRO_DIR}/changelog.cmake)
+include(${MACRO_DIR}/copyright.cmake)
 
 find_package(sdbus-c++ REQUIRED)
 
 # Proto file
-get_filename_component(zcu111d_proto "../interfaces/zcu111d.proto" ABSOLUTE)
+get_filename_component(fpgad_proto "../interfaces/fpgad.proto" ABSOLUTE)
 get_filename_component(zcu111d_proto_path "${zcu111d_proto}" PATH)
 
 set(_PROTOBUF_PROTOC protoc)
@@ -48,9 +47,8 @@ target_link_libraries(piradio-fpgad
   systemd)
 
 target_compile_options(piradio-fpgad PUBLIC -g)
-target_compile_options(piradio-fpgad PUBLIC -g)
 
-install(TARGETS piradio-fpgad DESTINATION usr/bin COMPONENT fpgad)
-install(FILES conf/io.piradio.fpgad.conf DESTINATION etc/dbus-1/system.d/ COMPONENT fpgad)
-install(FILES conf/io.piradio.fpgad.service DESTINATION etc/systemd/system COMPONENT fpgad)
+install(TARGETS piradio-fpgad DESTINATION usr/bin COMPONENT FPGAD)
+piradio_install_dbus("io.piradio.fpgad")
+
 

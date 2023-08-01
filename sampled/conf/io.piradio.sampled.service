@@ -4,7 +4,14 @@ Exec=/usr/bin/piradio-sampled
 
 [Unit]
 Description=Pi Radio Non Real Time sample daemon
+BindsTo=sys-devices-platform-piradio_nrt.device
 
 [Service]
+Type=notify-reload
+ExitType=main
+BusName=io.piradio.sampled
 ExecStart=/usr/bin/piradio-sampled
 
+[Install]
+Alias=piradio-sampled
+WantedBy=multi-user.target

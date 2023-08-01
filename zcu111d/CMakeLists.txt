@@ -1,13 +1,9 @@
-cmake_minimum_required(VERSION 3.8)
+include(../cmake/piradio.cmake)
 
-project(zcu111d
-  VERSION 0.1.0
-  DESCRIPTION "ZCU111 control daemon"
-  HOMEPAGE_URL "https://pi-rad.io/"
-  LANGUAGES CXX)
+piradio_project("piradio-zcu111d" ZCU111D)
 
-include(GNUInstallDirs)
-
+include(${MACRO_DIR}/changelog.cmake)
+include(${MACRO_DIR}/copyright.cmake)
 
 find_package(sdbus-c++ REQUIRED)
 
@@ -43,6 +39,7 @@ include_directories("include")
 add_executable(zcu111d
   src/i2c.cxx
   src/clocks.cxx
+  src/LMX_regs.cxx
   src/zcu111d.cxx
   )
 
@@ -56,6 +53,5 @@ target_link_libraries(zcu111d
 
 target_compile_options(zcu111d PUBLIC -g)
 
-install(FILES conf/io.piradio.zcu111d.conf DESTINATION etc/dbus-1/system.d/ COMPONENT zcu111d)
-install(FILES conf/io.piradio.zcu111d.service DESTINATION etc/systemd/system COMPONENT zcu111d)
-
+install(TARGETS zcu111d DESTINATION usr/bin COMPONENT ZCU111D)
+piradio_install_dbus("io.piradio.zcu111d")

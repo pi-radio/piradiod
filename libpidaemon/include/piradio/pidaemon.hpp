@@ -22,6 +22,8 @@
 #include <grpcpp/server_context.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 
+#include <piradio/sdsig.hpp>
+
 namespace piradio
 {
   class daemon_event
@@ -65,6 +67,13 @@ namespace piradio
 			       const std::string &name, const std::string &insig,
 			       const std::string &retsig, std::function<void(sdbus::MethodCall) > f);
 
+    template <typename R, typename... A>
+    void register_sdbus_method(const std::string &obj, const std::string &iface,
+			       const std::string &name, std::function<R(A...)> f)
+    {
+      
+    }
+    
     void register_sdbus_signal(const std::string &obj, const std::string &iface,
 			       const std::string &name, const std::string &sig);
     

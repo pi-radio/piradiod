@@ -11,7 +11,8 @@ namespace piradio
   
   daemon::daemon(const std::string &_service_name) : service_name(_service_name)
   {
-    std::cout << "Creating connection!"<< std::endl;
+    std::cout << "uid: " << getuid() << std::endl;
+    std::cout << "Creating connection for bus "<< service_name <<  std::endl;
     sdbus_conn = sdbus::createSystemBusConnection(service_name);
     
     sd_journal_print(LOG_INFO, "daemon created");

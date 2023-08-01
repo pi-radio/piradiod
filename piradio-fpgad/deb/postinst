@@ -1,6 +1,0 @@
-#!/bin/bash
-
-for dir in [ /etc/piradio /etc/piradio/firmware ] ; do
-    chown root.piradio ${dir}
-    chmod 0775 ${dir}
-done

@@ -9,5 +9,7 @@
 
 int main(int argc, char **argv)
 {
+  piradio::setup_clocks();
+	       
   return 0;
 }
