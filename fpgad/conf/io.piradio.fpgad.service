@@ -4,6 +4,7 @@ Exec=/usr/bin/piradio-fpgad
 
 [Unit]
 Description=Pi Radio FPGA Management Daemon
+Wants=io.piradio.zcu111d
 
 [Service]
 ExecStart=/usr/bin/piradio-fpgad

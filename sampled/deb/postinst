@@ -2,4 +2,4 @@
 
 set -e
 
-systemctl reload dbus
+deb-systemd-helper enable io.piradio.sampled.service

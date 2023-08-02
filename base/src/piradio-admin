@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import os
-
+import dbus
 import click
+
+from pathlib import Path
 
 piradio_required_groups = [
     'piradio', 'i2c', 'spi', 'gpio'
@@ -13,6 +15,36 @@ def piradio_admin():
     """Pi Radio administration tool"""
     pass
 
+@piradio_admin.command("disable-firmware")
+def diable_firmware():
+    os.system("rm /etc/piradio/firmware/current")
+    
+@piradio_admin.command("change-firmware")
+@click.argument("new_firmware")
+def change_firmware(new_firmware):
+    """Change the current firmware"""
+    fw_path = Path("/etc/piradio/firmware") / new_firmware
+
+    if not fw_path.exists():
+        print(f"Could not find firmware directory {fw_path}")
+        return 1
+
+    os.system(f"ln -sfn {fw_path} /etc/piradio/firmware/current")
+    
+    reload_firmware()
+
+@piradio_admin.command("reload-firmware")
+def reload_firmware():
+    """Reload the current firmware"""
+    try:
+        bus = dbus.SystemBus()
+
+        obj = bus.get_object('io.piradio.fpgad', '/io/piradio/fpgad/fpga')
+
+        obj.reload_firmware(dbus_interface="io.piradio.fpgad.fpga")
+    except:
+        print("Unable to contact fpgad")
+        
 @piradio_admin.command("grant-user")
 @click.argument("username") 
 def grant_user(username):

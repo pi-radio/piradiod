@@ -2,3 +2,4 @@
 
 set -e
 
+deb-systemd-helper enable io.piradio.zcu111d.service

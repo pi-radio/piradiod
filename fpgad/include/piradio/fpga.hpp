@@ -14,9 +14,6 @@ namespace piradio
     bool overlay_loaded(void);
     bool remove_overlay(void);
 
-    bool load_overlay(const std::filesystem::path &);
-    
-    bool load_image(const std::filesystem::path &);
     bool load_image(const std::filesystem::path &, const std::filesystem::path &);
   };
 };

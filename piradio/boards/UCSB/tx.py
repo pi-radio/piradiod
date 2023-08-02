@@ -78,7 +78,7 @@ class Mixer(CommandObject):
     @command
     def status(self):
         output.print("Mixer:")
-        self.children.VGG.status(" VLO: ")
+        self.children.VLO.status(" VLO: ")
         output.print(f" VCM: {1000.0*self.children.VCM.dac:4.0f} mV")
         output.print(f" VDD_bias: {1000.0*self.children.VDD_bias.dac:4.0f} mV")
                 

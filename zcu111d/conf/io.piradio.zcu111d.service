@@ -2,7 +2,11 @@
 Description=zcu111d
 
 [Service]
+Type=notify-reload
+ExitType=main
+BusName=io.piradio.sampled
 ExecStart=/usr/bin/zcu111d
 
 [Install]
+Alias=piradio-zcu111d
 WantedBy=multi-user.target
