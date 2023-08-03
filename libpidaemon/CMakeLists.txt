@@ -12,7 +12,11 @@ set(LIBPIDAEMON_SOURCES src/daemon.cxx src/grpc.cxx)
 
 add_library(pidaemon STATIC ${LIBPIDAEMON_SOURCES})
 
-target_link_libraries(pidaemon
+target_link_libraries(pidaemon PUBLIC
+  grpc++_reflection
+  grpc++
+  grpc
+  protobuf
   SDBusCpp::sdbus-c++
   systemd)
 

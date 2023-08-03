@@ -10,6 +10,8 @@ set(LIBSAMPLEBUF_SOURCES src/samplebuf.cpp src/trigger.cpp src/uio.cpp)
 
 add_library(samplebuf STATIC ${LIBSAMPLEBUF_SOURCES})
 
+target_link_libraries(samplebuf PUBLIC fmt)
+
 add_executable(piradio-dumpbuf src/dumpbuf.cpp)
 
 target_link_libraries(piradio-dumpbuf samplebuf fmt)

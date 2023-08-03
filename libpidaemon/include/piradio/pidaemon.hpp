@@ -50,7 +50,6 @@ namespace piradio
   };
 
   
-  
   class daemon
   {
   public:
@@ -67,11 +66,19 @@ namespace piradio
 			       const std::string &name, const std::string &insig,
 			       const std::string &retsig, std::function<void(sdbus::MethodCall) > f);
 
-    template <typename R, typename... A>
+    void invoke_sdbus_wrapper(sdbus_wrapper_base *wrapper, sdbus::MethodCall);
+    
+    template <class C, typename R, typename... A>
     void register_sdbus_method(const std::string &obj, const std::string &iface,
-			       const std::string &name, std::function<R(A...)> f)
+			       const std::string &name, R (C::*f)(A...))
     {
-      
+      sdbus_wrapper_base *wrapper = new sdbus_wrapper(f, dynamic_cast<C*>(this));
+
+      register_sdbus_method(obj, iface, name,
+			    wrapper->arg_sig(), wrapper->ret_sig(),
+			    [this, wrapper](sdbus::MethodCall call) { invoke_sdbus_wrapper(wrapper, call); });
+
+      wrappers.push_back(wrapper);
     }
     
     void register_sdbus_signal(const std::string &obj, const std::string &iface,
@@ -109,6 +116,8 @@ namespace piradio
     std::thread service_thread;
     std::thread signal_thread;
     std::promise<int> return_promise;
+
+    std::vector<sdbus_wrapper_base *> wrappers;
   };
 
   class grpc_daemon : public daemon

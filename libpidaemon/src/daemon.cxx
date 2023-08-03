@@ -42,6 +42,16 @@ namespace piradio
     sdbus_obj.emplace(str, sdbus::createObject(*sdbus_conn, str));
   }
 
+  void daemon::invoke_sdbus_wrapper(sdbus_wrapper_base *wrapper, sdbus::MethodCall call)
+  {
+    try {
+      wrapper->invoke(call);
+    } catch(const std::runtime_error &e) {
+      throw sdbus::Error(service_name, e.what());
+    }
+  }
+
+  
   void daemon::register_sdbus_method(const std::string &obj, const std::string &iface,
 				     const std::string &name, const std::string &insig,
 				     const std::string &retsig, std::function<void(sdbus::MethodCall) > f)
