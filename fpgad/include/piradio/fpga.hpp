@@ -4,8 +4,20 @@
 
 namespace piradio
 {
+  namespace fs = std::filesystem;
+  
   class FPGA
   {
+    fs::path configfs_path;
+
+    const fs::path overlays_path() {
+      return configfs_path / "device-tree/overlays";
+    }
+    
+    const fs::path full_overlay_path() {
+      return overlays_path() / "full";
+    }
+    
   public:
     FPGA();
 

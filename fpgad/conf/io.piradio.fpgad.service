@@ -1,8 +1,5 @@
-[D-BUS Service]
-Name=io.piradio.fpgad
-Exec=/usr/bin/piradio-fpgad
-
 [Unit]
+BusName=io.piradio.fpgad
 Description=Pi Radio FPGA Management Daemon
 Wants=io.piradio.zcu111d
 
@@ -10,4 +7,5 @@ Wants=io.piradio.zcu111d
 ExecStart=/usr/bin/piradio-fpgad
 
 [Install]
+Alias=piradio-fpgad.service
 WantedBy=multi-user.target

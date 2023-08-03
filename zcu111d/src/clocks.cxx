@@ -68,35 +68,58 @@ namespace piradio
   }
 
 
+  class Si5382
+  {
+    zcu111_i2c &i2c;
+  public:
+    Si5382(zcu111_i2c &_i2c) : i2c(_i2c) {
+      char id[9];
+      
+      i2c.write(0x01, 0x00);
+
+      for(int i = 0; i < 9; i++) { 
+	i2c.write(0x02 + i);
+	id[i] = i2c.read(0x00);
+      }
+
+      id[8] = 0;
+    }
+
+    void write_reg(uint8_t page, uint8_t reg, uint8_t val) {
+      if (page == 0xFF) {
+	usleep(1000);
+	return;
+      }
+      while (i2c.write(0x01, page) < 0) {
+	std::cout << "Could not set page to " << (int)page << std::endl;
+	sleep(1);
+      }
+      while (i2c.write(reg, val) < 0 ) {
+	std::cout << "Could not set reg " << (int)reg << " to " << (int)val << std::endl;
+	sleep(1);
+      }
+    }
+  };
   
   void program_Si5382(zcu111_i2c &i2c, const std::vector<std::tuple<uint8_t, uint8_t, uint8_t> > &regs)
   {
     std::cout << "Programming Si5382" << std::endl;
-    i2c.write(0x01, { 0x00 });
-    i2c.write(0x02);
-    i2c.read(0x00);
-    i2c.write(0x03);
-    i2c.read(0x00);
+    Si5382 si(i2c);
+
+    // Note, if shit's broken, I changed this
+    //i2c.write(0x01, 0x00);
+    //i2c.write(0x02);
+    //i2c.read(0x00);
+    //i2c.write(0x03);
+    //i2c.read(0x00);
 
     int i = 0;
     uint8_t page, reg, val;
                         
     for (auto r : regs) {
-
       std::tie(page, reg, val) = r;
-      
-      if (page == 0xFF) {
-	usleep(1000);
-	continue;
-      }
-      while (i2c.write(0x01, page) < 0) {
-	std::cout << i << ": Could not set page to " << (int)page << std::endl;
-	sleep(1);
-      }
-      while (i2c.write(reg, val) < 0 ) {
-	std::cout << i << ": Could not set reg " << (int)reg << " to " << (int)val << std::endl;
-	sleep(1);
-      }
+
+      si.write_reg(page, reg, val);
     }    
   }
 

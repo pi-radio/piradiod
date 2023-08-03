@@ -7,14 +7,17 @@
 #include <cstdlib>
 #include <chrono>
 
+#include <sys/mount.h>
+#include <mntent.h>
+
 namespace fs = std::filesystem;
 
 const fs::path manager_path = "/sys/class/fpga_manager";
 const fs::path fpga0_path = manager_path / "fpga0";
 
-const fs::path configfs_path = "/configfs";
-const fs::path overlays_path = configfs_path / "device-tree/overlays";
-const fs::path full_overlay_path = overlays_path / "full";
+//fs::path configfs_path = "/configfs";
+//const fs::path overlays_path = configfs_path / "device-tree/overlays";
+//const fs::path full_overlay_path = overlays_path / "full";
 
 const fs::path firmware_dest_dir = "/lib/firmware";
 
@@ -30,10 +33,34 @@ namespace piradio
       throw std::runtime_error("FPGA 0 not found");
     }
 
-    if (!fs::exists(configfs_path)) {
+    {
+      struct mntent *ent;
+      FILE *fp;
+
+      fp = setmntent("/proc/mounts", "r");
+      if (fp == NULL) {
+	throw std::runtime_error("Unable to access mount pints");
+      }
+
+      while (NULL != (ent = getmntent(fp))) {
+	if (std::string("configfs") == ent->mnt_fsname) {
+	  std::cout << "Config FS at: " << ent->mnt_dir << std::endl;
+	  configfs_path = ent->mnt_dir;
+	}
+      }
+
+      endmntent(fp);
+    }
+
+    
+    if (configfs_path.empty()) {
+      configfs_path = "/configfs";
       fs::create_directory(configfs_path);
-      std::string command = std::string("mount -t configfs configfs ") + configfs_path.string();
-      std::system(command.c_str());
+      int result = mount("configfs", configfs_path.c_str(), "configfs", 0, NULL);
+
+      if (result != 0) {
+	throw std::runtime_error("Could not mount configfs");
+      }
     }    
   }
   
@@ -49,12 +76,12 @@ namespace piradio
 
   bool FPGA::overlay_loaded(void)
   {
-    return fs::exists(full_overlay_path) && fs::is_directory(full_overlay_path);
+    return fs::exists(full_overlay_path()) && fs::is_directory(full_overlay_path());
   }
 
   bool FPGA::remove_overlay(void)
   {
-    return fs::remove(full_overlay_path);
+    return fs::remove(full_overlay_path());
   }
   
   bool FPGA::load_image(const std::filesystem::path &image_path, const std::filesystem::path &overlay_path)
@@ -72,12 +99,12 @@ namespace piradio
       fs::create_directory("/lib/firmware");
     }
 
-    fs::copy_file(image_path, firmware_dest);
-    fs::copy_file(overlay_path, overlay_dest);
+    fs::copy_file(image_path, firmware_dest,  fs::copy_options::overwrite_existing);
+    fs::copy_file(overlay_path, overlay_dest,  fs::copy_options::overwrite_existing);
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    fs::create_directory(full_overlay_path);
+    fs::create_directory(full_overlay_path());
 
     {
       std::ofstream flag_stream(fpga0_path / "flags");
@@ -86,7 +113,7 @@ namespace piradio
     }
     
     {
-      std::ofstream ovl_stream(full_overlay_path / "path");
+      std::ofstream ovl_stream(full_overlay_path() / "path");
 
       ovl_stream << overlay_path.filename().c_str();
 
@@ -94,7 +121,7 @@ namespace piradio
     }
 
     {
-      std::ifstream ovl_stream(full_overlay_path / "path");
+      std::ifstream ovl_stream(full_overlay_path() / "path");
       std::stringstream s;
 
       s << ovl_stream.rdbuf();

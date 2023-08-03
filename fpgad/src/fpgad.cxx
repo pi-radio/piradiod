@@ -17,6 +17,8 @@
 
 #include <signal.h>
 
+#include <mntent.h>
+
 namespace fs = std::filesystem;
 
 const std::string fpga_obj = "/io/piradio/fpgad/fpga";
@@ -34,6 +36,10 @@ class FPGADaemon : public piradio::grpc_daemon
 public:
   FPGADaemon() : grpc_daemon("io.piradio.fpgad") {
     std::cout << "FPGA operating: " << fpga.operating() << std::endl;
+
+    if (!fs::exists("/configfs")) {
+      fs::create_directory("/configfs");
+    }
 
     
     create_sdbus_object(fpga_obj);

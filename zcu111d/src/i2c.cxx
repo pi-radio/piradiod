@@ -38,11 +38,8 @@ namespace piradio
 	memset(buf, 0, sizeof(buf));
 
 	if (i2c.read() < 0) {
-	  std::cout << "Skipping " << de.path() << ": " << std::strerror(errno) << std::endl;
 	  continue;
 	}
-
-	std::cout << "Found " << de.path() << ": " << buf << std::endl;
 
 	retval = devno;
       }

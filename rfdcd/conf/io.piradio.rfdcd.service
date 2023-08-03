@@ -1,8 +1,9 @@
 [Unit]
-Description=zcu111d
+Description=rfdcd
 
 [Service]
-ExecStart=/usr/bin/zcu111d
+ExecStart=/usr/bin/piraido-rfdcd
 
 [Install]
+Alias=piradio-rfdcd.service
 WantedBy=multi-user.target
