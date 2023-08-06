@@ -23,7 +23,7 @@ class CMOS_PA(CommandObject):
         self.children.VGG.range = 6
         self.children.VGG.dac = 0.0
         
-        self.children.VDD = HCPort(dev, (10, 11, 12), self.VDD_target)
+        self.children.VDD = HCPort(dev, (10, 11, 12), self.VDD_target + 0.15)
 
     @command
     def up(self):

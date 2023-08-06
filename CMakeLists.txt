@@ -7,7 +7,7 @@ include(GNUInstallDirs)
 
 set(USE_CPACK 1)
 
-foreach(name IN ITEMS base libsamplebuf libpidaemon sampled fpgad zcu111d rfdcd)
+foreach(name IN ITEMS base libpiradio libtilmx libsamplebuf sampled fpgad zcu111d rfdcd)
   message(STATUS "Adding ${name}")
   add_subdirectory("${name}")
 endforeach()  

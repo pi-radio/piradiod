@@ -9,9 +9,9 @@ include(${MACRO_DIR}/grpc.cmake)
 grpc_generate_interface("../interfaces/sampled.proto")
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libsamplebuf/include")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpidaemon/include")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpiradio/include")
 
-link_libraries(pidaemon samplebuf fmt)
+link_libraries(piradio samplebuf fmt)
 
 add_executable(piradio-sampled
   src/piradio-sampled.cxx)

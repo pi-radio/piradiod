@@ -31,7 +31,7 @@ add_custom_command(
       DEPENDS "${zcu111d_proto}")
 
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpidaemon/include")    
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpiradio/include")    
 
 include_directories("include")
 
@@ -46,7 +46,7 @@ add_executable(zcu111d
 
 target_link_libraries(zcu111d
   SDBusCpp::sdbus-c++
-  pidaemon
+  piradio
   fmt
   i2c
   )

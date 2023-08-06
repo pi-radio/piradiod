@@ -11,7 +11,7 @@ find_package(sdbus-c++ REQUIRED)
 # Proto file
 grpc_generate_interface("../interfaces/fpgad.proto")
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpidaemon/include")    
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpiradio/include")    
 
 
 include_directories("include")
@@ -20,7 +20,7 @@ include_directories("include")
 add_executable(piradio-fpgad src/fpga.cxx src/fpgad.cxx)
 
 target_link_libraries(piradio-fpgad
-  pidaemon
+  piradio
   fmt
   SDBusCpp::sdbus-c++
   systemd)

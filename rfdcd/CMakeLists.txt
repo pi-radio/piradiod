@@ -31,7 +31,7 @@ add_custom_command(
       DEPENDS "${rfdcd_proto}")
 
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpidaemon/include")    
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpiradio/include")    
 
 include_directories("include")
 
@@ -62,7 +62,7 @@ add_executable(piradio-rfdcd
 
 target_link_libraries(piradio-rfdcd
   SDBusCpp::sdbus-c++
-  pidaemon
+  piradio
   rfdc
   metal
   fmt

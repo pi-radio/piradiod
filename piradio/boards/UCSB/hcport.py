@@ -1,7 +1,7 @@
 import os
 import time
 
-from piradio.command import CommandObject, command
+from piradio.command import CommandObject, command, cmdproperty
 from piradio.output import output
 from piradio.devices import SPIDev, MAX11300Dev
 
@@ -43,7 +43,7 @@ class HCPort(CommandObject):
         self.dac.end_config()
         time.sleep(0.001)
 
-    @property
+    @cmdproperty
     def V(self):
         return self._V
 
@@ -54,7 +54,7 @@ class HCPort(CommandObject):
         self.dac.dac = self._V
         return self._V
 
-    @property
+    @cmdproperty
     def I(self):
         return self.adcp.adc / self.Rsense
 
@@ -64,10 +64,11 @@ class HCPort(CommandObject):
             v += self.adcp.adc
         return v/N/self.Rsense
     
-    @property
+    @cmdproperty
     def V_sense_lo(self):
         return self.adcn.adc / self.Rsense
-    
+
+    @command
     def ramp_to(self, V, display=False):
         assert(V <= self.maxV)
         N = 16
