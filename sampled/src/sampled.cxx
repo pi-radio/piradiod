@@ -9,7 +9,8 @@
 #include <grpcpp/server_context.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 
-#include <piradio/pidaemon.hpp>
+#include <piradio/daemon.hpp>
+#include <piradio/services.hpp>
 #include <piradio/samplebuf.hpp>
 #include <piradio/trigger.hpp>
 
@@ -226,7 +227,7 @@ grpc::Status sampled::SetChannelEnable(grpc::ServerContext* context, const ::Cha
 class sampled_daemon : public piradio::grpc_daemon
 {
 public:
-  sampled_daemon() : grpc_daemon("io.piradio.sampled")
+  sampled_daemon() : grpc_daemon(piradio::services::sampled::bus)
   {
     bind_addresses.push_back("0.0.0.0:7778");
     grpc_services.push_back(&sampled_service);

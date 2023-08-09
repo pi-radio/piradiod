@@ -3,7 +3,7 @@
 
 #include <signal.h>
 
-#include <piradio/pidaemon.hpp>
+#include <piradio/daemon.hpp>
 
 namespace piradio
 {
@@ -35,14 +35,20 @@ namespace piradio
     }
   }
 
-  void daemon::create_sdbus_object(const std::string &str)
+  dbus::obj daemon::create_sdbus_object(const std::string &name)
   {
-    std::cout << "Creating object " << str << std::endl;
+    obj_map.emplace(name, sdbus::createObject(*sdbus_conn, name));
     
-    sdbus_obj.emplace(str, sdbus::createObject(*sdbus_conn, str));
+    return std::make_tuple(name);
   }
 
-  void daemon::invoke_sdbus_wrapper(sdbus_wrapper_base *wrapper, sdbus::MethodCall call)
+  dbus::iface daemon::create_sdbus_iface(dbus::obj &obj, const std::string &name)
+  {
+    return std::make_tuple(std::get<0>(obj), name);
+  }
+
+  
+  void daemon::invoke_sdbus_wrapper(dbus::wrapper_base *wrapper, sdbus::MethodCall call)
   {
     try {
       wrapper->invoke(call);
@@ -52,26 +58,23 @@ namespace piradio
   }
 
   
-  void daemon::register_sdbus_method(const std::string &obj, const std::string &iface,
+  void daemon::register_sdbus_method(dbus::iface &iface,
 				     const std::string &name, const std::string &insig,
 				     const std::string &retsig, std::function<void(sdbus::MethodCall) > f)
   {
-    std::cout << "Registering method " << obj << " " << iface << " " << insig << " " << retsig << std::endl;
-    sdbus_obj[obj]->registerMethod(iface, name, insig, retsig, f);
+    obj_map[std::get<0>(iface)]->registerMethod(std::get<1>(iface), name, insig, retsig, f);
   }
 
-  void daemon::register_sdbus_signal(const std::string &obj, const std::string &iface,
+  void daemon::register_sdbus_signal(dbus::iface &iface,
 				     const std::string &name, const std::string &insig)
   {
-    std::cout << "Registering method " << obj << " " << iface << " " << insig << std::endl;
-    sdbus_obj[obj]->registerSignal(iface, name, insig);
+    obj_map[std::get<0>(iface)]->registerSignal(std::get<1>(iface), name, insig);
   }
 
   
-  void daemon::finalize_sdbus_object(const std::string &obj)
+  void daemon::finalize_sdbus_object(dbus::obj &obj)
   {
-    std::cout << "Finalizing object " << obj << std::endl;
-    sdbus_obj[obj]->finishRegistration();
+    obj_map[std::get<0>(obj)]->finishRegistration();
   }
   
   void daemon::launch(void)

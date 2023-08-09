@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ostream>
+
 namespace piradio
 {
   class frequency
@@ -21,16 +23,35 @@ namespace piradio
     frequency operator*(double d) const { return frequency(f*d); }
     frequency operator/(double d) const { return frequency(f/d); }
 
+    bool operator==(const frequency &other) const { return f == other.f; }
+    
+    auto operator<=>(const frequency &other) const { return f <=> other.f; }
+    
   protected:
     double f;
   };
 
-  frequency operator*(double d, const frequency &f) { return f * d; }
+  static inline frequency operator*(double d, const frequency &f) { return f * d; }
 
-  frequency Hz(double f) { return frequency(f); }
-  frequency KHz(double f) { return frequency(f * 1.0e3); }
-  frequency MHz(double f) { return frequency(f * 1.0e6); }
-  frequency GHz(double f) { return frequency(f * 1.0e9); }
+  static inline std::ostream &operator<<(std::ostream &out, const frequency &f)
+  {
+    if (f.Hz() < 1000.0) {
+      out << f.Hz() << "Hz";
+    } else if (f.KHz() < 1000.0) {
+      out << f.KHz() << "KHz";
+    } else if (f.MHz() < 1000.0) {
+      out << f.MHz() << "MHz";
+    } else {
+      out << f.GHz() << "GHz";
+    }
+
+    return out;
+  }
+  
+  static inline frequency Hz(double f) { return frequency(f); }
+  static inline frequency KHz(double f) { return frequency(f * 1.0e3); }
+  static inline frequency MHz(double f) { return frequency(f * 1.0e6); }
+  static inline frequency GHz(double f) { return frequency(f * 1.0e9); }
 
   class frequency_range
   {
@@ -45,8 +66,8 @@ namespace piradio
 
     double bc(const frequency &f) { return (f.Hz() - min.Hz()) / (max.Hz() - min.Hz()); }
 
-    bool in_co(const frequency &f) { return (f.Hz() >= min.Hz()) && (f.Hz() < max.Hz()); }
-    bool in_cc(const frequency &f) { return (f.Hz() >= min.Hz()) && (f.Hz() <= max.Hz()); }
+    bool in_co(const frequency &f) { return (f >= min) && (f < max); }
+    bool in_cc(const frequency &f) { return (f >= min) && (f <= max); }
   
   protected:
     frequency min, max;

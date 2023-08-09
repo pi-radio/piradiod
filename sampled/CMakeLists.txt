@@ -14,7 +14,7 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpiradio/include")
 link_libraries(piradio samplebuf fmt)
 
 add_executable(piradio-sampled
-  src/piradio-sampled.cxx)
+  src/sampled.cxx)
 
 
 install(FILES conf/io.piradio.sampled.conf DESTINATION etc/dbus-1/system.d/ COMPONENT sampled)

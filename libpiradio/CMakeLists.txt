@@ -8,7 +8,7 @@ find_package(sdbus-c++ REQUIRED)
 
 project(libpiradio VERSION 0.1.0 DESCRIPTION "Shared class for Pi Radio Daemons")
 
-set(LIBPIRADIO_SOURCES src/daemon.cxx src/grpc.cxx)
+set(LIBPIRADIO_SOURCES src/freq_module.cxx src/daemon.cxx src/grpc.cxx)
 
 add_library(piradio STATIC ${LIBPIRADIO_SOURCES})
 

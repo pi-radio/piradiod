@@ -7,12 +7,9 @@
 #include <filesystem>
 #include <unordered_map>
 
-#include <systemd/sd-daemon.h>
-
-#include <sdbus-c++/sdbus-c++.h>
-
 #include <piradio/fpga.hpp>
-#include <piradio/pidaemon.hpp>
+#include <piradio/daemon.hpp>
+#include <piradio/services.hpp>
 #include <piradio/sdjournal.hpp>
 
 #include <signal.h>
@@ -20,9 +17,6 @@
 #include <mntent.h>
 
 namespace fs = std::filesystem;
-
-const std::string fpga_obj = "/io/piradio/fpgad/fpga";
-const std::string fpga_iface = "io.piradio.fpgad.fpga";
 
 fs::path fw_path = "/etc/piradio/firmware";
 
@@ -34,7 +28,7 @@ int test_func(int a, int b)
 class FPGADaemon : public piradio::grpc_daemon
 {
 public:
-  FPGADaemon() : grpc_daemon("io.piradio.fpgad") {
+  FPGADaemon() : grpc_daemon(piradio::services::fpgad::bus) {
     std::cout << "FPGA operating: " << fpga.operating() << std::endl;
 
     if (!fs::exists("/configfs")) {
@@ -42,13 +36,15 @@ public:
     }
 
     
-    create_sdbus_object(fpga_obj);
+    auto obj = create_sdbus_object(piradio::services::fpgad::root_object);
 
-    register_sdbus_method(fpga_obj, fpga_iface, "reload_firmware", &FPGADaemon::reload_firmware);
-    register_sdbus_signal(fpga_obj, fpga_iface, "pre_remove_firmware", "");
-    register_sdbus_signal(fpga_obj, fpga_iface, "firmware_removed", "");
+    auto iface = create_sdbus_iface(obj, piradio::services::fpgad::root_interface);
     
-    finalize_sdbus_object(fpga_obj);
+    register_sdbus_method(iface, "reload_firmware", &FPGADaemon::reload_firmware);
+    register_sdbus_signal(iface, "pre_remove_firmware", "");
+    register_sdbus_signal(iface, "firmware_removed", "");
+    
+    finalize_sdbus_object(obj);
 
     if (!fpga.operating() && fs::exists(fw_path / "current")) {
       reload_firmware();

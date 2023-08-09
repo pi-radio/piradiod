@@ -10,6 +10,12 @@ namespace piradio
   class DAC;
   class ADCTile;
   class DACTile;
+
+  namespace DCType
+  {
+    static const int ADC = XRFDC_ADC_TILE;
+    static const int DAC = XRFDC_DAC_TILE;
+  };
   
   class RFDC
   {
@@ -37,4 +43,4 @@ namespace piradio
     std::map<int, ADC *> adcs;
     std::map<int, DAC *> dacs;
   };
-}
+};

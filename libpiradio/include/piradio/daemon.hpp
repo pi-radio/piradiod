@@ -14,7 +14,6 @@
 #include <systemd/sd-daemon.h>
 #include <systemd/sd-journal.h>
 
-#include <sdbus-c++/sdbus-c++.h>
 
 #include <grpc/grpc.h>
 #include <grpcpp/server.h>
@@ -22,7 +21,7 @@
 #include <grpcpp/server_context.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 
-#include <piradio/sdsig.hpp>
+#include <piradio/dbus.hpp>
 
 namespace piradio
 {
@@ -59,32 +58,34 @@ namespace piradio
     virtual int service_loop(void);
     virtual int cleanup(void) { return 0; };
     virtual int reload(void) { return 0; };
-
-    void create_sdbus_object(const std::string &str);
-
-    void register_sdbus_method(const std::string &obj, const std::string &iface,
+    
+    dbus::obj create_sdbus_object(const std::string &name);
+    
+    dbus::iface create_sdbus_iface(dbus::obj &obj, const std::string &name);
+    
+    void register_sdbus_method(dbus::iface &,
 			       const std::string &name, const std::string &insig,
 			       const std::string &retsig, std::function<void(sdbus::MethodCall) > f);
 
-    void invoke_sdbus_wrapper(sdbus_wrapper_base *wrapper, sdbus::MethodCall);
+    void invoke_sdbus_wrapper(dbus::wrapper_base *wrapper, sdbus::MethodCall);
     
     template <class C, typename R, typename... A>
-    void register_sdbus_method(const std::string &obj, const std::string &iface,
+    void register_sdbus_method(dbus::iface &iface,
 			       const std::string &name, R (C::*f)(A...))
     {
-      sdbus_wrapper_base *wrapper = new sdbus_wrapper(f, dynamic_cast<C*>(this));
+      auto wrapper = dbus::wrap(f, dynamic_cast<C*>(this));
 
-      register_sdbus_method(obj, iface, name,
-			    wrapper->arg_sig(), wrapper->ret_sig(),
+      register_sdbus_method(iface, name,
+			    dbus::arg_sig(f), dbus::ret_sig(f),
 			    [this, wrapper](sdbus::MethodCall call) { invoke_sdbus_wrapper(wrapper, call); });
 
       wrappers.push_back(wrapper);
     }
     
-    void register_sdbus_signal(const std::string &obj, const std::string &iface,
+    void register_sdbus_signal(dbus::iface &iface,
 			       const std::string &name, const std::string &sig);
     
-    void finalize_sdbus_object(const std::string &str);
+    void finalize_sdbus_object(dbus::obj &);
     
     auto sd_notify(const std::string &s) {
       ::sd_notify(0, s.c_str());
@@ -107,7 +108,7 @@ namespace piradio
     virtual void launch(void);
     virtual void sigloop(void);
 
-    std::map<std::string, std::unique_ptr<sdbus::IObject> > sdbus_obj;
+    std::map<std::string, std::unique_ptr<sdbus::IObject> > obj_map;
     
     std::mutex daemon_event_mutex;
     std::condition_variable daemon_event_cv;
@@ -117,7 +118,7 @@ namespace piradio
     std::thread signal_thread;
     std::promise<int> return_promise;
 
-    std::vector<sdbus_wrapper_base *> wrappers;
+    std::vector<dbus::wrapper_base *> wrappers;
   };
 
   class grpc_daemon : public daemon

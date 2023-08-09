@@ -135,11 +135,11 @@ def parse_lmx_regs(infile):
         sym = f"{field_name.lower()}"
 
         if shift == 0:
-            return f"({sym} & 0x{((1 << (length + 1))-1):x})"        
+            return f"({sym} & 0x{((1 << length)-1):x})"        
         elif shift > 0:
-            return f"(({sym} & 0x{((1 << (length + 1))-1):x}) << {shift})"
+            return f"(({sym} & 0x{((1 << length)-1):x}) << {shift})"
         else:
-            return f"(({sym} >> {-shift}) & 0x{((1 << (length + 1))-1):x})"
+            return f"(({sym} >> {-shift}) & 0x{((1 << length)-1):x})"
 
     with open(f"include/piradio/lmx{chip_id}_config.hpp", "w") as f:
         f.write( "#pragma once\n")
@@ -151,6 +151,7 @@ def parse_lmx_regs(infile):
         f.write( "{\n")
         f.write(f"  class {classname}\n")
         f.write( "  {\n")
+        f.write( "  public:\n")
         for k, v in full_fields.items():
             if v >= 32:
                 f.write( "    std::uint64_t ")
@@ -162,9 +163,11 @@ def parse_lmx_regs(infile):
 
         f.write( "\n")
 
+        f.write(f"    {classname}();\n")
         f.write( "    void fill_regs(std::map<int, std::uint16_t> &map);\n")
         f.write( "    void read_regs(const std::map<int, std::uint16_t> &map);\n")
-        f.write( "    void dump(void);\n")
+        f.write( "    void dump(void) const;\n")
+        f.write(f"    void dump_compare(const {classname} &other) const;\n")
         f.write( "  };\n")
         f.write( "};\n")
         
@@ -177,6 +180,19 @@ def parse_lmx_regs(infile):
         f.write( "\n")
         f.write( "namespace piradio\n")
         f.write( "{\n")
+
+        f.write(f"  {classname}::{classname}()\n")
+        f.write( "  {\n")
+
+        for field_name, v in fields.items():
+            if '[' in field_name:
+                m = bits_re.match(field_name)
+                field_name = m.group('field_name').lower()
+            f.write(f"    {field_name.lower()} = 0;\n")
+            
+        f.write( "  }\n")
+        f.write( "\n")
+        
         f.write(f"  void {classname}::fill_regs(std::map<int, uint16_t> &reg_vals)\n")
         f.write( "  {\n")
         for k, v in reg_fields.items():
@@ -187,6 +203,7 @@ def parse_lmx_regs(infile):
                 
             f.write(" | ".join(t) + ";\n")
         f.write( "  }\n")
+        f.write( "\n")
 
         f.write(f"  void {classname}::read_regs(const std::map<int, std::uint16_t> &reg_vals)\n")
         f.write( "  {\n")
@@ -201,7 +218,6 @@ def parse_lmx_regs(infile):
             length = 0
             
             if '[' in field_name:
-                print(field_name)
                 m = bits_re.match(field_name)
                 field_name = m.group('field_name').lower()
                 start = int(m.group('start'))
@@ -230,7 +246,7 @@ def parse_lmx_regs(infile):
                 shift += v['pos']
                 length += v['len']
 
-                mask = (1 << (length + 1)) - 1
+                mask = (1 << (length)) - 1
 
                 if shift == 0:
                     f.write(f"    {field_name} = reg_vals.at({reg}) & 0x{mask:x};\n")
@@ -239,13 +255,24 @@ def parse_lmx_regs(infile):
         f.write( "  }\n")
 
         f.write( "\n")
-        f.write(f"  void {classname}::dump(void)\n")
+        f.write(f"  void {classname}::dump(void) const\n")
         f.write( "  {\n")
 
         for k in full_fields:
             f.write(f'    std::cout << "{k.lower()}: " << {k.lower()} << std::endl;\n')
         f.write( "  }\n")
+
+        f.write( "\n")
+        f.write(f"  void {classname}::dump_compare(const {classname} &other) const\n")
+        f.write( "  {\n")
+
+        for k in full_fields:
+            f.write(f'    if ({k.lower()} != other.{k.lower()}) {{\n')
+            f.write(f'      std::cout << "{k.lower()} differs: " << {k.lower()} << " " << other.{k.lower()} << std::endl;\n')
+            f.write( '    }\n')
+        f.write( "  }\n")
         f.write( "}\n")
+
         
 if __name__ == '__main__':
     parse_lmx_regs()

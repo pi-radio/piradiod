@@ -7,6 +7,7 @@ namespace piradio
 {
   class LMX2594Config
   {
+  public:
     std::uint16_t powerdown;
     std::uint16_t reset;
     std::uint16_t muxout_ld_sel;
@@ -96,8 +97,10 @@ namespace piradio
     std::uint16_t rb_vco_capctrl;
     std::uint16_t rb_vco_daciset;
 
+    LMX2594Config();
     void fill_regs(std::map<int, std::uint16_t> &map);
     void read_regs(const std::map<int, std::uint16_t> &map);
-    void dump(void);
+    void dump(void) const;
+    void dump_compare(const LMX2594Config &other) const;
   };
 };

@@ -3,7 +3,7 @@
 
 #include <signal.h>
 
-#include <piradio/pidaemon.hpp>
+#include <piradio/daemon.hpp>
 
 namespace piradio
 {
