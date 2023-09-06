@@ -58,7 +58,6 @@ namespace piradio
     { 7, { MHz(13900), MHz(15000) }, { 182, 239 }, { 323, 244 }, { 175, 19 } }
   };
 
-  
   LMX2594::LMX2594(const frequency &_f_osc_in) :
     osc_in([this](void) { return f_osc_in; }),
     osc_2x(osc_in),
@@ -155,6 +154,18 @@ namespace piradio
 
     return std::make_tuple(num / v, precision / v);
   }
+
+  void LMX2594::enable_all(void)
+  {
+    config.outa_pd = 0;
+    config.outb_pd = 0;
+  }
+  
+  void LMX2594::disable_all(void)
+  {
+    config.outa_pd = 1;
+    config.outb_pd = 1;
+  }
   
   void LMX2594::tune(frequency A, frequency B)
   {
@@ -213,7 +224,6 @@ namespace piradio
     }
 
     
-    std::cout << osc_post_div.output_frequency() << std::endl;
     double d = VCOfreq / osc_post_div.output_frequency();
 
     uint64_t ivco_freq = (uint64_t)VCOfreq.Hz();
@@ -233,7 +243,6 @@ namespace piradio
 
     for (auto vcoc : LMX2594_VCO) {
       if (vcoc.in_range(VCOfreq)) {
-	std::cout << "VCO: " << vcoc.get_sel() << " " << VCOfreq << std::endl; 
 	new_config.vco_sel = vcoc.get_sel();
 	new_config.vco_daciset = vcoc.get_amp_cal(VCOfreq);
 	new_config.vco_daciset_strt = vcoc.get_amp_cal(VCOfreq);
@@ -242,11 +251,6 @@ namespace piradio
 	break;
       }
     }
-
-    std::cout << std::setprecision(15) << std::endl;
-    
-    std::cout << "VCO freq: " << VCOfreq << std::endl;
-    std::cout << "VCO mult: " << d << std::endl;
 
     frequency max_fpd;
     uint32_t min_n;

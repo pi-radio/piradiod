@@ -7,7 +7,13 @@
 #include <future>
 #include <memory>
 #include <string>
+#include <fstream>
 #include <condition_variable>
+#include <filesystem>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include <fmt/core.h>
 
@@ -25,6 +31,21 @@
 
 namespace piradio
 {
+  class runfile : public std::fstream
+  {
+  public:
+    runfile(const std::filesystem::path &path) {
+      int fd = ::open(path.c_str(), O_RDWR | O_CREAT, 0644);
+
+      if (fd < 0) {
+	throw std::runtime_error(std::string("Unable to open ") + path.string());
+      }
+      
+      open(path);
+      ::close(fd);
+    }
+  };
+
   class daemon_event
   {
   public:

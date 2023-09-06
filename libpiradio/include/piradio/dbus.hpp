@@ -27,7 +27,7 @@ namespace piradio
     template <> char _arg_sig<int>(void) { return 'i'; }
     template <> char _arg_sig<double>(void) { return 'd'; }
     template <> char _arg_sig<bool>(void) { return 'b'; }
-  
+    
     template <typename R, typename C, typename... A>
     static inline const char *arg_sig(R (C::*f)(A...))
     {
@@ -35,11 +35,24 @@ namespace piradio
       return sig;
     }
 
+    template <typename R, typename C>
+    static inline const char *arg_sig(R (C::*f)(void))
+    {
+      return "";
+    }
+    
+
     template <typename R, typename C, typename... A>
     static inline const char *ret_sig(R (C::*f)(A...))
     {
       static const char sig[] = { _arg_sig<R>(), 0 };
       return sig;
+    }
+
+    template <typename C, typename... A>
+    static inline const char *ret_sig(void (C::*f)(A...))
+    {
+      return "";
     }
 
     
@@ -51,6 +64,66 @@ namespace piradio
       return v;
     }
 
+    template <typename T>
+    struct method_call
+    {
+      T &proxy;
+      sdbus::MethodCall call;
+
+      method_call(T &_proxy, sdbus::MethodCall _call) : proxy(_proxy), call(_call)
+      {
+      }
+      
+
+      template <typename... Args>
+      auto operator()(Args... args)
+      {
+	(call << ... << args);
+
+	return proxy.call_method(call);
+      }
+    };
+
+    struct proxy
+    {
+      std::unique_ptr<sdbus::IProxy> sbus_proxy;
+      uint64_t timeout;
+      std::string default_interface;
+
+      proxy(void)
+      {
+	timeout = 10000;
+      }
+      
+      proxy &attach(const std::string &bus, const std::string &object)
+      {
+        sbus_proxy = sdbus::createProxy(bus, object);
+	return *this;
+      }
+
+      proxy &connect(void)
+      {
+	sbus_proxy->finishRegistration();
+	return *this;
+      }
+
+      auto call_method(sdbus::MethodCall call)
+      {
+	sbus_proxy->callMethod(call, timeout);
+      }
+      
+      method_call<proxy> call(const std::string &iface, const std::string &method)
+      {
+	return method_call<proxy>(*this, sbus_proxy->createMethodCall(iface, method));
+      }
+
+      method_call<proxy> call(const std::string &method)
+      {
+	return method_call<proxy>(*this, sbus_proxy->createMethodCall(default_interface, method));
+      }
+      
+    };
+      
     template <typename R>
     static inline void reply(sdbus::MethodReply &reply, R &r)
     {

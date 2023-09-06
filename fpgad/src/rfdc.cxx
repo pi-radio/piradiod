@@ -20,7 +20,6 @@ namespace piradio
   {
     int result;
     int tile, block;
-
     
     cfg = XRFdc_LookupConfig(0);
 
@@ -47,17 +46,14 @@ namespace piradio
       throw std::runtime_error("Unable to get IP status");     
     }
     
-    std::cout << "Setting up ADCs..." << std::endl;
-
     int n = 0;
     
     for (tile = 0; tile < 4; tile++) {
-      if (!ip_status.ADCTileStatus[tile].IsEnabled) {
+      if (!ip_status.ADCTileStatus[tile].IsEnabled ||
+	  ip_status.ADCTileStatus[tile].BlockStatusMask == 0) {
 	continue;
       }    
 
-      std::cout << "ADC Tile " << tile << std::endl;
-      
       adc_tiles[tile] = new ADCTile(*this, tile);
 
       adc_tiles[tile]->reset();
@@ -82,17 +78,13 @@ namespace piradio
       }
     }
 
-
     n = 0;
     
-    std::cout << "Setting up DACs..." << std::endl;
-    
     for (tile = 0; tile < 4; tile++) {
-      if (!ip_status.DACTileStatus[tile].IsEnabled) {
+      if (!ip_status.DACTileStatus[tile].IsEnabled ||
+	  ip_status.DACTileStatus[tile].BlockStatusMask == 0) {
 	continue;
       }
-
-      std::cout << "DAC Tile " << tile << std::endl;
 
       dac_tiles[tile] = new DACTile(*this, tile);
 
@@ -113,18 +105,6 @@ namespace piradio
 	n++;
       }
     }
-
-    
-    for (auto adc : adcs) {
-      //std::get<1>(adc)->set_mixer_passthrough();
-      std::get<1>(adc)->tune_NCO(1250e6);
-    }
-  
-
-    for (auto adc : adcs) {
-      std::get<1>(adc)->dump();
-    }
-    
   }
 
   int RFDC::reset()

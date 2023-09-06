@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdexcept>
 #include <ostream>
 
 namespace piradio
@@ -47,6 +48,33 @@ namespace piradio
 
     return out;
   }
+
+  static inline std::istream &operator>>(std::istream &in, frequency &f)
+  {
+    double d;
+
+    in >> d;
+
+    auto c = in.peek();
+
+    double mult = 1.0;
+
+    if (c == 'G') {
+      in.get(); mult = 1e9;
+    } else if (c == 'M') {
+      in.get(); mult = 1e6;
+    } else if (c == 'K') {
+      in.get(); mult = 1e3;
+    }
+    
+    if (in.get() != 'H') throw std::runtime_error("Badly formatted freqeuency");      
+    if (in.get() != 'z') throw std::runtime_error("Badly formatted freqeuency");      
+
+    f = frequency(d * mult);
+    
+    return in;
+  }
+
   
   static inline frequency Hz(double f) { return frequency(f); }
   static inline frequency KHz(double f) { return frequency(f * 1.0e3); }

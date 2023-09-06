@@ -5,7 +5,8 @@
 #include <iostream>
 
 #include <piradio/rfdc.hpp>
-
+#include <piradio/frequency.hpp>
+    
 
 namespace piradio
 {
@@ -42,6 +43,17 @@ namespace piradio
       }
 
       return locked == XRFDC_PLL_LOCKED;
+    }
+
+    frequency ref_clk_freq(void) {
+      int result;
+      u32 locked;
+
+      XRFdc_PLL_Settings s;
+      
+      result = rfdc_func(XRFdc_GetPLLConfig, &s);
+
+      return MHz(s.RefClkFreq);
     }
     
     std::string get_id_string() { return id_string; }

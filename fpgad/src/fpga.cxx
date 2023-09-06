@@ -6,6 +6,7 @@
 #include <string>
 #include <cstdlib>
 #include <chrono>
+#include <cassert>
 
 #include <sys/mount.h>
 #include <mntent.h>
@@ -87,10 +88,8 @@ namespace piradio
   bool FPGA::load_image(const std::filesystem::path &image_path, const std::filesystem::path &overlay_path)
   {
     bool retval = false;
-    
-    if (operating()) {
-      remove_overlay();
-    }
+
+    assert(!operating());
 
     fs::path firmware_dest = firmware_dest_dir / image_path.filename();
     fs::path overlay_dest = firmware_dest_dir / overlay_path.filename();

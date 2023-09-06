@@ -7,7 +7,7 @@ include(GNUInstallDirs)
 
 set(USE_CPACK 1)
 
-foreach(name IN ITEMS base libpiradio libtilmx libsamplebuf sampled fpgad zcu111d rfdcd)
+foreach(name IN ITEMS base libpiradio libtilmx libsamplebuf sampled fpgad)
   message(STATUS "Adding ${name}")
   add_subdirectory("${name}")
 endforeach()  
@@ -52,8 +52,8 @@ if (USE_CPACK)
   #set(CPACK_COMPONENT_FPGAD_DESCRIPTION "Pi Radio FPGA mangement daemon")
 
   piradio_service_deb(FPGAD "Pi Radio FPGA mangement daemon")
-  piradio_service_deb(ZCU111D "Pi Radio ZCU111 mangement daemon")
-  piradio_service_deb(RFDCD "Pi Radio RFDC mangement daemon")
+  #piradio_service_deb(ZCU111D "Pi Radio ZCU111 mangement daemon")
+  #piradio_service_deb(RFDCD "Pi Radio RFDC mangement daemon")
   piradio_service_deb(SAMPLED "Pi Radio non-realtime sample capture daemon")
   
   set(CPACK_COMPONENTS_ALL BASE FPGAD ZCU111D RFDCD SAMPLED)

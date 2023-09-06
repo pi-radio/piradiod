@@ -37,6 +37,9 @@ namespace piradio
     
     int get_channel_divide(void);
 
+    void enable_all(void);
+    void disable_all(void);
+    
     frequency get_A_frequency(void);
     frequency get_B_frequency(void);
     
