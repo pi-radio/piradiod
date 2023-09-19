@@ -4,7 +4,8 @@ from piradio.util import Freq, GHz, MHz
 
 class DACBlock(CommandObject):
     EVENT_SOURCE_IMMEDIATE = 0
-
+    EVENT_SOURCE_TILE = 2
+    
     UPDATE_EVENT_MASK = 0xF
 
     UPDATE_EVENT_SLICE = 0x1
@@ -50,6 +51,8 @@ class DACBlock(CommandObject):
         self.DRP.NCO_FQWD_MID = (v >> 16) & 0xFFFF
         self.DRP.NCO_FQWD_UPP = (v >> 32) & 0xFFFF
 
-        self.DRP.NCO_UPDT = (self.DRP.NCO_UPDT & ~self.NCO_UPDATE_MODE_MASK) | self.EVENT_SOURCE_IMMEDIATE
+        self.DRP.NCO_UPDT = (self.DRP.NCO_UPDT & ~self.NCO_UPDATE_MODE_MASK) | self.EVENT_SOURCE_TILE
         self.DRP.DAC_UPDATE_DYN |= self.UPDATE_EVENT_NCO
+
+        
 

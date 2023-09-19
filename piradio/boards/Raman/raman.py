@@ -29,39 +29,35 @@ class Raman(CommandObject):
         
         # setup GPIOs
         self.children.gpio = AXI_GPIO("pl_gpio")
+        self.children.reset_gpio = self.gpio.outputs[0]
 
+        self.reset()
+        
+    @command
+    def reset(self):
         print("Resetting board...")
 
-        self.children.reset = self.gpio.outputs[0]
-
-        self.reset.val = 0
+        self.reset_gpio.val = 0
         time.sleep(0.25)
-        self.reset.val = 1
+        self.reset_gpio.val = 1
         time.sleep(0.25)
 
         print("Programming clock tree and LO...")
         
         self.children.clk_root = Renesas_8T49N240()
+        self.children.lo_root = LMX2595Dev("LO Root", SPIDev(2, 24), f_src=MHz(45), A=self.NCO_freq, B=self.NCO_freq, Apwr=10, Bpwr=10)
 
         self.clk_root.program()
         
-        self.children.lo_root = LMX2595Dev("LO Root", SPIDev(2, 24), f_src=MHz(45), A=self.NCO_freq, B=self.NCO_freq, Apwr=20, Bpwr=20)
+        os.system(f"rfdcnco {self.NCO_freq.Hz}")
 
-        for i, adc in enumerate(zcu111.rfdc.ADC):
-            print(f"Cur ADC {i} NCO Freq: {adc.nco_freq}")
-            adc.nco_freq = self.NCO_freq
-
-        for i, dac in enumerate(zcu111.rfdc.DAC):
-            print(f"Cur DAC {i} NCO Freq: {dac.nco_freq}")
-            dac.nco_freq = self.NCO_freq
-            
         self.lo_root.program()
 
         self.children.radios = [ None ] * 8
         
         print("Detecting radios...")
-
-        self.detect_radios()
+        
+        #self.detect_radios()
         
     @command
     def detect_radios(self):
@@ -70,6 +66,7 @@ class Raman(CommandObject):
                 n =  2*card + radio
 
                 if self.children.radios[n] is not None:
+                    # check to make usre it's still there
                     continue
                 
                 try:
@@ -98,12 +95,9 @@ class Raman(CommandObject):
         print(f"Changing NCO freq to {v}")
         self._NCO_freq = v
         self.children.lo_root.tune(self._NCO_freq, self._NCO_freq)
+        self.children.lo_root.program()
 
-        for i, adc in enumerate(zcu111.children.rfdc.children.ADC):
-            adc.nco_freq = self._NCO_freq
-
-        for dac in zcu111.children.rfdc.children.DAC:
-            dac.nco_freq = self._NCO_freq
+        os.system(f"rfdcnco {self._NCO_freq.Hz}")
 
     @command
     def listen(self, n : int):

@@ -55,25 +55,6 @@ namespace piradio
     //tile.update_tile(XRFDC_EVENT_MIXER);
   }
 
-  void ADC::tune_NCO(double freq, double phase)
-  {
-    XRFdc_Mixer_Settings s;
-
-    s.Freq = freq / 1e6;
-    s.PhaseOffset = phase;
-    s.EventSource = XRFDC_EVNT_SRC_TILE;
-    s.CoarseMixFreq = XRFDC_COARSE_MIX_OFF;
-    s.MixerMode = XRFDC_MIXER_MODE_R2C;
-    s.FineMixerScale = XRFDC_MIXER_SCALE_1P0;
-    s.MixerType = XRFDC_MIXER_TYPE_FINE;
-
-    set_mixer_settings(s, true);
-
-    rfdc_func(XRFdc_ResetNCOPhase);
-    
-    tile.update_tile(XRFDC_EVENT_MIXER);
-  }
-
   void ADC::set_attenuation(bool enable_ctrl, float val)
   {
     int result;

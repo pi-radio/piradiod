@@ -99,7 +99,48 @@ namespace piradio
       }
     }
 
+    void disable_NCO()
+    {
+      XRFdc_Mixer_Settings s;
+
+      s.Freq = 0;
+      s.PhaseOffset = 0;
+      s.EventSource = XRFDC_EVNT_SRC_TILE;
+      s.CoarseMixFreq = XRFDC_COARSE_MIX_BYPASS;
+      s.MixerMode = XRFDC_MIXER_MODE_R2R;
+
+      s.FineMixerScale = XRFDC_MIXER_SCALE_1P0;
+      s.MixerType = XRFDC_MIXER_TYPE_COARSE;
     
+      set_mixer_settings(s, true);
+    }
+    
+    void tune_NCO(double freq, double phase = 0.0)
+    {
+      XRFdc_Mixer_Settings s;
+
+      s.Freq = freq / 1e6;
+      s.PhaseOffset = phase;
+      s.EventSource = XRFDC_EVNT_SRC_TILE;
+      s.CoarseMixFreq = XRFDC_COARSE_MIX_OFF;
+
+      if (std::is_same<tile_type, ADCTile>::value)
+	s.MixerMode = XRFDC_MIXER_MODE_R2C;
+      else if (std::is_same<tile_type, DACTile>::value)
+	s.MixerMode = XRFDC_MIXER_MODE_C2R;
+      else
+	throw std::runtime_error("Invalid tile type");
+      
+      s.FineMixerScale = XRFDC_MIXER_SCALE_1P0;
+      s.MixerType = XRFDC_MIXER_TYPE_FINE;
+    
+      set_mixer_settings(s, true);
+      
+      rfdc_func(XRFdc_ResetNCOPhase);
+      
+      tile.update_tile(XRFDC_EVENT_MIXER);
+    }
+       
   protected:
     tile_type &tile;
     int block;
@@ -130,7 +171,6 @@ namespace piradio
     ADC(ADCTile &_tile, int _block);
 
     void set_mixer_passthrough(void);
-    void tune_NCO(double freq, double phase=0.0);
 
     void set_attenuation(bool, float);
     
@@ -145,7 +185,7 @@ namespace piradio
   {
   public:
     DAC(DACTile &_tile, int _block);
-  
+
   private:
   
   };
