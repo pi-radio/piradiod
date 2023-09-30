@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+
+import time
+import re
+import logging
+from pathlib import Path
+
+from pisivers import Eder, EderChipNotFoundError
+from piradio.devices import SPIDev
+
+logging.basicConfig(level="INFO")
+
+class SiversDaemon:
+    of_name_prefix = "sivers"
+
+    spidev_re = re.compile(r"spidev(?P<bus>[0-9]+).(?P<device>[0-9]+)")
+    
+    def __init__(self):
+        logging.info("Pi Radio SIVERS control daemon loading...")
+
+    def detect_radios(self):
+        self.radios = {}
+        
+        for d in Path(f"/sys/bus/spi/devices").iterdir():
+            with open(d / "of_node" / "compatible") as f:
+                of_compat = f.read()
+
+            with open(d / "of_node" / "name") as f:
+                of_name = f.read()
+
+            if of_compat.lower() == "sivers,eder" or of_name.lower().startswith(self.of_name_prefix):
+                n = int(of_name[len(self.of_name_prefix):-1])
+                
+                n = next((d / "spidev").iterdir()).name
+
+                m = self.spidev_re.match(n)
+
+                bus = int(m["bus"])
+                device = int(m["device"])
+
+                print(f"spidev node: {n} bus: {bus} device: {device}")
+                
+                self.attach_radio(SPIDev(bus, device), n)
+
+    def attach_radio(self, spidev, n):
+        try:
+            self.radios[n] = Eder(spidev, n)
+        except EderChipNotFoundError:
+            pass
+                
+    def run(self):
+        while(True):
+            self.detect_radios()
+            time.sleep(1)
+            break;
+
+def siversd():
+    daemon = SiversDaemon()
+
+    daemon.run()
+    
+    
+
+if __name__ == "__main__":
+    siversd()
