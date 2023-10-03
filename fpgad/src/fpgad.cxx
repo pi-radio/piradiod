@@ -19,7 +19,7 @@
 #include <piradio/daemon.hpp>
 #include <piradio/services.hpp>
 #include <piradio/sdjournal.hpp>
-#include <piradio/zcu111.hpp>
+#include <piradio/zcu111_manager.hpp>
 #include <piradio/rfdc_manager.hpp>
 
 #include <signal.h>

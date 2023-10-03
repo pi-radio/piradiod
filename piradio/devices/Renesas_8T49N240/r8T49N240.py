@@ -10,8 +10,6 @@ from periphery.i2c import I2CError
 from piradio.command import CommandObject, command
 
 class Renesas_8T49N240(CommandObject):
-    addr=0x6c
-
     """
     0000–0001Startup Control Registers
     0002–0005Device ID Control Registers
@@ -288,21 +286,49 @@ class Renesas_8T49N240(CommandObject):
         0x210: 0x00,
         0x211: 0x00,
     }
+
+    def detect(self, addr):
+        print(f"Checking address {addr:x} for 8T49N240")
+        try:
+            data = self.read_reg_addr(addr, 0, 10)
+        except:
+            return False
         
+        rev_id = data[2] >> 4
+        dev_id = ((data[2] & 0xF) << 12) | (data[3] << 4) | ((data[4] & 0xF0) >> 4)
+        dash_code = ((data[4] & 0xF) << 7) | (data[5] >> 1)
+
+        print(f"rev_id: {rev_id} dev_id: {dev_id}")
+            
+        if dev_id == 0x60C and data[5] & 1:
+            print(f"Found 8T49N240 at 0x{addr:x}")
+            self.addr = addr
+            self.rev_id = rev_id
+            self.dev_id = dev_id
+            self.dash_code = dash_code
+            assert data[5] & 1
+            return True
+
+        return False
+    
     def __init__(self):
-        f = Path("/dev") / list(Path("/sys/bus/platform/devices").glob("a*.i2c/i2c-*"))[0].stem
+        f = Path("/dev") / list(Path("/sys/bus/platform/devices").glob("[ab]*.i2c/i2c-*"))[0].stem
 
         self.i2c = I2C(f)
+        self.addr = None
+        
+        for addr in [ 0x6C, 0x61, 0x50, 0x51 ]:
+            if self.detect(addr):
+                break
 
-        data = self.read_reg(0, 10)
-
-        self.rev_id = data[2] >> 4
-        self.dev_id = ((data[2] & 0xF) << 12) | (data[3] << 4) | ((data[4] & 0xF0) >> 4)
-        self.dash_code = ((data[4] & 0xF) << 7) | (data[5] >> 1)
-
-        assert self.dev_id == 0x60C, f"Invalid ID code received {self.dev_id}"
-        assert data[5] & 1
-
+        if self.addr is None:
+            for addr in range(128):
+                if self.detect(addr):
+                    break
+                
+            
+        if self.addr is None:
+            raise RuntimeError("Could not find 8T49N240")
 
     def program(self):
         start_addr = 0
@@ -358,17 +384,20 @@ class Renesas_8T49N240(CommandObject):
         v = self.read_reg(0x203)
 
         return ((v >> 4) & 1) == 1
-        
-    def read_reg(self, reg, nreg = 1):
+
+    def read_reg_addr(self, addr, reg, nreg=1):
         msg = [ I2C.Message([ (reg >> 8) & 0xFF, reg & 0xFF ]), I2C.Message([ 0x00 ] * nreg, read=True) ]
 
-        self.i2c.transfer(self.addr, msg)
+        self.i2c.transfer(addr, msg)
 
         if nreg == 1:
             return msg[1].data[0]
         
         return msg[1].data
-
+    
+    def read_reg(self, reg, nreg = 1):
+        return self.read_reg_addr(self.addr, reg, nreg)
+            
     def write_reg(self, reg, val):
         if isinstance(val, list):
             msg = [ I2C.Message([ (reg >> 8) & 0xFF, reg & 0xFF, *val ]) ]

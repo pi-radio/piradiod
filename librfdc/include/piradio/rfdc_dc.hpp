@@ -19,6 +19,11 @@ namespace piradio
     {
     }
 
+    bool enabled() const
+    {
+      return tile.enabled();
+    }
+    
     template <class C, class F>
     int _compare_field(const C &a, const C &b, F C::*ptr, const std::string &name)
     {

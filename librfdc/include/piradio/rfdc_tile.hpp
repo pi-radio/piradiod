@@ -10,9 +10,27 @@
 
 namespace piradio
 {
+  class RFDCTile;
+  
+  class RFDCPLL
+  {
+    bool enabled() const;
+    
+  protected:
+    friend class RFDCTile;
+    
+    RFDCPLL(RFDCTile &_tile);
+
+    XRFdc_PLL_Settings settings() const;
+    
+    RFDCTile &tile;
+  };
+  
   class RFDCTile
   {
   public:
+    RFDCPLL pll;
+
     template <typename F, class... types> int rfdc_func(F f, types... args)
     {
       return f(&rfdc.rfdc, type, tile, args...);
@@ -32,6 +50,8 @@ namespace piradio
 
     int reset(void) { return rfdc_func(XRFdc_Reset); }
 
+    bool enabled();
+    
     bool pll_locked(void) {
       int result;
       u32 locked;

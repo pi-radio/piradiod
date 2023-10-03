@@ -12,7 +12,7 @@
 #include "zcu111.grpc.pb.h"
 
 #include <piradio/daemon.hpp>
-#include <piradio/zcu111.hpp>
+#include <piradio/zcu111_manager.hpp>
 #include <piradio/rfdc_tile.hpp>
 
 namespace fs = std::filesystem;
@@ -25,43 +25,13 @@ static const fs::path lmxC_path{"/run/fpgad/lmxC"};
 
 namespace piradio
 {    
-  ZCU111Manager::ZCU111Manager() :
-    i2c_si5382(zcu111_i2c::find_device(0x68), 0x68),
-    i2c_spi(zcu111_i2c::find_device(0x2F), 0x2F),
-    zcu111_lmx_A(MHz(122.88)),
-    zcu111_lmx_B(MHz(122.88)),
-    zcu111_lmx_C(MHz(122.88))
+  ZCU111Manager::ZCU111Manager() 
   {    
-    if (!fs::exists(siprog_path)) {
-      program_Si5382(i2c_si5382, si_122_88);
-
-      runfile ofs(siprog_path);
-
-      ofs << "programmed" << std::endl;
-    }
-
-    if (!fs::exists(lmkprog_path)) {
-      program_LMK04208(i2c_spi, LMK04208_regs);
-
-      runfile ofs(lmkprog_path);
-
-      ofs << "programmed" << std::endl;
-    }
-
-    
-    zcu111_lmx_A.config.read_regs(LMX4GHz_template);
-    zcu111_lmx_B.config.read_regs(LMX4GHz_template);
-    zcu111_lmx_C.config.read_regs(LMX4GHz_template);
   }
 
   void ZCU111Manager::mute_clocks(void)
   {
-    zcu111_lmx_A.disable_all();    
-    zcu111_lmx_B.disable_all();    
-    zcu111_lmx_C.disable_all();    
-
-    for (int i = 0; i < 3; i++)
-      program_lmx(i);
+    zcu111.mute_clocks();
 
     {
       runfile r(lmxA_path);
@@ -108,6 +78,7 @@ namespace piradio
     frequency fC_A = rfdc->get_dac_tile(0)->ref_clk_freq();
     frequency fC_B = rfdc->get_dac_tile(1)->ref_clk_freq();
 
+#if 0
     zcu111_lmx_A.tune(fA_A, fA_B);
     zcu111_lmx_B.tune(fB_A, fB_B);
     zcu111_lmx_C.tune(fC_A, fC_B);
@@ -141,22 +112,8 @@ namespace piradio
       runfile r(lmxC_path);
       r << fC_A << " " << fC_B << std::endl;
     }
+
+#endif    
   }
 
-  void ZCU111Manager::program_lmx(int n)
-  {
-    std::map<int, uint16_t> lmx_regs;
-
-    if (n == 0) {
-      zcu111_lmx_A.config.fill_regs(lmx_regs);
-    } else if (n == 1) {
-      zcu111_lmx_B.config.fill_regs(lmx_regs);
-    } else if (n == 2) {
-      zcu111_lmx_C.config.fill_regs(lmx_regs);
-    } else {
-      throw std::runtime_error("Invalid LMX");
-    }
-
-    
-  }
 }

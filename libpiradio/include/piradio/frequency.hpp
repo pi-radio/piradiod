@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <ostream>
+#include <istream>
 
 namespace piradio
 {
@@ -10,6 +11,8 @@ namespace piradio
   public:
     frequency(double _f=0.0) : f(_f) { }
 
+    frequency(const std::string &);
+    
     double Hz() const { return f; } 
     double KHz() const { return f / 1.0e3; }
     double MHz() const { return f / 1.0e6; }

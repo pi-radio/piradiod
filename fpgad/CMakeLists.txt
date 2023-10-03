@@ -10,14 +10,10 @@ include(${MACRO_DIR}/grpc.cmake)
 
 find_package(sdbus-c++ REQUIRED)
 
-# Proto file
-grpc_generate_interface("../interfaces/fpgad.proto")
-grpc_generate_interface("../interfaces/zcu111.proto")
-grpc_generate_interface("../interfaces/rfdcd.proto")
-
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../librfdc/include")    
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpiradio/include")    
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libtilmx/include")    
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libzcu111/include")    
 
 
 include_directories("include")
@@ -25,16 +21,13 @@ include_directories("include")
 add_executable(piradio-fpgad
   src/fpga.cxx
   src/fpgad.cxx
-  src/i2c.cxx
-  src/clocks.cxx
-  src/zcu111.cxx
+  src/zcu111_manager.cxx
   src/rfdc_manager.cxx
-  #src/rfdcd.cxx
-  #src/zcu111d.cxx
 )
 
 
 target_link_libraries(piradio-fpgad
+  zcu111
   tilmx
   rfdc
   piradio
@@ -44,6 +37,9 @@ target_link_libraries(piradio-fpgad
   i2c
   metal
   )
+
+target_add_protocol(piradio-fpgad fpgad)
+
 
 target_compile_options(piradio-fpgad PUBLIC -g)
 

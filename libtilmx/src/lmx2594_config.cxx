@@ -111,20 +111,52 @@ namespace piradio
   {
     reg_vals[0] = 0x2410 | (powerdown & 0x1) | ((reset & 0x1) << 1) | ((muxout_ld_sel & 0x1) << 2) | ((fcal_en & 0x1) << 3) | ((fcal_lpfd_adj & 0x3) << 5) | ((fcal_hpfd_adj & 0x3) << 7) | ((out_mute & 0x1) << 9) | ((vco_phase_sync & 0x1) << 14) | ((ramp_en & 0x1) << 15);
     reg_vals[1] = 0x0808 | (cal_clk_div & 0x7);
+
+    reg_vals[2] = 0x0500;
+    reg_vals[3] = 0x0642;
+    
     reg_vals[4] = 0x0043 | ((acal_cmp_dly & 0xff) << 8);
+
+    reg_vals[5] = 0x00C8;
+    reg_vals[6] = 0xC802;
+    
     reg_vals[7] = 0x00b2 | ((out_force & 0x1) << 14);
     reg_vals[8] = 0x2000 | ((vco_capctrl_force & 0x1) << 11) | ((vco_daciset_force & 0x1) << 14);
     reg_vals[9] = 0x0604 | ((osc_2x & 0x1) << 12);
     reg_vals[10] = 0x1058 | ((mult & 0x1f) << 7);
     reg_vals[11] = 0x0008 | ((pll_r & 0xff) << 4);
     reg_vals[12] = 0x5000 | (pll_r_pre & 0xff);
+
+    reg_vals[13] = 0x4000;
+    
     reg_vals[14] = 0x1e00 | ((cpg & 0x7) << 4);
+
+    reg_vals[15] = 0x064F;
+    
     reg_vals[16] = 0x0000 | (vco_daciset & 0x1ff);
     reg_vals[17] = 0x0000 | (vco_daciset_strt & 0x1ff);
+
+    reg_vals[18] = 0x0064;
+    
     reg_vals[19] = 0x2700 | (vco_capctrl & 0xff);
     reg_vals[20] = 0xc048 | ((vco_sel_force & 0x1) << 10) | ((vco_sel & 0x7) << 11);
+
+    reg_vals[21] = 0x0401;
+    reg_vals[22] = 0x0001;
+    reg_vals[23] = 0x007C;
+    reg_vals[24] = 0x071A;
+    reg_vals[25] = 0x0C2B;
+    reg_vals[26] = 0x0DB0;
+    reg_vals[27] = 0x0002;
+    reg_vals[28] = 0x0488;
+    reg_vals[29] = 0x318C;
+    reg_vals[30] = 0x318C;
+    
     reg_vals[31] = 0x03ec | ((seg1_en & 0x1) << 14);
+
+    
     reg_vals[34] = 0x0000 | ((pll_n >> 16) & 0x3fff);
+    
     reg_vals[36] = 0x0000 | (pll_n & 0xffff);
     reg_vals[37] = 0x0004 | ((pfd_dly_sel & 0x3f) << 8) | ((mash_seed_en & 0x1) << 15);
     reg_vals[38] = 0x0000 | ((pll_den >> 16) & 0x1);
@@ -136,9 +168,33 @@ namespace piradio
     reg_vals[44] = 0x0000 | (mash_order & 0x7) | ((mash_reset_n & 0x1) << 5) | ((outa_pd & 0x1) << 6) | ((outb_pd & 0x1) << 7) | ((outa_pwr & 0x3f) << 8);
     reg_vals[45] = 0xc0c0 | (outb_pwr & 0x3f) | ((out_iset & 0x3) << 9) | ((outa_mux & 0x3) << 11);
     reg_vals[46] = 0x07fc | (outb_mux & 0x3);
+
+    reg_vals[47] = 0x0300;
+    reg_vals[48] = 0x0300;
+    reg_vals[49] = 0x4180;
+    reg_vals[50] = 0x0000;
+    reg_vals[51] = 0x0080;
+    reg_vals[52] = 0x0820;
+    reg_vals[53] = 0x0000;
+    reg_vals[54] = 0x0000;
+    reg_vals[55] = 0x0000;
+    reg_vals[56] = 0x0000;
+    reg_vals[57] = 0x0020;
+    reg_vals[58] = 0x9001;    
+    
     reg_vals[58] = 0x0001 | ((inpin_fmt & 0x7) << 9) | ((inpin_lvl & 0x3) << 12) | ((inpin_hyst & 0x1) << 14) | ((inpin_ignore & 0x1) << 15);
     reg_vals[59] = 0x0000 | (ld_type & 0x1);
     reg_vals[60] = 0x0000 | (ld_dly & 0xffff);
+
+    reg_vals[61] = 0x00a8;
+    reg_vals[62] = 0x0322;
+    reg_vals[63] = 0x0000;
+    reg_vals[64] = 0x1388;
+    reg_vals[65] = 0x0000;
+    reg_vals[66] = 0x01f4;
+    reg_vals[67] = 0x0000;
+    reg_vals[68] = 0x03e8;
+    
     reg_vals[69] = 0x0000 | ((mash_rst_count >> 16) & 0x1);
     reg_vals[70] = 0x0000 | (mash_rst_count & 0xffff);
     reg_vals[71] = 0x0001 | ((sysref_repeat & 0x1) << 2) | ((sysref_en & 0x1) << 3) | ((sysref_pulse & 0x1) << 4) | ((sysref_div_pre & 0x7) << 5);
@@ -146,8 +202,11 @@ namespace piradio
     reg_vals[73] = 0x0000 | (jesd_dac1_ctrl & 0x3f) | ((jesd_dac2_ctrl & 0x3f) << 6);
     reg_vals[74] = 0x0000 | (jesd_dac3_ctrl & 0x3f) | ((jesd_dac4_ctrl & 0x3f) << 6) | ((sysref_pulse_cnt & 0xf) << 12);
     reg_vals[75] = 0x0800 | ((chdiv & 0x1f) << 6);
+
+    reg_vals[76] = 0x000c;
+    reg_vals[77] = 0x0000;
+    
     reg_vals[78] = 0x0001 | ((vco_capctrl_strt & 0xff) << 1) | ((quick_recal_en & 0x1) << 9) | ((ramp_thresh >> 32) & 0xffff);
-    reg_vals[106] = 0x0000 | ((ramp_trig_cal & 0x1) << 4) | (ramp_scale_cnt & 0x7);
     reg_vals[79] = 0x0000 | ((ramp_thresh >> 16) & 0x1);
     reg_vals[80] = 0x0000 | (ramp_thresh & 0xffff);
     reg_vals[81] = 0x0000 | ((ramp_limit_high >> 32) & 0xffff);
@@ -156,6 +215,17 @@ namespace piradio
     reg_vals[84] = 0x0000 | ((ramp_limit_low >> 32) & 0xffff);
     reg_vals[85] = 0x0000 | ((ramp_limit_low >> 16) & 0x1);
     reg_vals[86] = 0x0000 | (ramp_limit_low & 0xffff);
+
+    reg_vals[87] = 0x0000;
+    reg_vals[88] = 0x0000;
+    reg_vals[89] = 0x0000;
+    reg_vals[90] = 0x0000;
+    reg_vals[91] = 0x0000;
+    reg_vals[92] = 0x0000;
+    reg_vals[93] = 0x0000;
+    reg_vals[94] = 0x0000;
+    reg_vals[95] = 0x0000;
+    
     reg_vals[96] = 0x0000 | ((ramp_burst_count & 0x1fff) << 2) | ((ramp_burst_en & 0x1) << 15);
     reg_vals[97] = 0x0800 | (ramp_burst_trig & 0x3) | ((ramp_triga & 0xf) << 3) | ((ramp_trigb & 0xf) << 7) | ((ramp0_rst & 0x1) << 15);
     reg_vals[98] = 0x0000 | (ramp0_dly & 0x1) | ((ramp0_inc >> 16) & 0x7);
@@ -166,6 +236,12 @@ namespace piradio
     reg_vals[103] = 0x0000 | (ramp1_inc & 0xffff);
     reg_vals[104] = 0x0000 | (ramp1_len & 0xffff);
     reg_vals[105] = 0x0000 | ((ramp1_next & 0x1) << 4) | (ramp1_next_trig & 0x3) | ((ramp_dly_cnt & 0x3ff) << 6) | ((ramp_manual & 0x1) << 5);
+    reg_vals[106] = 0x0000 | ((ramp_trig_cal & 0x1) << 4) | (ramp_scale_cnt & 0x7);
+
+    reg_vals[107] = 0x0000;
+    reg_vals[108] = 0x0000;
+    reg_vals[109] = 0x0000;
+    
     reg_vals[110] = 0x0000 | ((rb_vco_sel & 0x7) << 5) | ((rb_ld_vtune & 0x3) << 9);
     reg_vals[111] = 0x0000 | (rb_vco_capctrl & 0xff);
     reg_vals[112] = 0x0000 | (rb_vco_daciset & 0x1ff);

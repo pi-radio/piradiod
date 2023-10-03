@@ -30,6 +30,8 @@ add_library(rfdc SHARED
   src/rfdc_str.cxx
   )
 
+target_compile_options(xrfdc PUBLIC -g)
+
 target_link_libraries(rfdc
   xrfdc)
 
@@ -47,3 +49,9 @@ add_executable(rfdc_disable_nco
 
 target_link_libraries(rfdc_disable_nco rfdc metal)
 target_compile_options(rfdc_disable_nco PUBLIC -g)
+
+add_executable(rfdcmix
+  src/rfdcmix.cxx)
+
+target_link_libraries(rfdcmix rfdc metal)
+target_compile_options(rfdcmix PUBLIC -g)

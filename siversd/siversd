@@ -8,6 +8,8 @@ from pathlib import Path
 from pisivers import Eder, EderChipNotFoundError
 from piradio.devices import SPIDev
 
+from siversd_pb2_grpc import siversdServicer
+
 logging.basicConfig(level="INFO")
 
 class SiversDaemon:
@@ -45,6 +47,9 @@ class SiversDaemon:
     def attach_radio(self, spidev, n):
         try:
             self.radios[n] = Eder(spidev, n)
+
+            self.radios[n].INIT()
+            self.radios[n].freq = 60e9
         except EderChipNotFoundError:
             pass
                 

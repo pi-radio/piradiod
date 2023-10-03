@@ -5,9 +5,9 @@ from piradio.devices.sivers.eder.child import EderChild
 from piradio.devices.sivers.eder.registers import attach_registers, set_bits, clear_bits, toggle_bits, modify_bits
 
 class FreqRef(EderChild):
-    def __init__(self, eder):
+    def __init__(self, eder, freq=45e6):
         super().__init__(eder)
-        self.freq = 45e6
+        self.freq = freq
 
     def startup(self):
        self.regs.bias_ctrl = set_bits(0x1c)

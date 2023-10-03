@@ -50,13 +50,13 @@ namespace piradio
     
     for (tile = 0; tile < 4; tile++) {
       if (!ip_status.ADCTileStatus[tile].IsEnabled ||
-	  ip_status.ADCTileStatus[tile].BlockStatusMask == 0) {
+ 	   ip_status.ADCTileStatus[tile].BlockStatusMask == 0) {
 	continue;
-      }    
+      }
 
       adc_tiles[tile] = new ADCTile(*this, tile);
 
-      adc_tiles[tile]->reset();
+      //adc_tiles[tile]->reset();
 
       if (!adc_tiles[tile]->pll_locked()) {
 	std::cerr << adc_tiles[tile]->get_id_string() << ": PLL not locked" << std::endl;
@@ -69,10 +69,6 @@ namespace piradio
 	std::cout << " Block " << block << std::endl;
 
 	adcs[n] = new ADC(*adc_tiles[tile], block);
-
-	//adcs[n]->tune_NCO(1.25e9);
-
-	adcs[n]->set_mixer_passthrough();
 	
 	n++;
       }
@@ -82,13 +78,13 @@ namespace piradio
     
     for (tile = 0; tile < 4; tile++) {
       if (!ip_status.DACTileStatus[tile].IsEnabled ||
-	  ip_status.DACTileStatus[tile].BlockStatusMask == 0) {
+	   ip_status.DACTileStatus[tile].BlockStatusMask == 0) {
 	continue;
       }
 
       dac_tiles[tile] = new DACTile(*this, tile);
 
-      dac_tiles[tile]->reset();
+      //dac_tiles[tile]->reset();
 
       if (!dac_tiles[tile]->pll_locked()) {
 	std::cerr << dac_tiles[tile]->get_id_string() << ": PLL not locked" << std::endl;
@@ -109,6 +105,7 @@ namespace piradio
 
   int RFDC::reset()
   {
+    return 0;
   }
 
   int RFDC::load_config()
@@ -136,6 +133,8 @@ namespace piradio
     if (result != XRFDC_SUCCESS) {
       throw std::runtime_error("Unable to initialize rfdc");
     }
+
+    return 0;
   }
   
 };

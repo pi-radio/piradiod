@@ -5,9 +5,11 @@ project(piradio)
 
 include(GNUInstallDirs)
 
+add_subdirectory("interfaces")
+
 set(USE_CPACK 1)
 
-foreach(name IN ITEMS base libpiradio libtilmx librfdc libsamplebuf sampled fpgad)
+foreach(name IN ITEMS base libpiradio libtilmx librfdc libzcu111 libsamplebuf sampled fpgad siversd)
   message(STATUS "Adding ${name}")
   add_subdirectory("${name}")
 endforeach()  

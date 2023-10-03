@@ -26,26 +26,26 @@ main(int argc, char **argv)
   piradio::RFDC *rfdc = new piradio::RFDC();
 
   int i;
-  double f = strtod(argv[1], NULL);
   
   for (i = 0; i < rfdc->n_adcs(); i++) {
     auto adc = rfdc->get_adc(i);
 
     std::cout << "ADC " << i << std::endl; 
-    std::cout << "Enabled: " << adc->enabled() << std::endl;
-
+    std::cout << " Enabled: " << adc->enabled() << std::endl;
+    
     if (adc->enabled()) {
-      adc->tune_NCO(f);
+      //adc->tune_NCO(f);
     }
   }
   
   for (i = 0; i < rfdc->n_dacs(); i++) {
     auto dac = rfdc->get_dac(i);
+
     std::cout << "DAC " << i << std::endl;
-    std::cout << "Enabled: " << dac->enabled() << std::endl;
+    std::cout << " Enabled: " << dac->enabled() << std::endl;
     
     if (dac->enabled()) {
-      dac->tune_NCO(f);
+      //dac->tune_NCO(f);
     }
   }
 }

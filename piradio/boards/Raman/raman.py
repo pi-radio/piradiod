@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import traceback
+import glob
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal as signal
@@ -25,13 +26,45 @@ class Raman(CommandObject):
     def __init__(self):
         print("Initializing C.V. Raman (a.k.a. SDRv2)...")
 
-        self._NCO_freq = MHz(1035)
-        
         # setup GPIOs
-        self.children.gpio = AXI_GPIO("pl_gpio")
+
+        self.find_gpio()
+        
+        l = glob.glob("/sys/firmware/devicetree/base/__symbols__/*pl_gpio")
+
+        assert len(l) == 1
+
+        gpio = Path(l[0]).name
+
+        if gpio == "pl_gpio":
+            self.OFDM = False
+            self._NCO_freq = MHz(1000)
+        else:
+            self.OFDM = True
+            self._NCO_freq = MHz(737.2)
+            
+        
+        self.children.gpio = AXI_GPIO(gpio)
         self.children.reset_gpio = self.gpio.outputs[0]
 
+        print(f"Reset: {self.children.reset_gpio.val}")
+        
+        if self.reset_gpio.val == 0:
+            self.reset_gpio.val = 1
+            time.sleep(0.25)
+        
+        self.children.clk_root = Renesas_8T49N240()
+        self.children.lo_root = LMX2595Dev("LO Root", SPIDev(2, 24), f_src=MHz(45), A=self.LO_freq, B=self.LO_freq, Apwr=10, Bpwr=10)
+
+    def find_gpio(self):
+        gpios = list(Path("/sys/bus/platform/devices").glob("[ab]*.gpio"))
+        print(gpios)
+
+        
+    @command
+    def init(self):
         self.reset()
+        self.detect_radios()
         
     @command
     def reset(self):
@@ -44,12 +77,11 @@ class Raman(CommandObject):
 
         print("Programming clock tree and LO...")
         
-        self.children.clk_root = Renesas_8T49N240()
-        self.children.lo_root = LMX2595Dev("LO Root", SPIDev(2, 24), f_src=MHz(45), A=self.NCO_freq, B=self.NCO_freq, Apwr=10, Bpwr=10)
 
         self.clk_root.program()
-        
-        os.system(f"rfdcnco {self.NCO_freq.Hz}")
+
+        if not self.OFDM:
+            os.system(f"rfdcnco {self.NCO_freq.Hz}")
 
         self.lo_root.program()
 
@@ -86,6 +118,13 @@ class Raman(CommandObject):
             if r is not None:
                 yield r
 
+    @cmdproperty
+    def LO_freq(self):
+        if self.OFDM:
+            return MHz(737.2)
+
+        return self.NCO_freq
+                
     @cmdproperty
     def NCO_freq(self):
         return self._NCO_freq

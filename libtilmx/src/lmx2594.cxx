@@ -223,6 +223,12 @@ namespace piradio
       new_config.chdiv = i - plldiv.begin();
     }
 
+
+    if (new_config.chdiv != 0 &&
+	new_config.outa_mux != mux_select::VCO &&
+	new_config.outb_mux != mux_select::VCO) {
+      new_config.seg1_en = 1;
+    }
     
     double d = VCOfreq / osc_post_div.output_frequency();
 

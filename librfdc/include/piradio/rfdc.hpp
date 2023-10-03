@@ -24,6 +24,9 @@ namespace piradio
 
     RFDC();
 
+    int n_adcs() { return adcs.size(); }
+    int n_dacs() { return dacs.size(); }
+    
     ADC *get_adc(int i) { return adcs.at(i); }
     DAC *get_dac(int i) { return dacs.at(i); }
 
