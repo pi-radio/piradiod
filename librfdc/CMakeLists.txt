@@ -37,11 +37,17 @@ target_link_libraries(rfdc
 
 target_compile_options(rfdc PUBLIC -g)
 
+add_executable(rfdcstatus
+  src/rfdcstatus.cxx)
+
+target_link_libraries(rfdcstatus rfdc metal)
+target_compile_options(rfdcstatus PUBLIC -g)
+
 
 add_executable(rfdcnco
   src/rfdcnco.cxx)
 
-target_link_libraries(rfdcnco rfdc metal)
+target_link_libraries(rfdcnco rfdc piradio metal)
 target_compile_options(rfdcnco PUBLIC -g)
 
 add_executable(rfdc_disable_nco

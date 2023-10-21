@@ -48,9 +48,8 @@ class Beambook:
         self.table = args
 
     def get_table(self, freq):
-        freq /= 1e3
-        print(f"Searching for freq {freq}")
-        return min(self.table, key=lambda x: abs(x.freq - freq/1e3))
+        freq /= 1e6
+        return min(self.table, key=lambda x: abs(x.freq - freq))
 
     def __getitem__(self, freq):
         return self.get_table(freq)

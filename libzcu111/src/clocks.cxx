@@ -18,46 +18,6 @@ extern "C" {
 
 namespace piradio
 {
-  void program_LMX2594(int n, zcu111_i2c &i2c, const std::map<int, uint16_t>  &regs)
-  {
-    std::cout << "Programming LMX" << std::endl;
-
-    uint8_t mask = 0;
-    
-    if (n == 0) {
-      mask = 8;
-    } else if (n == 1) {
-      mask = 4;
-    } else if (n == 2) {
-      mask = 1;
-    } else {
-      throw std::runtime_error("Invalid LMX");
-    }
-
-    
-    i2c.write(mask, { 0, 0, 2 });
-    usleep(1000);
-
-    i2c.write(mask, { 0, 0, 0 });
-    usleep(1000);
-
-    for (int i = 113; i > 0; i--) {
-      uint16_t r = regs.at(i);
-      i2c.write(mask, { (uint8_t)i, (uint8_t)(r >> 8), (uint8_t)r });
-      usleep(1000);
-    }
-
-    uint16_t r = regs.at(0);
-
-    i2c.write(mask, { (uint8_t)0, (uint8_t)(r >> 8), (uint8_t)(r & ~0x8) });
-        
-    usleep(10000);
-
-    i2c.write(mask, { (uint8_t)0, (uint8_t)(r >> 8), (uint8_t)(r | 0x8) });
-
-    usleep(1000);
-  }
-
   void program_LMK04208(zcu111_i2c &i2c, const std::vector<unsigned int> &regs)
   {
     int retries = 0;
@@ -65,15 +25,8 @@ namespace piradio
     std::cout << "Programming LMK" << std::endl;
     for (auto r : regs) {
       int result;
-      do {
-	result = i2c.write(0x2, { (uint8_t)(r >> 24), (uint8_t)(r >> 16), (uint8_t)(r >> 8), (uint8_t)r });
 
-	if (result != 0) {
-	  std::cerr << "i2c write_failed: " << r << ": " << std::strerror(errno) << std::endl;
-	  retries++;
-	  sleep(1);
-	}
-      } while (result && retries < 4);
+      i2c.write(0x2, { (uint8_t)(r >> 24), (uint8_t)(r >> 16), (uint8_t)(r >> 8), (uint8_t)r });
       
       usleep(1000);
     }
@@ -86,15 +39,19 @@ namespace piradio
   public:
     Si5382(zcu111_i2c &_i2c) : i2c(_i2c) {
       char id[9];
-      
-      i2c.write(0x01, 0x00);
 
-      for(int i = 0; i < 9; i++) { 
-	i2c.write(0x02 + i);
-	id[i] = i2c.read(0x00);
+      try {
+	i2c.write(0x01, 0x00);
+
+	for(int i = 0; i < 9; i++) { 
+	  i2c.write(0x02 + i);
+	  id[i] = i2c.read(0x00);
+	}
+
+	id[8] = 0;
+      } catch(...) {
+	std::cout << "Error getting id" << std::endl;
       }
-
-      id[8] = 0;
     }
 
     void write_reg(uint8_t page, uint8_t reg, uint8_t val) {
@@ -102,14 +59,8 @@ namespace piradio
 	usleep(1000);
 	return;
       }
-      while (i2c.write(0x01, page) < 0) {
-	std::cout << "Could not set page to " << (int)page << std::endl;
-	sleep(1);
-      }
-      while (i2c.write(reg, val) < 0 ) {
-	std::cout << "Could not set reg " << (int)reg << " to " << (int)val << std::endl;
-	sleep(1);
-      }
+      i2c.write(0x01, page);
+      i2c.write(reg, val);
     }
   };
   
@@ -131,7 +82,11 @@ namespace piradio
     for (auto r : regs) {
       std::tie(page, reg, val) = r;
 
-      si.write_reg(page, reg, val);
+      try {
+	si.write_reg(page, reg, val);
+      } catch(...) {
+	std::cout << "Write failed: " << (int)page << " " << (int)reg << " " << (int)val << std::endl;
+      }
     }    
   }
 
@@ -142,7 +97,7 @@ namespace piradio
   {
     int n;
 
-    n = zcu111_i2c::find_device(0x2F);
+    n = zcu111_i2c::find_LMXs();
 
     zcu111_i2c i2c(n, 0x2F);
 

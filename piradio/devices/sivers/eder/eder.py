@@ -10,6 +10,9 @@ from piradio.devices.sivers.eder.rx import RX
 from piradio.devices.sivers.eder.tx import TX
 from piradio.devices.sivers.eder.selftest import self_test, agc_test
 from piradio.devices.sivers.eder.pll import FreqRef, PLL
+from piradio.devices.sivers.eder.config import EderConfig
+
+
 
 def KtoC(K):
     return K - 273.15
@@ -18,8 +21,6 @@ class EderChipNotFoundError(RuntimeError):
     pass
 
 class Eder(StateMachine):
-    CID_EDER_B = 0x02731803
-    CID_EDER_B_MMF = 0x02741812
 
     PRERESET = State("pre-reset", initial=True)
     RESET = State("reset")
@@ -42,20 +43,37 @@ class Eder(StateMachine):
 
         self.cid = self.regs.chip_id
 
-        if self.cid == self.CID_EDER_B:
-            output.info("Found Eder B")
-        elif self.cid == self.CID_EDER_B_MMF:
-            output.info("Found Eder B MMF")
-        else:
+        if not self.is_eder_b and not self.is_eder_b_mmf:
             self.spi = None
             raise EderChipNotFoundError(f"Unknown SIVERS chip {self.cid}")
+
+        self._config = EderConfig(self)
 
         self.ref = FreqRef(self)
         self.pll = PLL(self)
         self.adc = ADC(self)
         self.rx = RX(self)
         self.tx = TX(self)
+
+    def __del__(self):
+        self._config.save()
+    
+    @property
+    def config(self):
+        return self._config
         
+    @property
+    def is_eder_b(self):
+        return self.cid == 0x02731803
+
+    @property
+    def is_eder_b_mmf(self):
+        return self.cid == 0x02741812
+
+    @property
+    def mmf(self):
+        return self.is_eder_b_mmf
+    
     def __del__(self):
         if self.spi is not None:
             self.SX()
@@ -108,10 +126,6 @@ class Eder(StateMachine):
     def Tj(self):
         return KtoC(self.adc.tj)
         
-    @property
-    def mmf(self):
-        return self.cid == self.CID_EDER_B_MMF
-
     @command
     @transition(PRERESET, RESET)
     def reset(self):
@@ -125,17 +139,14 @@ class Eder(StateMachine):
     @transition(RESET, INIT)
     def startup(self, run_tests=False):        
         self.ref.startup()
-
         self.adc.startup()
-
         self.eeprom.startup()
-
         self.pll.startup()
 
         prevT = 0.0
         curT = self.Tj
 
-        output.info("Waiting for stable temperature")
+        output.debug("Waiting for stable temperature")
         
         while abs(curT - prevT) > 0.1:
             prevT = curT
@@ -151,8 +162,8 @@ class Eder(StateMachine):
             output.warn("Intialization failed")
             self.regs.trx_ctrl = 0
             return
-            
-        output.info("Eder initialized")
+
+        output.debug("Eder initialized")
         
     @transition(INIT, SX)
     @precondition(lambda obj: obj.freq != 0.0)
@@ -170,12 +181,14 @@ class Eder(StateMachine):
 
     @transition(SX, LOOP)
     def SX_to_LOOP(self):
-        self.regs.trx_ctrl = set_bits(1)
+        self.rx.loopback()
         self.tx.loopback()
+        self.regs.trx_ctrl = set_bits(3)
         
     @transition(LOOP, SX)
     def LOOP_to_SX(self):
-        self.regs.trx_ctrl = 0
+        self.regs.trx_ctrl = clear_bits(3)
+        self.rx.loopback_off()
         self.tx.loopback_off()
         
     @transition(SX, RX)
@@ -214,6 +227,7 @@ class Eder(StateMachine):
         agc_test(eder)
 
     def post_transition(self, start, end):
+        return
         print(f"Transition: {start}=>{end}")
         print(f"trx_ctrl: {self.regs.trx_ctrl}")
         print(f"tx_ctrl: {self.regs.tx_ctrl}")

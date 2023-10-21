@@ -7,7 +7,7 @@ from .registers import set_bits, clear_bits, modify_bits, toggle_bits
 
 def sign_extend(x, bits):
     sign_bit = 1 << (bits - 1)
-    return (value & (sign_bit - 1)) - (value & sign_bit)
+    return (x & (sign_bit - 1)) - (x & sign_bit)
 
 class DieTemp:
     def __init__(self, adc):
@@ -16,7 +16,7 @@ class DieTemp:
         self.adc_max = 4096
         self.adc_scale = 3
         
-        if self.adc.eder.cid == self.adc.eder.CID_EDER_B_MMF:
+        if self.adc.eder.mmf:
             # Semi-cryptic comment...
             #ADC reference measured for 12 units at T = 0 degrees,
             #Use 1.217 for other voltage measurements (found at T = 25 degrees)
@@ -191,7 +191,6 @@ class ADC(EderChild):
         self.regs.adc_sample_cycle = self.sample_cycle
         self.edge = 0
 
-        output.info("SIVERS: ADC initialized")
         self.unlock()
         
     @property

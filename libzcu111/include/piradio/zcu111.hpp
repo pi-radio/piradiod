@@ -25,15 +25,17 @@ namespace piradio
 
     void tune_all(const frequency &freq);
     
+    void program_lmx(int n);
+
+    void i2c_program_lmx(uint8_t mask, const std::map<int, uint16_t> &regs);
+
   protected:
     Si5382 si5382;
     LMX2594 zcu111_lmx_A;
     LMX2594 zcu111_lmx_B;
     LMX2594 zcu111_lmx_C;
     zcu111_i2c i2c_spi;
-    
-    void program_lmx(int n);
 
-    void i2c_program_lmx(int n, const std::map<int, uint16_t> &regs);
+    void write_i2c_spi(std::initializer_list<uint8_t> il);
   };
 };

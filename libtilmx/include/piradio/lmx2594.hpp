@@ -31,7 +31,7 @@ namespace piradio
       };
     };
     
-    LMX2594(const frequency &_f_osc_in);
+    LMX2594(const frequency &_f_osc_in, uint8_t A_pwr = 12, uint8_t B_pwr = 12);
 
     void set_f_osc_in(const frequency &_f_osc_in);
     

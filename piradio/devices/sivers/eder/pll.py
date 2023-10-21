@@ -17,7 +17,7 @@ class FreqRef(EderChild):
        self.regs.fast_clk_ctrl = 0x20
        self.regs.pll_ref_in_lvds_en = 0x1
 
-       output.info(f"SIVERS: Ref Clk {self.freq:.2f} MHz")
+       output.debug(f"SIVERS: Ref Clk {self.freq:.2f} MHz")
 
        # Write monitor enable/disable
 
@@ -39,7 +39,7 @@ class VCO(EderChild):
         super().__init__(pll.eder)
 
     def set_bias_vco_x3(self, freq):
-        if self.eder.cid == self.eder.CID_EDER_B_MMF:
+        if self.eder.mmf:
             if freq <= self.bias_vco_x3_lo_freq or freq >= self.bias_vco_x3_hi_freq:
                 self.regs.bias_vco_x3 = 0x02
             else:
@@ -123,7 +123,7 @@ class PLL(EderChild):
 
         time.sleep(0.5)
 
-        output.info("PLL initialized")
+        output.debug("PLL initialized")
 
     @property
     def freq(self):
@@ -144,7 +144,7 @@ class PLL(EderChild):
         
         self.regs.vco_alc_hi_th = self.alc_th
         
-        if self.eder.cid == self.eder.CID_EDER_B_MMF:
+        if self.eder.mmf:
             #Set vtune_th according to temperature
             vtune_th=int((T*9e-3+1.166)*255/self.dac_ref)
             #pll_chp is set to 0x01 before lock
@@ -165,7 +165,7 @@ class PLL(EderChild):
         # Increased to 2 ms from 0.5 ms
         time.sleep(0.002)
         
-        if self.eder.cid == self.eder.CID_EDER_B_MMF:
+        if self.eder.mmf:
             #Set pll_chp to 0x00 if digtune between 28 and 64 or 92 and 128
             digtune=self.regs.vco_tune_dig_tune
             if (0x5C < digtune) or (0x1D < digtune < 0x40):

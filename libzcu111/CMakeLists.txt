@@ -21,7 +21,9 @@ target_link_libraries(zcu111
   )
 
 add_executable(zcu111-util
-  src/zcu111_util.cxx)
+  src/zcu111_util.cxx
+  src/zcu111_predef_lmx.cxx
+  )
 
 target_link_libraries(zcu111-util
   zcu111

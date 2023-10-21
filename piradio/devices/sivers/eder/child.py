@@ -2,6 +2,10 @@
 class EderChild:
     def __init__(self, eder):
         self.eder = eder
+
+    @property
+    def config(self):
+        return self.eder.config
         
     @property
     def regs(self):

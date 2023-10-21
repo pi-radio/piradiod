@@ -146,6 +146,8 @@ namespace piradio
     reg_vals[23] = 0x007C;
     reg_vals[24] = 0x071A;
     reg_vals[25] = 0x0C2B;
+    // Value from ZCU111 programming stuff
+    reg_vals[25] = 0x0624;
     reg_vals[26] = 0x0DB0;
     reg_vals[27] = 0x0002;
     reg_vals[28] = 0x0488;
@@ -154,8 +156,12 @@ namespace piradio
     
     reg_vals[31] = 0x03ec | ((seg1_en & 0x1) << 14);
 
+    reg_vals[32] = 0x0393;
+    reg_vals[33] = 0x1E21;
     
     reg_vals[34] = 0x0000 | ((pll_n >> 16) & 0x3fff);
+
+    reg_vals[35] = 0x0004;
     
     reg_vals[36] = 0x0000 | (pll_n & 0xffff);
     reg_vals[37] = 0x0004 | ((pfd_dly_sel & 0x3f) << 8) | ((mash_seed_en & 0x1) << 15);
@@ -207,13 +213,13 @@ namespace piradio
     reg_vals[77] = 0x0000;
     
     reg_vals[78] = 0x0001 | ((vco_capctrl_strt & 0xff) << 1) | ((quick_recal_en & 0x1) << 9) | ((ramp_thresh >> 32) & 0xffff);
-    reg_vals[79] = 0x0000 | ((ramp_thresh >> 16) & 0x1);
+    reg_vals[79] = 0x0000 | ((ramp_thresh >> 16) & 0xFFFF);
     reg_vals[80] = 0x0000 | (ramp_thresh & 0xffff);
-    reg_vals[81] = 0x0000 | ((ramp_limit_high >> 32) & 0xffff);
-    reg_vals[82] = 0x0000 | ((ramp_limit_high >> 16) & 0x1);
+    reg_vals[81] = 0x0000 | ((ramp_limit_high >> 32) & 0x1);
+    reg_vals[82] = 0x0000 | ((ramp_limit_high >> 16) & 0xffff);
     reg_vals[83] = 0x0000 | (ramp_limit_high & 0xffff);
-    reg_vals[84] = 0x0000 | ((ramp_limit_low >> 32) & 0xffff);
-    reg_vals[85] = 0x0000 | ((ramp_limit_low >> 16) & 0x1);
+    reg_vals[84] = 0x0000 | ((ramp_limit_low >> 32) & 0x1);
+    reg_vals[85] = 0x0000 | ((ramp_limit_low >> 16) & 0xffff);
     reg_vals[86] = 0x0000 | (ramp_limit_low & 0xffff);
 
     reg_vals[87] = 0x0000;
@@ -228,11 +234,11 @@ namespace piradio
     
     reg_vals[96] = 0x0000 | ((ramp_burst_count & 0x1fff) << 2) | ((ramp_burst_en & 0x1) << 15);
     reg_vals[97] = 0x0800 | (ramp_burst_trig & 0x3) | ((ramp_triga & 0xf) << 3) | ((ramp_trigb & 0xf) << 7) | ((ramp0_rst & 0x1) << 15);
-    reg_vals[98] = 0x0000 | (ramp0_dly & 0x1) | ((ramp0_inc >> 16) & 0x7);
+    reg_vals[98] = 0x0000 | (ramp0_dly & 0x1) | ((ramp0_inc >> 16) & 0x3FFF);
     reg_vals[99] = 0x0000 | (ramp0_inc & 0xffff);
     reg_vals[100] = 0x0000 | (ramp0_len & 0xffff);
     reg_vals[101] = 0x0000 | ((ramp0_next & 0x1) << 4) | (ramp0_next_trig & 0x3) | ((ramp1_dly & 0x1) << 6) | ((ramp1_rst & 0x1) << 5);
-    reg_vals[102] = 0x0000 | ((ramp1_inc >> 16) & 0x7);
+    reg_vals[102] = 0x0000 | ((ramp1_inc >> 16) & 0x3FFF);
     reg_vals[103] = 0x0000 | (ramp1_inc & 0xffff);
     reg_vals[104] = 0x0000 | (ramp1_len & 0xffff);
     reg_vals[105] = 0x0000 | ((ramp1_next & 0x1) << 4) | (ramp1_next_trig & 0x3) | ((ramp_dly_cnt & 0x3ff) << 6) | ((ramp_manual & 0x1) << 5);

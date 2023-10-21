@@ -2,6 +2,7 @@ import math
 import struct
 from pathlib import Path
 from functools import cached_property
+from contextlib import contextmanager
 
 from piradio.output import output
 from piradio.command import command
@@ -15,6 +16,8 @@ csr_struct = struct.Struct("iiiiii")
 
 class Trigger(UIO):
     def __init__(self):
+        self._enable_stack = list()
+        
         l = list(Path("/sys/bus/platform/devices").glob("*.piradip_trigger_unit"))
 
         assert len(l) == 1, "Only set up for one trigger unit at the moment"
@@ -82,4 +85,12 @@ class Trigger(UIO):
 
         for i in range(32):
             print(f"Delay {i}: {self.csr[3+i]}")
-    
+
+    @contextmanager
+    def push(self):
+        self._enable_stack.append([ self.csr[4] ])
+
+        try:
+            yield None
+        finally:
+            self.csr[4] = self._enable_stack.pop()

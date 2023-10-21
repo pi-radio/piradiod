@@ -4,6 +4,7 @@
 #include <map>
 #include <iostream>
 #include <cmath>
+#include <cassert>
 #include <iomanip>
 #include <numeric>
 #include <algorithm>
@@ -58,7 +59,7 @@ namespace piradio
     { 7, { MHz(13900), MHz(15000) }, { 182, 239 }, { 323, 244 }, { 175, 19 } }
   };
 
-  LMX2594::LMX2594(const frequency &_f_osc_in) :
+  LMX2594::LMX2594(const frequency &_f_osc_in, uint8_t A_pwr, uint8_t B_pwr) :
     osc_in([this](void) { return f_osc_in; }),
     osc_2x(osc_in),
     osc_pre_div(osc_2x),
@@ -81,6 +82,12 @@ namespace piradio
 
     set_f_osc_in(_f_osc_in);
 
+    assert(A_pwr < 64);
+    assert(B_pwr < 64);
+    
+    config.outa_pwr = A_pwr;
+    config.outb_pwr = B_pwr;
+
     config.muxout_ld_sel = 1;
     config.cpg = 7;
     config.mash_order = 3;
@@ -89,7 +96,11 @@ namespace piradio
     config.ld_type = 1;
 
     // Straight up copying cra
-    config.jesd_dac1_ctrl = 1;
+    config.sysref_en = 0;
+    config.sysref_div = 1;
+    config.sysref_div_pre = 4;
+    
+    config.jesd_dac1_ctrl = 0x3F;
     config.ramp_thresh = 26214;
     config.ramp_triga = 1;
     config.ramp_trigb = 1;
@@ -97,6 +108,7 @@ namespace piradio
     config.ramp0_next_trig = 1;
     config.ramp1_next_trig = 1;
     config.ramp_manual = 1;
+    config.out_force = 1;
   }
 
   void LMX2594::set_f_osc_in(const frequency &_f_osc_in)
@@ -325,6 +337,22 @@ namespace piradio
       throw std::runtime_error("PLL divider lower than minimum");      
     }
 
+
+    new_config.fcal_en = 1;
+    
+    new_config.acal_cmp_dly = 10;
+    new_config.vco_capctrl = 183;
+    new_config.vco_sel = 4;
+    new_config.vco_daciset = 128;
+    new_config.vco_daciset_strt = 300;
+    new_config.vco_capctrl_strt = 1;
+    new_config.mash_rst_count = 0xc350;
+
+    new_config.ramp_thresh = 0x266666;
+    new_config.ramp_limit_high = 0x1E000000;    
+    new_config.ramp_limit_low = 0x1d3000000;
+    new_config.ramp0_inc = 0x2000000;
+    new_config.ramp1_inc = 0x3F800000;
     
     config = new_config;
   }

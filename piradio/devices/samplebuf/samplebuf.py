@@ -1,12 +1,17 @@
 import time
 import math
+import copy
 import struct
 from pathlib import Path
 from functools import cached_property
 from threading import Timer
+from scipy.signal import resample
 
 import numpy as np
+import numpy.fft as fft
 import matplotlib.pyplot as plt
+from scipy.signal import find_peaks, decimate
+import pandas as pd
 
 from piradio.output import output
 from piradio.command import command, cmdproperty
@@ -26,7 +31,7 @@ iq_struct = struct.Struct("hh")
 REAL_SAMPLES=0
 IQ_SAMPLES=1
 
-def int_to_iq(n):
+def int_to_iq(n, swap_IQ):
     def u2s(x):
         if x & (1 << 15):
             x = -((~x & 0xFFFF) + 1)
@@ -35,9 +40,7 @@ def int_to_iq(n):
     I = u2s((n >> 16) & 0xFFFF)
     Q = u2s(n & 0xFFFF)
 
-    return (I, Q)
-
-    return iq.unpack(uint32.pack(n))
+    return (I, Q) if not swap_IQ else (Q, I)
 
 class IQBuf:
     def plot():
@@ -49,19 +52,22 @@ class Samples:
         self._format = sample_format
        
     def __getitem__(self, n):
-        s = self.sbuf._samples[n]
+        s = self.sbuf._samples[n * 4]
         
         if self._format == IQ_SAMPLES:
             if isinstance(s, list):
                 return map(int_to_iq, s)
             else:
-                return int_to_iq(s)
+                return int_to_iq(s, self.sbuf.swap_IQ)
         else:
             raise RuntimeException("Not implemented")
  
     def __setitem__(self, n, v):
         if self._format == IQ_SAMPLES:
-            self.sbuf._samples[n] = ((v[0] & 0xFFFF) << 16) | (v[1] & 0xFFFF) # uint32.unpack(iq.pack(*v))[0]
+            if self.sbuf.swap_IQ:
+                self.sbuf._samples[n * 4] = ((v[1] & 0xFFFF) << 16) | (v[0] & 0xFFFF) # uint32.unpack(iq.pack(*v))[0]
+            else:
+                self.sbuf._samples[n * 4] = ((v[0] & 0xFFFF) << 16) | (v[1] & 0xFFFF) # uint32.unpack(iq.pack(*v))[0]
         else:
             raise RuntimeException("Not implemented")
 
@@ -79,6 +85,10 @@ class Samples:
             
     
 class SampleBuffer(UIO):
+    @property
+    def is_sample_buffer(self):
+        return True
+    
     def __init__(self, n, direction, sample_rate=GHz(2), sample_format=IQ_SAMPLES):
         self.direction = direction
         self.n = n
@@ -108,7 +118,7 @@ class SampleBuffer(UIO):
         self.samples = Samples(self, sample_format)
         
         assert self.ip_id == 0x5053424F, f"Invalid IP identifier {self.ip_id:x}"
-        
+
         output.debug(f"CTRL STAT: {self.ctrl_stat}")
         output.debug(f"OFFSETS: {self.start_offset}-{self.end_offset}")
         output.debug(f"STREAM_DEPTH: {self.stream_depth}")
@@ -116,7 +126,30 @@ class SampleBuffer(UIO):
 
     def read_reg(self, n):
         return uint32.unpack(self.csr_map[4*n:4*n+4])[0]
-        
+
+    @property
+    def i_en(self):
+        return True if self.ctrl_stat & 0x20 else False
+
+    @i_en.setter
+    def i_en(self, v):
+        if v:
+            self.csr[4 * 1] = (self.csr[4 * 1] & ~0x1) | 0x20
+        else:
+            self.csr[4 * 1] = (self.csr[4 * 1] & ~0x21)
+                
+    @property
+    def q_en(self):
+        return True if self.ctrl_stat & 0x10 else False
+
+    @q_en.setter
+    def q_en(self, v):
+        if v:
+            self.csr[4 * 1] = (self.csr[4 * 1] & ~0x1) | 0x10
+        else:
+            self.csr[4 * 1] = (self.csr[4 * 1] & ~0x11)
+            
+    
     @cached_property
     def ip_id(self):
         return self.csr[0]
@@ -196,34 +229,36 @@ class SampleBuffer(UIO):
 
         return self.array
             
-    @command
-    def save(self, name : str):
-        self.capture()
-
-        with open(name, "w") as f:
-            for r in self.array:
-                print(r, file=f)
-        
-    @command
-    def dump(self):
-        self.samples.dump()
-
     @cmdproperty
     def fundamental_freq(self):
         return self.sample_rate / (self.end_sample - self.start_sample)
 
+    def round_freq(self, f):
+        return self.fundamental_freq * round(f / self.fundamental_freq)
+    
     @property
     def t(self):
-        return np.arange(0, self.nsamples) / self.sample_rate
+        return np.arange(self.nsamples, dtype=np.double) / self.sample_rate.Hz
 
     @property
     def T(self):
         return self.nsamples / self.sample_rate
-                        
+
+    @property
+    def f(self):
+        return np.fft.fftshift(np.fft.fftfreq(self.nsamples, 1.0/self.sample_rate.Hz))
+
+    @property
+    def fft(self):
+        return (self.f, np.fft.fftshift(np.fft.fft(self.array, norm="forward")))
+
+    def decimate(self, n=2):
+        return decimate(self.array, n)    
+    
     @property
     def array(self):
         if self.sample_format == IQ_SAMPLES:
-            v = np.array([ self.samples[4 * i] for i in range(self.start_sample, self.end_sample) ]) / 0x7FFF
+            v = np.array([ self.samples[i] for i in range(self.start_sample, self.end_sample) ]) / 0x7FFF
             
             return v[...,0] + 1j * v[...,1]
         else:
@@ -240,17 +275,29 @@ class SampleBuffer(UIO):
             v = zip(rearr, imarr)
             
             for i, s in enumerate(v):
-                self.samples[4 * i] = s
-            
-            
+                self.samples[i] = s
+
     
 class SampleBufferIn(SampleBuffer):
+    swap_IQ = True
+    sample_rate = 4e9
+    
     def __init__(self, n, **kwargs):
         assert "direction" not in kwargs
+        if "sample_rate" not in kwargs:
+            kwargs["sample_rate"] = GHz(4)
         super().__init__(n, direction="in", **kwargs)
 
 class SampleBufferOut(SampleBuffer):
+    swap_IQ = False
+    sample_rate = 2e9
+    
     def __init__(self, n, **kwargs):
         assert "direction" not in kwargs
+        if "sample_rate" not in kwargs:
+            kwargs["sample_rate"] = GHz(2)
         super().__init__(n, direction="out", **kwargs)
+                
 
+
+        

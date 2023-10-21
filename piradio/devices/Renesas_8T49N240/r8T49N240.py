@@ -8,6 +8,7 @@ from periphery import I2C
 from periphery.i2c import I2CError
 
 from piradio.command import CommandObject, command
+from piradio.output import output
 
 class Renesas_8T49N240(CommandObject):
     """
@@ -288,7 +289,7 @@ class Renesas_8T49N240(CommandObject):
     }
 
     def detect(self, addr):
-        print(f"Checking address {addr:x} for 8T49N240")
+        output.debug(f"Checking address {addr:x} for 8T49N240")
         try:
             data = self.read_reg_addr(addr, 0, 10)
         except:
@@ -298,10 +299,10 @@ class Renesas_8T49N240(CommandObject):
         dev_id = ((data[2] & 0xF) << 12) | (data[3] << 4) | ((data[4] & 0xF0) >> 4)
         dash_code = ((data[4] & 0xF) << 7) | (data[5] >> 1)
 
-        print(f"rev_id: {rev_id} dev_id: {dev_id}")
+        output.debug(f"rev_id: {rev_id} dev_id: {dev_id}")
             
         if dev_id == 0x60C and data[5] & 1:
-            print(f"Found 8T49N240 at 0x{addr:x}")
+            output.debug(f"Found 8T49N240 at 0x{addr:x}")
             self.addr = addr
             self.rev_id = rev_id
             self.dev_id = dev_id

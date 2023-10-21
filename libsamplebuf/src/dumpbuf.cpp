@@ -5,7 +5,7 @@
 
 int main(int argc, char **argv)
 {
-  piradio::sample_buffer tb(piradio::sample_buffer::OUT, 0);
+  piradio::sample_buffer tb(piradio::sample_buffer::IN, 4);
 
   auto v = tb.get_view<piradio::complex_sample>();
 

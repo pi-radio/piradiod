@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <ostream>
 #include <istream>
+#include <cmath>
 
 namespace piradio
 {
@@ -39,11 +40,13 @@ namespace piradio
 
   static inline std::ostream &operator<<(std::ostream &out, const frequency &f)
   {
-    if (f.Hz() < 1000.0) {
+    double af = std::abs(f.Hz());
+      
+    if (af < 1e3) {
       out << f.Hz() << "Hz";
-    } else if (f.KHz() < 1000.0) {
+    } else if (af < 1e6) {
       out << f.KHz() << "KHz";
-    } else if (f.MHz() < 1000.0) {
+    } else if (af < 1e9) {
       out << f.MHz() << "MHz";
     } else {
       out << f.GHz() << "GHz";

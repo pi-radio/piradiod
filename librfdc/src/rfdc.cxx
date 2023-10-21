@@ -66,7 +66,6 @@ namespace piradio
 	if (!(ip_status.ADCTileStatus[tile].BlockStatusMask & (1 << block))) {
 	  continue;
 	}
-	std::cout << " Block " << block << std::endl;
 
 	adcs[n] = new ADC(*adc_tiles[tile], block);
 	
@@ -94,7 +93,6 @@ namespace piradio
 	if (!(ip_status.DACTileStatus[tile].BlockStatusMask & (1 << block))) {
 	  continue;
 	}
-	std::cout << " Block " << block << std::endl;
 
 	dacs[n] = new DAC(*dac_tiles[tile], block);
 	

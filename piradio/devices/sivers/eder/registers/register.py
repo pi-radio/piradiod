@@ -1,6 +1,8 @@
 from functools import reduce
 from piradio.output import output
 
+from contextlib import contextmanager
+
 def ffs(x):
     return (x&-x).bit_length()-1
 
@@ -20,6 +22,7 @@ class Registers:
     def __init__(self, obj, log_registers):
         self.spi = obj.spi
         self.log_registers = log_registers
+        self.saved_registers = []
 
     def xfer(self, x):
         result = obj.spi.xfer(x)
@@ -28,6 +31,23 @@ class Registers:
             output.print("SPI: {x}=>{result}")
 
         return result
+
+    @contextmanager
+    def push_regs(self):
+        self.saved_registers.append(dict())
+
+        try:
+            yield None
+        finally:
+            for k, v in self.saved_registers[-1].items():
+                output.debug(f"Restoring registers: {k.name} 0x{v:x}")
+                k.__set__(self, v)
+
+            self.saved_registers.pop(-1)
+
+    def forget(self, name):
+        if self.registers[name] in self.saved_registers[-1]:
+            del self.saved_registers[-1][self.registers[name]]
 
 class AbstractRegister:
     SPI_CMD_WRITE  = 0
@@ -43,7 +63,7 @@ class AbstractRegister:
 
     def prefix(self, prefix):
         return encode((self.addr << 3) | prefix)
-
+    
     def __get__(self, obj, objtype=None):
         d = self.prefix(self.SPI_CMD_READ) + [ 0x00 ] * self.size
         
@@ -60,6 +80,10 @@ class AbstractRegister:
     def __set__(self, obj, x):
         if obj.log_registers:
             output.print(f"Register Set {self.name} {x}")
+
+        if (len(obj.saved_registers) and
+            self not in obj.saved_registers[-1]):
+            obj.saved_registers[-1][self] = self.__get__(obj)
             
         cmd = self.SPI_CMD_WRITE
         if isinstance(x, bitop):
@@ -88,6 +112,7 @@ class BFAzEntry:
         self.spi = spi
         self.addr = addr
         self.log_registers = False
+        self.saved_registers = []
 
     def set(self, v):
         assert len(v) == 32
@@ -108,6 +133,7 @@ class BFRegisterInst:
         self.spi = spi
         self.name = name
         self.addr = addr
+        self.saved_registers = []
 
     def set(self, v):
         AbstractRegister("Bf", self.addr, 64 * 16 * 2).__set__(self, v)
@@ -129,6 +155,7 @@ class BFRegister:
         setattr(Registers, name, self)
         self.size = 64 * 16 * 2
         self.default = 0
+        self.saved_registers = []
 
     def __get__(self, obj, objtype=None):
         return BFRegisterInst(obj.spi, self.name, self.addr)

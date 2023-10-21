@@ -65,15 +65,24 @@ namespace piradio
       return locked == XRFDC_PLL_LOCKED;
     }
 
-    frequency ref_clk_freq(void) {
+    XRFdc_PLL_Settings pll_settings(void) {
       int result;
-      u32 locked;
-
+      
       XRFdc_PLL_Settings s;
       
       result = rfdc_func(XRFdc_GetPLLConfig, &s);
 
-      return MHz(s.RefClkFreq);
+      // TODO: Check and throw a sane exception
+      
+      return s;
+    }
+    
+    frequency sample_freq(void) {
+      return GHz(pll_settings().SampleRate);
+    }
+    
+    frequency ref_clk_freq(void) {
+      return MHz(pll_settings().RefClkFreq);
     }
     
     std::string get_id_string() { return id_string; }

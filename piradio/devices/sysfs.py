@@ -1,4 +1,5 @@
 from pathlib import Path
+from piradio.output import output
 
 sysfs_dt_path = Path("/sys/firmware/devicetree/base")
 sysfs_devices_path = Path("/sys/devices/platform")
@@ -14,7 +15,7 @@ class SysFS:
         _, dev = dev.split("/")
         dev, addr = dev.split("@")
             
-        print(f"dev: {dev} addr: {addr}")
+        output.debug(f"dev: {dev} addr: {addr}")
 
         l = list((sysfs_devices_path / "axi").glob(f"{addr}.*"))
 

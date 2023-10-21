@@ -37,7 +37,7 @@ namespace piradio
     int get_n_dac_tiles(void) { return dac_tiles.size(); }
 
     int reset();
-
+    
     static int load_config();
     
   private:

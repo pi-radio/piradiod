@@ -12,6 +12,13 @@ class DPMeasurement:
         self.dco = adc.acquire(dco_r, l2samp).mean
         self.dco_dcsc = adc.acquire(dco_dcsc_r, l2samp).mean
         self.dco_diff = self.dco - self.dco_dcsc
+
+    def meas_dco_noise(self, adc, dco_r, dco_dcsc_r, l2samp):
+        self.dco_min = adc.acquire(dco_r, l2samp).min
+        self.dco_dcsc_min = adc.acquire(dco_dcsc_r, l2samp).min
+        
+        self.dco_max = adc.acquire(dco_r, l2samp).max
+        self.dco_dcsc_max = adc.acquire(dco_dcsc_r, l2samp).max
         
     @classmethod
     def read(cls, adc, P, N, l2samp=4):
@@ -30,13 +37,17 @@ class IQMeasurement:
         self.Q = Q
         self.scale = 1
 
+    @property
+    def dco_diff(self):
+        return self.I.dco_diff + 1.0j * self.Q.dco_diff
+        
     @classmethod
     def read(cls, adc, I_P, I_N, Q_P, Q_N, l2samp):
         return IQMeasurement(DPMeasurement.read(adc, I_P, I_N, l2samp),
                              DPMeasurement.read(adc, Q_P, Q_N, l2samp))
 
     def __repr__(self):
-        return f"<I: {self.I} Q: {self.Q}>"
+        return f"<I: {self.I},\n Q: {self.Q}>"
 
 
 def measure_diff_pair(adc, adc1, adc2, l2samp=4):

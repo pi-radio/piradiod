@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 import glob
+import os
 
 from periphery import I2C
 from periphery.i2c import I2CError
 
-from piradio.devices import Si5382
-from piradio.devices import LMK04208
-from piradio.devices import RFDC
-
-from piradio.command import CommandObject, command
+from pathlib import Path
 
 regs_4GHz = [
     0x700000, 0x6f0000, 0x6e0000, 0x6d0000,
@@ -42,48 +39,38 @@ regs_4GHz = [
     0x00249c ]
 
 
-SCI18IS602Addr=0x2f
-LMXAddrs = [ 0x08, 0x04, 0x01 ]
 
-
-class ZCU111ClockTree(CommandObject):
-    def __init__(self):
-        self.children.Si5382 = Si5382()
-        self.children.LMK04208 = LMK04208()
-
-    @command
+class ZCU111:
+    @classmethod
     def program(self):
-        self.Si5382.program()
-        self.LMK04208.program()
+        SCI18IS602Addr=0x2f
+        LMXAddrs = [ 0x08, 0x04, 0x01 ]
 
-        print("Configuring LMX2594s")
+        i2c = None
         
-        for p in glob.glob("/dev/i2c-*"):
-            i2c = I2C(p)
-            try:
-                msgs = [ I2C.Message([0x00], read=True) ]
-                i2c.transfer(SCI18IS602Addr, msgs)
-                print(f"Found on bus {p}")
-            except I2CError as e:
-                continue
+        i2cpath = Path("/sys/bus/i2c/devices/")
 
-            for lmx in LMXAddrs:
-                print(f"Programming LMX@{lmx}...");
-                for r in regs_4GHz:
-                    try:
-                        msgs = [ I2C.Message([ lmx,
-                                               (r >> 16) & 0xFF, (r >> 8) & 0xFF, (r) & 0xFF ])]
-                        i2c.transfer(SCI18IS602Addr, msgs)
-                    except I2CError as e:
-                        print(f"Error in transfer {s}: {e}")
-                        continue
+        for bus in i2cpath.glob("i2c-*"):
+            busno = int(bus.name.split("-")[1])
 
-class ZCU111(CommandObject):
-    def __init__(self):
-        self.children.clock_tree = ZCU111ClockTree()
-        self.children.rfdc = RFDC()
-        
-    @command
-    def program(self):
-        self.clock_tree.program()
-
+            for device in bus.glob(f"{busno}-*"):
+                with open(device/"name") as f:
+                    name = f.read().strip()
+                    if name.startswith("sc18is60"):
+                        i2c = I2C(f"/dev/i2c-{busno}")
+                        break
+                    
+            if i2c is not None:
+                break
+                    
+        for lmx in LMXAddrs:
+            print(f"Programming LMX@{lmx}...");
+            for r in regs_4GHz:
+                try:
+                    msgs = [ I2C.Message([ lmx,
+                                           (r >> 16) & 0xFF, (r >> 8) & 0xFF, (r) & 0xFF ])]
+                    i2c.transfer(SCI18IS602Addr, msgs)
+                except I2CError as e:
+                    print(f"Error in transfer: {e}")
+                    continue
+                

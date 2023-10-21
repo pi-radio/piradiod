@@ -2,6 +2,7 @@ import os
 
 import gpiod
 
+from piradio.output import output
 from piradio.command import CommandObject, command, cmdproperty
 from piradio.devices.sysfs import SysFS
 
@@ -11,9 +12,7 @@ class GPIOPin(CommandObject):
     
     def __init__(self, ctrl, n):
         self.line = line
- 
         
-
     @cmdproperty
     def dir(self):
         with open(self.dirpath, "r") as f:
@@ -74,20 +73,32 @@ class OutputPin(CommandObject):
     @val.setter
     def val(self, v):
         self.line.set_value(v)
+
+_gpios = {}
         
 class AXI_GPIO(CommandObject):
+    def __new__(cls, name):
+        if name in _gpios:
+            return _gpios[name]
+
+        _gpios[name] = super().__new__(cls)
+
+        _gpios[name].__init__(name)
+
+        return _gpios[name]
+        
     def __init__(self, name):
         devpath = SysFS.find_device(name)
 
         l = list(devpath.glob("gpiochip*"))
-
+        
         assert(len(l) == 1)
 
         chippath = l[0]
 
         self.gpion = int(chippath.stem[len("gpiochip"):])
 
-        print(f"Opening GPIO chip {self.gpion} {chippath}")
+        output.debug(f"Opening GPIO chip {self.gpion} {chippath}")
         
         self.chip = gpiod.chip(self.gpion) #, gpiod.chip.OPEN_BY_NUMBER)
         

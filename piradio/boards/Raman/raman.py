@@ -14,6 +14,7 @@ from piradio.devices import SysFS, SPIDev
 from piradio.devices import Renesas_8T49N240, LMX2595Dev
 from piradio.devices import AXI_GPIO
 from piradio.devices import Trigger
+from piradio.devices import LTC5594Dev
 from piradio.devices.sivers import Eder, EderChipNotFoundError
 from piradio.util import MHz
 from piradio import zcu111
@@ -24,7 +25,7 @@ sysfs_devices_path = Path("/sys/devices/platform")
 
 class Raman(CommandObject):
     def __init__(self):
-        print("Initializing C.V. Raman (a.k.a. SDRv2)...")
+        output.info("Initializing C.V. Raman (a.k.a. SDRv2)...")
 
         # setup GPIOs
 
@@ -47,8 +48,6 @@ class Raman(CommandObject):
         self.children.gpio = AXI_GPIO(gpio)
         self.children.reset_gpio = self.gpio.outputs[0]
 
-        print(f"Reset: {self.children.reset_gpio.val}")
-        
         if self.reset_gpio.val == 0:
             self.reset_gpio.val = 1
             time.sleep(0.25)
@@ -56,10 +55,22 @@ class Raman(CommandObject):
         self.children.clk_root = Renesas_8T49N240()
         self.children.lo_root = LMX2595Dev("LO Root", SPIDev(2, 24), f_src=MHz(45), A=self.LO_freq, B=self.LO_freq, Apwr=10, Bpwr=10)
 
+        self.children.LTC5594 = [ LTC5594Dev(SPIDev(2, 6 * card + radio + 4)) for card in range(4) for radio in range(2) ]
+
+        for ltc in self.LTC5594:
+            ltc.lvcm = 2
+            ltc.band = 0
+            ltc.cf1 = 8
+            ltc.lf1 = 1
+            ltc.cf2 = 21
+            ltc.ampg = 0
+            ltc.program()
+
+            
+        
+        
     def find_gpio(self):
         gpios = list(Path("/sys/bus/platform/devices").glob("[ab]*.gpio"))
-        print(gpios)
-
         
     @command
     def init(self):
@@ -68,31 +79,32 @@ class Raman(CommandObject):
         
     @command
     def reset(self):
-        print("Resetting board...")
+        output.info("Resetting board...")
 
         self.reset_gpio.val = 0
         time.sleep(0.25)
         self.reset_gpio.val = 1
         time.sleep(0.25)
 
-        print("Programming clock tree and LO...")
+        output.info("Programming clock tree and LO...")
         
 
         self.clk_root.program()
 
         if not self.OFDM:
-            os.system(f"rfdcnco {self.NCO_freq.Hz}")
+            os.system(f"rfdcnco set {self.NCO_freq.Hz}")
 
         self.lo_root.program()
 
         self.children.radios = [ None ] * 8
         
-        print("Detecting radios...")
         
         #self.detect_radios()
         
     @command
-    def detect_radios(self):
+    def detect_radios(self, init=True):
+        output.info("Detecting radios...")
+        
         for card in range(4):
             for radio in range(2):
                 n =  2*card + radio
@@ -105,8 +117,10 @@ class Raman(CommandObject):
                     eder = Eder(SPIDev(2, 6 * card + 2 * radio + 1, mode=0), n)
                     print(f"Found radio {n}")
                     self.children.radios[n] = eder
-                    eder.INIT()
-                    eder.freq = 60e9
+                    if init:
+                        print(f"Initializing radio {n}")
+                        eder.INIT()
+                        eder.freq = 60e9
                 except EderChipNotFoundError:
                     pass
                 except Exception as e:

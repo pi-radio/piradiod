@@ -1,6 +1,10 @@
 import math
 import functools
+from json import JSONEncoder, JSONDecoder
 from collections import OrderedDict
+
+import numpy as np
+
 
 
 @functools.total_ordering
@@ -22,10 +26,19 @@ class Freq:
             return
         
         self.hz = f * self.freq_mult[unit]
-
+        
     def v(self, unit):
         return self.hz / self.freq_mult[unit]
+
+    @property
+    def friendly_tuple(self):
+        for s, v in self.freq_mult.items():
+            if np.abs(self.hz) >= v:
+                return (v, s)
+            
+        return (1, "Hz")
         
+    
     @property
     def GHz(self):
         return self.v('GHz')
@@ -43,9 +56,7 @@ class Freq:
         return self.hz
 
     def __str__(self):
-        for s, v in self.freq_mult.items():
-            if self.hz >= v:
-                return f"{self.hz/v}{s}"
+        return self.__format__("")
 
     def __eq__(self, other):
         return self.hz == other.hz
@@ -54,12 +65,14 @@ class Freq:
         return self.hz > other.hz
             
     def __repr__(self):
-        return f"<{str(self)}>"
+        s = self.__format__("")
+        return f"<{s}>"
 
     def __format__(self, spec):
-        for s, v in self.freq_mult.items():
-            if self.hz >= v:
-                return format(self.hz/v, spec) + s
+        v, s = self.friendly_tuple
+
+        return format(self.hz/v, spec) + s
+        
 
     def __add__(self, other):
         return Freq(self.hz + other.hz)
@@ -86,6 +99,9 @@ class Freq:
 
     def __round__(self, rounding):
         return Freq(round(self.hz, int(math.log10(rounding.hz))))
+
+    def __neg__(self):
+        return Freq(-self.hz)
     
 def GHz(x):
     return Freq(x * 1e9)
@@ -98,3 +114,4 @@ def KHz(x):
 
 def Hz(x):
     return Freq(x)
+ 

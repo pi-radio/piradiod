@@ -21,7 +21,7 @@ namespace piradio
 
   
   ZCU111::ZCU111() :
-    i2c_spi(zcu111_i2c::find_device(0x2F), 0x2F),
+    i2c_spi(zcu111_i2c::find_LMXs(), 0x2F),
     zcu111_lmx_A(MHz(122.88)),
     zcu111_lmx_B(MHz(122.88)),
     zcu111_lmx_C(MHz(122.88))
@@ -47,19 +47,6 @@ namespace piradio
     for (int i = 0; i < 3; i++)
       program_lmx(i);
   }
-
-  void save_regs(const std::map<int, uint16_t> &regs)
-  {
-    std::ofstream regfile("regs.txt");
-    
-    for (auto it = regs.crbegin(); it != regs.crend(); it++) {
-      uint8_t addr = it->first;
-      uint16_t r = it->second;
-
-      regfile << "R" << std::dec << std::setw(0) << int(addr) << " 0x" <<
-	std::hex << std::setfill('0') << std::setw(2) << int(addr) << std::setw(4) << r << std::endl;
-    }
-  }
   
   void ZCU111::program_lmx(int n)
   {
@@ -68,15 +55,15 @@ namespace piradio
     if (n == 0 || n == -1) {
       zcu111_lmx_A.config.fill_regs(lmx_regs);
 
-      i2c_program_lmx(0, lmx_regs);      
+      i2c_program_lmx(8, lmx_regs);      
     } else if (n == 1 || n == -1) {
       zcu111_lmx_B.config.fill_regs(lmx_regs);
 
-      i2c_program_lmx(1, lmx_regs);      
+      i2c_program_lmx(4, lmx_regs);      
     } else if (n == 2 || n == -1) {
       zcu111_lmx_C.config.fill_regs(lmx_regs);
 
-      i2c_program_lmx(2, lmx_regs);      
+      i2c_program_lmx(1, lmx_regs);      
     } else {
       throw std::runtime_error("Invalid LMX");
     }
@@ -84,73 +71,65 @@ namespace piradio
     
   }
 
-  void ZCU111::i2c_program_lmx(int n, const std::map<int, uint16_t>  &regs)
+  void ZCU111::write_i2c_spi(std::initializer_list<uint8_t> il)
   {
-    std::cout << "Programming LMX" << std::endl;
-
-    uint8_t mask = 0;
-    
-    if (n == 0) {
-      mask = 8;
-    } else if (n == 1) {
-      mask = 4;
-    } else if (n == 2) {
-      mask = 1;
-    } else {
-      throw std::runtime_error("Invalid LMX");
-    }
+    uint8_t buf[32];
 
     
-    i2c_spi.write(mask, { 0, 0, 2 });
-    usleep(1000);
+    i2c_spi.write(il);
 
-    i2c_spi.write(mask, { 0, 0, 0 });
-    usleep(1000);
-
-    auto it = regs.crbegin();
-
-    while (1) {
-      uint8_t addr = it->first;
-      uint16_t r = it->second;
-
-      if (++it == regs.crend()) break;
-      
-      i2c_spi.write(mask, {addr, (uint8_t)(r >> 8), (uint8_t)r });
-    }
-
-    uint16_t r = regs.at(0);
-
-    i2c_spi.write(mask, { (uint8_t)0, (uint8_t)(r >> 8), (uint8_t)(r & ~0x8) });
-        
-    usleep(10000);
-
-    i2c_spi.write(mask, { (uint8_t)0, (uint8_t)(r >> 8), (uint8_t)(r | 0x8) });
-
-    usleep(1000);
   }
 
   
-  /*
-	if (!fs::exists(siprog_path)) {
-	program_Si5382(i2c_si5382, si_122_88);
-	
-	runfile ofs(siprog_path);
-	
-	ofs << "programmed" << std::endl;
-	}
-	
-    if (!fs::exists(lmkprog_path)) {
-    program_LMK04208(i2c_spi, LMK04208_regs);
+  void ZCU111::i2c_program_lmx(uint8_t mask, const std::map<int, uint16_t>  &regs)
+  {
+    int result;
+    uint16_t r;
+    std::cout << "Programming LMX" << std::endl;
+
+    useconds_t short_delay = 1000;
+    useconds_t long_delay = 10000;
+        
+    std::cout << "Mask: " << (int)mask << std::endl;
+
+    r = regs.at(0);
+
+    //i2c_spi.txn(0x2F, { mask, (uint8_t)0, (uint8_t)(r >> 8), (uint8_t)(r | 0x02) });
+    usleep(short_delay);
+
+
+    i2c_spi.txn(0x2F, { mask, (uint8_t)0, (uint8_t)(r >> 8), (uint8_t)(r & 0xF7) });
+    usleep(100000);
     
-    runfile ofs(lmkprog_path);
-    
-    ofs << "programmed" << std::endl;
+    auto it = regs.crbegin();
+
+    while (1) {
+      int retries = 0;
+      int retval;
+      uint8_t addr = it->first;
+      r = it->second;
+
+      if (++it == regs.crend()) break;
+
+#if 0
+      std::cout << "R" << (int)addr << " 0x"
+		<< std::hex << std::setfill('0')
+		<< std::setw(2) << (int)addr
+		<< std::setw(4) << r << std::dec << std::endl;
+#endif
+      
+      i2c_spi.txn(0x2F, {mask, addr, (uint8_t)(r >> 8), (uint8_t)r });
+      usleep(short_delay);
     }
 
-    
-    zcu111_lmx_A.config.read_regs(LMX4GHz_template);
-    zcu111_lmx_B.config.read_regs(LMX4GHz_template);
-    zcu111_lmx_C.config.read_regs(LMX4GHz_template);
-      */
+    r = regs.at(0);
+
+    i2c_spi.txn(0x2F, { mask, (uint8_t)0, (uint8_t)(r >> 8), (uint8_t)(r & 0xF7) });
+    usleep(long_delay);
+
+    i2c_spi.txn(0x2F, { mask, (uint8_t)0, (uint8_t)(r >> 8), (uint8_t)(r | 0x8) });
+
+    usleep(short_delay);
+  }
 };
          

@@ -12,7 +12,8 @@ set(LIBPIRADIO_SOURCES
   src/frequency.cxx
   src/freq_module.cxx
   src/daemon.cxx
-  src/grpc.cxx)
+  src/grpc.cxx
+  src/cmdline.cxx)
 
 add_library(piradio STATIC ${LIBPIRADIO_SOURCES})
 

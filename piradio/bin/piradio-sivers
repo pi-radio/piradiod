@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+import time
+
+from piradio.jupyter import *
+from piradio.jupyter.nrt import *
+from piradio.jupyter.sdrv2 import *
+from piradio.devices.sivers.eder.registers import attach_registers, set_bits, clear_bits, modify_bits
+
+import click
+
+@click.group()
+def cli():
+    pass
+
+def calibrate_radio(radio_no):
+    radio = board.radios[radio_no]
+
+    radio.rx.omni = True
+    radio.tx.omni = True
+    radio.SX()
+    radio.rx.gain = 78
+    radio.tx.bb_gain = 9.5
+    radio.tx.bf_gain = 15
+    radio.tx.rf_gain = 15    
+
+    signals.Sine(MHz(25), 0.3).apply(radio.sbo)
+    txCW()
+
+    radio.tx.calibrate()
+
+@cli.command("calibrate")
+@click.argument("radio-no", type=int)
+def calibrate(radio_no):
+    # loop over all for "all" or default argument
+    calibrate_radio(radio_no)
+    
+if __name__ == "__main__":
+    cli()
