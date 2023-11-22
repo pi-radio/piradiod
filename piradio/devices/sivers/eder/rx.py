@@ -370,17 +370,21 @@ class RX(Beamformer):
 
         self.bfrf_gain = (bf_gain, rf_gain)        
 
-        if v >= 21:
+
+        # We want VGA1 & VGA2 to share the load to avoid
+        # interstage saturation
+        
+        if v >= 42:
             gain = 21
-        elif v >= 18:
+        elif v > 36:
             gain = 18
-        elif v >= 12:
+        elif v > 12:
             gain = 12
         elif v >= 6:
             gain = 6
         else:
             gain = 0
-
+            
         v -= gain
         self.VGA1_gain = gain
 

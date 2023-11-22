@@ -35,22 +35,29 @@ class _RXEnables:
 
 rx_enables = _RXEnables()
 tx_enables = _TXEnables()
-        
-def txCW():    
-    save_rx = [ rx_enables[i] for i in range(8) ]
-    
-    for i in range(8):
-        sbos[i].one_shot(False)
-        rx_enables[i] = False
-        tx_enables[i] = True
 
-    trigger.trigger()
+def capture_mode(mode):
+    if mode == "CW":
+        for i in range(8):
+            sbos[i].one_shot(False)
+            rx_enables[i] = True
+            tx_enables[i] = True
+
+        trigger()
+
+        for i in range(8):
+            tx_enables[i] = False
+    elif mode == "SYNC":
+        for i in range(8):
+            sbos[i].one_shot(True)
+            rx_enables[i] = True
+            tx_enables[i] = True
         
-    for i in range(8):
-        rx_enables[i] = save_rx[i]
-        tx_enables[i] = False
+        
+# legacy stupidity
+def txCW():
+    capture_mode("CW")
     
 def txSYNC():
-    for i in range(8):
-        tx_enables[i] = True
+    capture_mode("SYNC")
         

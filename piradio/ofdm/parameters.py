@@ -2,15 +2,77 @@ import numpy as np
 
 from functools import cached_property
 
-from piradio.util import Freq, Hz, GHz
+from piradio.util import Freq, Hz, MHz, GHz
 
-from .sync_word import SyncWord
+from .sync_word import OFDM1SyncWord, IEEE20SyncWord
+from .synchronizer import Synchronizer
 from .equalizer import Equalizer
 from .modulator import BPSK
+from .symbol import Frame, FullSymbol
 
 class OFDMParameters:
+    frame_symbols = 1
+    symbol_offset = 0
+    
+    def __init__(self):
+        pass
+    
+    @property
+    def SCS(self):
+        return self.sample_rate/self.N_fft
 
-    default_pilot_values = [
+    @property
+    def CP_len(self):
+        return self.N // 4
+
+    @property
+    def BW(self):
+        return (self.subcarriers + 2) * self.SCS
+
+    @property
+    def symbol_len(self):
+        return self.N + self.CP_len    
+
+    @property
+    def frame_len(self):
+        return (self.frame_symbols + 1) * self.symbol_len
+
+    @property
+    def frame_time(self):
+        return self.frame_len / self.sample_rate
+    
+    @property
+    def NDSC(self):
+        return len(self.data_idxs)
+
+    @cached_property
+    def subcarrier_idxs(self):
+        return np.sort(np.concatenate((self.pilot_idxs, self.data_idxs)))
+    
+    @cached_property
+    def BPSK(self):
+        return BPSK(self)
+    
+    @cached_property
+    def sync_word(self):
+        return self.sync_word_class(self)
+
+    @cached_property
+    def synchronizer(self):
+        return Synchronizer(self)
+
+    @cached_property
+    def equalizer(self):
+        return Equalizer(self)
+
+    def frame(self, samples):
+        return Frame(self, samples)
+    
+    def full_symbol(self, samples):
+        return FullSymbol(self, samples)
+
+class OFDMGeorge(OFDMParameters):
+    george_pilot_values = [
          1, -1,  1,  1, -1,  1, -1,  1, -1,  1,
         -1,  1,  1,  1, -1,  1,  1,  1, -1, -1,
          1, -1,  1, -1,  1, -1, -1, -1,  1,  1,
@@ -21,6 +83,7 @@ class OFDMParameters:
          1,  1, -1, -1, -1,  1, -1, -1, -1, -1,
          1, -1, -1, -1,  1, -1, -1, -1, -1,  1,
          1, -1,  1, -1,  1,  1, -1, -1, -1, -1,
+        
          1,  1, -1,  1,  1,  1,  1,  1, -1,  1,
          1, -1, -1,  1, -1,  1, -1, -1,  1, -1,
         -1, -1,  1,  1,  1,  1, -1, -1,  1,  1,
@@ -30,95 +93,93 @@ class OFDMParameters:
          1,  1, -1, -1,  1,  1, -1,  1, -1,  1,
         -1, -1,  1, -1, -1,  1,  1,  1,  1,  1,
         -1, -1,  1,  1,  1, -1, -1, -1,  1, -1,
-         1, -1,  1,  1,  1, -1, -1, -1,  1,  1
+         1, -1,  1,  1,  1, -1, -1, -1,  1,  1,
+    ]
+    
+
+class OFDMStructure1(OFDMParameters):
+    N = 1024
+    LO_space = 2
+    
+    pilot_values = [
+         1, -1,  1,  1, -1,  1, -1,  1, -1,  1,
+        -1,  1,  1,  1, -1,  1,  1,  1, -1, -1,
+         1, -1,  1, -1,  1, -1, -1, -1,  1,  1,
+        -1,  1,  1, -1, -1, -1,  1, -1,  1,  1,
+        -1, -1,  1,  1,  1, -1, -1,  1, -1,  1,
+         1, -1,  1, -1,  1,  1, -1, -1,  1,  1,
+         1,  1,  1, -1, -1,  1, -1,  1, -1, -1,
+         1,  1, -1, -1, -1,  1, -1, -1, -1, -1,
+         1, -1, -1, -1,  1, -1, -1, -1, -1,  1,
+         1, -1,  1, -1,  1,  1, -1, -1, -1, -1,  1,
+        
+         1,  1, -1,  1,  1,  1,  1,  1, -1,  1,
+         1, -1, -1,  1, -1,  1, -1, -1,  1, -1,
+        -1, -1,  1,  1,  1,  1, -1, -1,  1,  1,
+        -1,  1,  1,  1,  1,  1, -1,  1, -1, -1,
+        -1,  1, -1, -1, -1,  1, -1, -1,  1, -1,
+         1,  1,  1,  1, -1,  1,  1,  1,  1, -1,
+         1,  1, -1, -1,  1,  1, -1,  1, -1,  1,
+        -1, -1,  1, -1, -1,  1,  1,  1,  1,  1,
+        -1, -1,  1,  1,  1, -1, -1, -1,  1, -1,
+         1, -1,  1,  1,  1, -1, -1, -1,  1,  1, -1
     ]
 
+    sync_word_class=OFDM1SyncWord
     
-    def __init__(self,
-                 N_fft=1024,
-                 sample_rate=GHz(2),
-                 pilot_values=default_pilot_values,
-                 pilot_spacing=4
-                 ):
-        self.sample_rate = sample_rate
-        self.N_fft = N_fft
-        self.pilot_values = pilot_values
-        self.pilot_spacing = pilot_spacing
-        self.LO_space = 2
-        self.N_guard_band = (self.N_fft - self.subcarriers) // 2
-        self.symbol_offset = 10
+    npilots = len(pilot_values)
+    pilot_spacing = 4
+    
+    half_width_sc =  (npilots // 2 - 1) * pilot_spacing + 1
 
-        self.lo_guard_idxs = np.arange(self.LO_space) + self.N_guard_band + self.subcarriers // 2
-        self.guard_band_idxs = np.concatenate((np.arange(self.N_guard_band), self.lo_guard_idxs, np.arange(self.N_guard_band) + 4096 - self.N_guard_band ))
+    loff = ((N - LO_space) // 2) - half_width_sc
+    roff = N // 2 + LO_space // 2
+
+    half_sc_i = np.arange(half_width_sc)
+
+    half_pilot_sc_i = np.arange(npilots//2) * pilot_spacing
+
+    half_data_sc_i = np.delete(half_sc_i, half_pilot_sc_i)
+
+    pilot_idxs = np.concatenate((half_pilot_sc_i + loff,
+                                 half_pilot_sc_i + roff))
         
-        self.subcarrier_idxs = np.delete(np.arange(self.N), self.guard_band_idxs)
-
-        self.pilot_idxs = np.concatenate((self.subcarrier_idxs[:self.data_subcarriers//2:self.pilot_spacing],
-                                          self.subcarrier_idxs[-self.data_subcarriers//2::self.pilot_spacing]))
+    data_idxs = np.concatenate((half_data_sc_i + loff,
+                                half_data_sc_i + roff))
+    
+    subcarrier_idxs = np.sort(np.concatenate((pilot_idxs, data_idxs)))
         
-
-        self.data_idxs = self.subcarrier_idxs[np.where(np.isin(self.subcarrier_idxs, self.pilot_idxs) == False)]
-        
-    @property
-    def N(self):
-        return self.N_fft
-        
-    @property
-    def SCS(self):
-        return self.sample_rate/self.N_fft
-
-    @property
-    def BW(self):
-        return (self.subcarriers + 2) * self.SCS
-
-    @property
-    def npilots(self):
-        return len(self.pilot_values)
-        
-    
-    @property
-    def CP_len(self):
-        return self.N_fft // 4
-
-    @property
-    def frame_symbols(self):
-        return 1
-    
-    @property
-    def data_subcarriers(self):
-        return self.pilot_spacing * self.npilots
-
-    @property
-    def subcarriers(self):
-        return self.data_subcarriers + self.LO_space
+    zero_idxs = np.delete(np.arange(N), subcarrier_idxs)
 
     
-    @property
-    def symbol_len(self):
-        return self.N_fft + self.CP_len
+    
 
-    @property
-    def frame_len(self):
-        return (self.frame_symbols + 1) * self.symbol_len
-    
-    @cached_property
-    def BPSK(self):
-        return BPSK(self)
-    
-    @cached_property
-    def sync_word(self):
-        return SyncWord(self)
+class IEEE_802_11_20MHz(OFDMParameters):
+    N = 64
 
-    @cached_property
-    def equalizer(self):
-        return Equalizer(self)
+    sync_word_class = IEEE20SyncWord
     
-    def extract_subcarriers(self, samples):
-        fft = np.fft.fftshift(samples.spectrum.fft)
-        assert len(fft) == self.N_fft
+    sample_rate = MHz(40)
 
-        return fft[self.subcarrier_idxs]
+    pilot_idxs = 32 + np.array([ -21, -7, 7, 21 ])
+
+    pilot_values = [ 1, -1, -1, 1 ]
     
-    def extract_pilots(self, subcarriers):
-        return np.concatenate((subcarriers[0:self.data_subcarriers//2:self.pilot_spacing],
-                               subcarriers[-self.data_subcarriers//2::self.pilot_spacing]))
+    data_idxs = np.concatenate((32 + np.arange(26) - 26, 32 + 1 + np.arange(26)))
+    data_idxs = np.delete(data_idxs, np.where(np.isin(data_idxs, pilot_idxs)))
+
+    
+class OFDM2(OFDMParameters):
+    N = 64
+
+    sync_word_class = IEEE20SyncWord
+    
+    sample_rate = MHz(160)
+
+    pilot_idxs = 32 + np.array([ -21, -7, 7, 21 ])
+
+    pilot_values = [ 1, -1, -1, 1 ]
+    
+    data_idxs = np.concatenate((32 + np.arange(26) - 26, 32 + 1 + np.arange(26)))
+    data_idxs = np.delete(data_idxs, np.where(np.isin(data_idxs, pilot_idxs)))
+                            

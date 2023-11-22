@@ -16,7 +16,7 @@ import pandas as pd
 from piradio.output import output
 from piradio.command import command, cmdproperty
 from piradio.devices.uio import UIO
-from piradio.util import Freq, GHz
+from piradio.util import Freq, GHz, Samples
 
 dt_uint32 = struct.Struct(">i")
 
@@ -46,7 +46,7 @@ class IQBuf:
     def plot():
         pass
 
-class Samples:
+class SampleMap:
     def __init__(self, sbuf, sample_format):
         self.sbuf = sbuf
         self._format = sample_format
@@ -115,7 +115,7 @@ class SampleBuffer(UIO):
         self.csr.map()
         self._samples.map()
         
-        self.samples = Samples(self, sample_format)
+        self.sample_map = SampleMap(self, sample_format)
         
         assert self.ip_id == 0x5053424F, f"Invalid IP identifier {self.ip_id:x}"
 
@@ -254,11 +254,24 @@ class SampleBuffer(UIO):
 
     def decimate(self, n=2):
         return decimate(self.array, n)    
+
+    @property
+    def samples(self):
+        return Samples(self.array, sample_rate=self.sample_rate)
+
+    @samples.setter
+    def samples(self, v):
+        assert v.sample_rate == self.sample_rate
+
+        if len(v) < self.nsamples:
+            v = Samples.concatenate(v, Samples.zeros(self.nsamples - len(v), sample_rate=self.sample_rate))
+        
+        self.array = v.samples
     
     @property
     def array(self):
         if self.sample_format == IQ_SAMPLES:
-            v = np.array([ self.samples[i] for i in range(self.start_sample, self.end_sample) ]) / 0x7FFF
+            v = np.array([ self.sample_map[i] for i in range(self.start_sample, self.end_sample) ]) / 0x7FFF
             
             return v[...,0] + 1j * v[...,1]
         else:
@@ -275,7 +288,7 @@ class SampleBuffer(UIO):
             v = zip(rearr, imarr)
             
             for i, s in enumerate(v):
-                self.samples[i] = s
+                self.sample_map[i] = s
 
     
 class SampleBufferIn(SampleBuffer):

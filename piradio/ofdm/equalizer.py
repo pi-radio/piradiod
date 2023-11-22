@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.interpolate import interp1d
 
 import matplotlib.pyplot as plt
 
@@ -51,91 +52,42 @@ class Equalizer:
         plt.plot(l/np.max(l) * ofdm.SCS.hz * np.max(np.abs(arg_gamma)) )
         plt.show()
         
-        return f_ml
-
-    def estimate_symbol_cfo(self, symbol):
-        A = symbol[:self.ofdm.CP_len]
-        B = symbol[-self.ofdm.CP_len:]
-
-        s = np.sum(A * np.conjugate(B))
-
-        return np.angle(s)
-        
-    def estimate_cfo(self, samples):
-        return [ self.estimate_symbol_cfo(samples[p:p+self.ofdm.symbol_len]) for p in range(0, len(samples), self.ofdm.symbol_len) ]
-            
-
-    def eq_cfo_symbol(self, symbol):
-        cfo_est = self.estimate_symbol_cfo(symbol.samples) * 1.0j
-
-        retval = symbol.stripped
-
-        retval.cfo_est = Freq(cfo_est * self.ofdm.N / retval.samples.sample_rate.hz)
-        retval.samples.samples *= np.exp(-cfo_est * np.arange(self.ofdm.N) / self.ofdm.N)
-        
-        return retval
-            
-    def eq_cfo(self, frame):
-        return [ self.eq_cfo_symbol(symbol) for symbol in frame.symbols ]
-            
+        return f_ml          
 
     def eq_zf(self, symbols):
-        # The first symbol is the sync_word, let's get an overall channel estimate from it just for kicks
+        ofdm = self.ofdm
 
-        tx_sync_word = FDSymbol(self.ofdm, np.fft.fftshift(self.ofdm.sync_word.ft))
-        rx_sync_word = symbols[0].fd
-                
-        H_sync_word = rx_sync_word.data_subcarriers * tx_sync_word.data_subcarriers
-
-        Hs = [ H_sync_word ]
-
-        eq_results = [ rx_sync_word.data_subcarriers / H_sync_word ]
         
-        for sym in symbols[1:]:
-            rx_word = sym.fd
+        def H(d1, d2):
+            return d1 * np.conjugate(d2) / np.real(d2 * np.conjugate(d2))
 
-            H = rx_word.pilots * np.conjugate(self.ofdm.pilot_values)
+        def zf(rx, pilots):
+            Hpilots = H(rx.pilots, pilots)
 
-            mag = np.abs(H)
-            arg = np.angle(H)
-
-            mag_interp = np.interp(self.ofdm.data_idxs, self.ofdm.pilot_idxs, mag)
-            arg_interp = np.interp(self.ofdm.data_idxs, self.ofdm.pilot_idxs, arg)
-
-            plt.plot(self.ofdm.pilot_idxs, mag)
-            plt.plot(self.ofdm.data_idxs, mag_interp)
-            plt.show()
-
-            plt.plot(self.ofdm.pilot_idxs, arg)
-            plt.plot(self.ofdm.data_idxs, arg_interp)
-            plt.show()
-
-            H_recon = mag * np.exp(arg * 1.0j)
-
-            pilot_recon = rx_word.pilots / H_recon
-
-            plot_IQ(pilot_recon, title="Reconstructed pilots")
-                        
-            H_interp = mag_interp * np.exp(arg_interp * 1.0j)
-
-            Hs.append(H_interp)
-
-            plt.suptitle("Unadjusted subcarriers", fontsize="x-large")
-            plt.scatter(np.real(rx_word.data_subcarriers), np.imag(rx_word.data_subcarriers), s=1)
-            plt.show()
-
-            plt.suptitle("Interpolated Transfer Function", fontsize="x-large")
-            plt.scatter(np.real(H_interp), np.imag(H_interp), s=1)
-            plt.show()
+            # Interpolate magnitude and angle
+            mag = interp1d(ofdm.pilot_idxs, np.abs(Hpilots),
+                           fill_value="extrapolate")(ofdm.data_idxs)
             
-            w = rx_word.data_subcarriers / H_interp
+            angle = interp1d(ofdm.pilot_idxs, np.unwrap(np.angle(Hpilots)),
+                             fill_value="extrapolate")(ofdm.data_idxs)
 
-            plt.suptitle("IQ", fontsize="x-large")
-            plt.scatter(np.real(w), np.imag(w), s=1)
-            plt.show()
+            Hdata = mag * np.exp(1.0j * angle)
+
+            outsym = FDSymbol(ofdm)
+
+            outsym.pilots = rx.pilots / Hpilots
+            outsym.data_subcarriers = rx.data_subcarriers / Hdata
+
+            return outsym
             
-            eq_results.append(w)
+        
+        rxsw = symbols[0]
+        txsw = ofdm.sync_word
 
+        Hsw = H(rxsw.fd.subcarriers, txsw.fd.subcarriers)
 
-        return (eq_results, Hs)
-            
+        sw_mag = np.abs(Hsw)
+        sw_angle = np.unwrap(np.angle(Hsw))
+
+        return [ zf(rxsw.fd, txsw.fd.pilots) ] + [ zf(rxsym.fd, ofdm.pilot_values) for rxsym in symbols[1:] ]
+        
