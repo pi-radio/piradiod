@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+import os
+import sys
+import traceback
+from functools import partialmethod
+
+import Pyro5
+from Pyro5.api import oneway
+from Pyro5.server import expose, behavior
+
+from eder import Eder, EderChipNotFoundError
+from piradio.output import output
+from piradio.devices import SPIDev
+from piradio.boards import SDRv2
+
+do_restart = False
+
+motherboard = SDRv2()
+motherboard.reset()
+
+def proxy_prop(sub, name):
+    def get_prop(obj):
+        return getattr(getattr(obj.radio(), sub), name)
+
+    def set_prop(obj, v):
+        return setattr(getattr(obj.radio(), sub), name, v)
+    
+    return property(get_prop, set_prop)
+
+class RadioProxy:
+    def __init__(self, server, n):
+        self.server = server
+        self.n = n
+
+    def radio(self):
+        return server._radios[self.n]
+
+    def TX(self):
+        self.radio().TX()
+
+    def thunk(self, s):
+        getattr(self.radio(), s)()
+
+    @classmethod
+    def proxy_method(cls, s):
+        print(f"Proxying method {s}")
+        m = getattr(Eder, s)
+        setattr(cls, s, expose(lambda obj: m(obj.radio())))
+        #setattr(cls, s, expose(lambda obj: obj.thunk(s)))
+
+    @oneway
+    def calibrate_tx(self):
+        self.radio().tx.calibrate()
+
+    rx_omni = proxy_prop("rx", "omni")
+    tx_omni = proxy_prop("tx", "omni")
+
+    rx_azimuth = proxy_prop("rx", "azimuth")
+    tx_azimuth = proxy_prop("tx", "azimuth")
+
+    
+    tx_bb_gain = proxy_prop("tx", "bb_gain")
+    tx_bb_I_gain = proxy_prop("tx", "bb_I_gain")
+    tx_bb_Q_gain = proxy_prop("tx", "bb_Q_gain")
+    tx_rf_gain = proxy_prop("tx", "rf_gain")
+    tx_bf_gain = proxy_prop("tx", "bf_gain")
+    
+    rx_bfrf_gain = proxy_prop("rx", "bfrf_gain")
+    rx_VGA1_gain = proxy_prop("rx", "VGA1_gain")
+    rx_VGA2_gain = proxy_prop("rx", "VGA2_gain")
+    rx_VGA3_gain = proxy_prop("rx", "VGA3_gain")
+
+
+    
+        
+for s in Eder.states:    
+    RadioProxy.proxy_method(s)
+
+print(dir(RadioProxy))
+
+print(RadioProxy.TX)
+
+RadioProxy = expose(RadioProxy)
+
+
+
+@behavior(instance_mode="single")
+class EderServer:
+    def __init__(self, daemon):
+        self.spidevs = [ SPIDev(2, 6 * card + 2 * radio + 1, mode=0) for card in range(4) for radio in range(2) ]
+
+        self._radios = [ None ] * 8
+
+        daemon.register(self, objectId="eder_server")
+        
+        self.radios = [ RadioProxy(self,i) for i in range(8) ]
+
+        for r in self.radios:
+            daemon.register(r)
+        
+        self.detect_radios()
+        
+    @expose
+    @oneway
+    def restart(self):
+        global do_restart
+        do_restart = True
+        daemon.shutdown()
+
+    @expose
+    def detect_radios(self):
+        output.info("Detecting radios...")
+
+        for n, spidev in enumerate(self.spidevs):
+            if self._radios[n] is not None:
+                # check to make usre it's still there
+                continue
+                
+            try:
+                eder = Eder(spidev, n)
+                print(f"Found radio {n}")
+                self._radios[n] = eder
+                print(f"Initializing radio {n}")
+                eder.INIT()
+                eder.freq = 60e9
+            except EderChipNotFoundError:
+                pass
+            except Exception as e:
+                print(f"Failed to detect radio {n}")
+                traceback.print_exc()
+
+    @expose
+    def get_radio(self, i):
+        return self.radios[i]
+
+
+daemon = Pyro5.server.Daemon(port=9999)
+
+server = EderServer(daemon)
+
+daemon.requestLoop()
+
+if do_restart:
+    pid = os.getpid()
+
+    os.fork()
+
+    pid2 = os.getpid()
+
+    if pid2 == pid:
+        sys.exit(0)
+
+    print("Respawning...")
+    os.execlp("/bin/bash", "/bin/bash",  "-c", f"sleep 1 ; {sys.argv[0]}" )

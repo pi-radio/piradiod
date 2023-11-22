@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+import Pyro5.api
+
+import sys
+import time
+import click
+from piradio.boards import SDRv2
+from piradio.util import Freq, MHz, GHz, Samples
+
+
+@click.command()
+@click.argument("uri")
+def connect(uri):
+    proxy = Pyro5.api.Proxy(uri)
+
+    board = proxy.get_board()
+
+    board.detect_radios()
+
+if __name__ == "__main__":
+    connect()

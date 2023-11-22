@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+import Pyro5.api
+
+import sys
+import time
+from piradio.output import output
+from piradio.boards import SDRv2
+from piradio.util import Freq, MHz, GHz, Samples
+
+board = SDRv2()
+board.reset()
+
+@Pyro5.api.expose
+class RamanServer:
+    def detect_radios(self):
+        board.detect_radios()
+
+daemon = Pyro5.api.Daemon()
+uri = daemon.register(RamanServer)
+
+print(uri)
+
+daemon.requestLoop()
