@@ -16,7 +16,7 @@ import pandas as pd
 from piradio.output import output
 from piradio.command import command, cmdproperty
 from piradio.devices.uio import UIO
-from piradio.util import Freq, GHz, Samples
+from piradio.util import Freq, GHz, Samples, REAL_SAMPLES, IQ_SAMPLES
 
 dt_uint32 = struct.Struct(">i")
 
@@ -27,16 +27,14 @@ csr_struct = struct.Struct("iiiiii")
 
 iq_struct = struct.Struct("hh")
 
-# For now, the univers is IQ_SAMPLES
-REAL_SAMPLES=0
-IQ_SAMPLES=1
+def u2s(x):
+    if x & (1 << 15):
+        x = -((~x & 0xFFFF) + 1)
+    return x
+    
+
 
 def int_to_iq(n, swap_IQ):
-    def u2s(x):
-        if x & (1 << 15):
-            x = -((~x & 0xFFFF) + 1)
-        return x
-    
     I = u2s((n >> 16) & 0xFFFF)
     Q = u2s(n & 0xFFFF)
 
@@ -52,15 +50,22 @@ class SampleMap:
         self._format = sample_format
        
     def __getitem__(self, n):
-        s = self.sbuf._samples[n * 4]
-        
         if self._format == IQ_SAMPLES:
+            s = self.sbuf._samples[n * 4]
+        
             if isinstance(s, list):
                 return map(int_to_iq, s)
             else:
                 return int_to_iq(s, self.sbuf.swap_IQ)
+        elif self._format == REAL_SAMPLES:
+            s = self.sbuf._samples[n * 2]
+            
+            if isinstance(s, list):
+                return map(u2s, s)
+            else:
+                return u2s(s)
         else:
-            raise RuntimeException("Not implemented")
+            raise RuntimeError("Not implemented")
  
     def __setitem__(self, n, v):
         if self._format == IQ_SAMPLES:
@@ -68,8 +73,10 @@ class SampleMap:
                 self.sbuf._samples[n * 4] = ((v[1] & 0xFFFF) << 16) | (v[0] & 0xFFFF) # uint32.unpack(iq.pack(*v))[0]
             else:
                 self.sbuf._samples[n * 4] = ((v[0] & 0xFFFF) << 16) | (v[1] & 0xFFFF) # uint32.unpack(iq.pack(*v))[0]
+        elif self._format == REAL_SAMPLES:
+            self.sbuf._samples[n * 2] = v & 0xFFFF
         else:
-            raise RuntimeException("Not implemented")
+            raise RuntimeError("Not implemented")
 
     def dump(self):
         if self._format == IQ_SAMPLES:
@@ -77,7 +84,7 @@ class SampleMap:
                 v = self[i]
                 print(f"{i}: {v}")
         else:
-            raise RuntimeException("Not implemented")
+            raise RuntimeError("Not implemented")
                 
     @property
     def format(self):
@@ -113,7 +120,7 @@ class SampleBuffer(UIO):
         self._samples = self.maps[1]
 
         self.csr.map()
-        self._samples.map()
+        self._samples.map(cast='I' if sample_format == IQ_SAMPLES else 'H')
         
         self.sample_map = SampleMap(self, sample_format)
         
@@ -274,8 +281,10 @@ class SampleBuffer(UIO):
             v = np.array([ self.sample_map[i] for i in range(self.start_sample, self.end_sample) ]) / 0x7FFF
             
             return v[...,0] + 1j * v[...,1]
+        elif self.sample_format == REAL_SAMPLES:
+            return np.array([ self.sample_map[i] for i in range(self.start_sample, self.end_sample) ]) / 0x7FFF
         else:
-            raise RuntimeException("Not implemented")
+            raise RuntimeError("Not implemented")
 
     @array.setter
     def array(self, v):
@@ -287,6 +296,11 @@ class SampleBuffer(UIO):
 
             v = zip(rearr, imarr)
             
+            for i, s in enumerate(v):
+                self.sample_map[i] = s
+        elif self.sample_format == REAL_SAMPLES:
+            v = np.array(v * 0x7FFF).astype(int)
+
             for i, s in enumerate(v):
                 self.sample_map[i] = s
 

@@ -48,6 +48,27 @@ main(int argc, char **argv)
     std::cout << " Decimation factor: " << adc->decimation_factor() << std::endl;
   }
 
+  for (i = 0; i < rfdc->n_dacs(); i++) {
+    auto dac = rfdc->get_dac(i);
+
+    std::cout << "DAC: " << i << std::endl;
+
+    auto status = dac->block_status();
+
+    std::cout << std::setfill('0');
+    
+    std::cout << " Sampling Rate: " << status.SamplingFreq << std::endl;
+
+    std::cout << " Analog Data Path Status: 0x" << std::setw(4) << std::hex << status.AnalogDataPathStatus << std::dec << std::endl;
+    std::cout << " Digital Data Path Status: 0x" << std::setw(4) << std::hex << status.DigitalDataPathStatus << std::dec << std::endl;
+    std::cout << " Data Path Clocks: " << (status.DataPathClocksStatus ? "enabled" : "disabled") << std::endl;
+    std::cout << " FIFO Flags Enabled: " << (status.IsFIFOFlagsEnabled ? "enabled" : "disabled") << std::endl;
+    std::cout << " FIFO Flags Asserted: " << (status.IsFIFOFlagsAsserted ? "asserted" : "not asserted") << std::endl;
+
+    //std::cout << " Decimation factor: " << adc->decimation_factor() << std::endl;
+  }
+
+  
 #if 0
   for (i = 0; i < rfdc->n_dacs(); i++) {
     auto dac = rfdc->get_dac(i);

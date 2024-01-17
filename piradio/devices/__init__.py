@@ -1,7 +1,7 @@
 from .sysfs import SysFS
 from .spidev import SPIDev
 from .axigpio import AXI_GPIO
-from .samplebuf import SampleBufferIn, SampleBufferOut
+from .samplebuf import SampleBufferIn, SampleBufferOut, REAL_SAMPLES, IQ_SAMPLES
 from .trigger import Trigger
 from .Si5382 import Si5382
 from .LMK04208 import LMK04208

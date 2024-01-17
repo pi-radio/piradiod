@@ -11,6 +11,10 @@ SUBSYSTEM=="spi", ACTION=="add|change", ENV{MODALIAS}=="spi:LMX2598", PROGRAM="/
 # This is where I was an idiot
 SUBSYSTEM=="spi", ACTION=="add|change", ENV{OF_NAME}=="LMX2598", PROGRAM="/bin/sh -c 'echo spidev > /sys/%E{DEVPATH}/driver_override ; echo %k > /sys/bus/spi/drivers/spidev/bind'"
 
+SUBSYSTEM=="spi", ACTION=="add|change", ENV{OF_COMPATIBLE_0}=="piradio,bgctrl", PROGRAM="/bin/sh -c 'echo spidev > /sys/%E{DEVPATH}/driver_override ; echo %k > /sys/bus/spi/drivers/spidev/bind'"
+SUBSYSTEM=="spi", ACTION=="add|change", ENV{OF_COMPATIBLE_0}=="piradio,amps", PROGRAM="/bin/sh -c 'echo spidev > /sys/%E{DEVPATH}/driver_override ; echo %k > /sys/bus/spi/drivers/spidev/bind'"
+
+
 # This is where I was an idiot -- needs fixing, status="okay"
 SUBSYSTEM=="spi", ACTION=="add|change", ENV{OF_COMPATIBLE_0}=="sivers,radio", PROGRAM="/bin/sh -c 'echo spidev > /sys/%E{DEVPATH}/driver_override ; echo %k > /sys/bus/spi/drivers/spidev/bind'"
 SUBSYSTEM=="spi", ACTION=="add|change", ENV{OF_COMPATIBLE_0}=="sivers,synth", PROGRAM="/bin/sh -c 'echo spidev > /sys/%E{DEVPATH}/driver_override ; echo %k > /sys/bus/spi/drivers/spidev/bind'"

@@ -108,7 +108,6 @@ class window_array_inst:
         for i in range(wa.n):
             w = window(offset, wa.size)
             w.regs = wa.regs
-            
             self.windows.append(window_inst(obj, w))
             offset += wa.stride
             
@@ -143,24 +142,35 @@ class UIOMap:
         self.offset = offset
         self.size = size
 
-    def map(self):
+    def set_cast(self, t):
+        assert t in ('I', 'H')
+        self.castview = self.mv.cast(t)
+
+        if t == 'I':
+            self.shift = 2
+        if t == 'H':
+            self.shift = 1
+
+        self.mask = (1 << self.shift) - 1
+        
+    def map(self, cast='I'):
         output.debug(f"Mapping map {self.n} size {self.size} addr {self.addr}")
         self.mmap = mmap.mmap(self.UIO.fd, self.size,
                               flags = mmap.MAP_SHARED,
                               prot = mmap.PROT_WRITE | mmap.PROT_READ,
                               offset=self.n * resource.getpagesize())
         self.mv = memoryview(self.mmap)
-        self.mv32 = self.mv.cast('I')
+        self.set_cast(cast)
         
     def __getitem__(self, n):
         output.debug(f"Reading register @{n:08x}")
-        assert n & 3 == 0        
-        return self.mv32[n >> 2]
+        assert n & self.mask == 0        
+        return self.castview[n >> self.shift]
 
     def __setitem__(self, n, v):
         output.debug(f"Writing {v:08x} to register @{n:08x}")
-        assert n & 3 == 0
-        self.mv32[n >> 2] = v
+        assert n & self.mask == 0
+        self.castview[n >> self.shift] = v
 
 uint32 = struct.Struct("I")
 

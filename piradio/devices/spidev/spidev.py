@@ -2,6 +2,8 @@ import os
 import time
 import atexit
 
+from pathlib import Path
+
 from periphery import SPI
 from periphery.spi import SPIError
 from piradio.output import output
@@ -15,7 +17,22 @@ class SPIDev(CommandObject):
     @property
     def override_file(self):
         return f"/sys/bus/spi/devices/spi{self.bus_no}.{self.dev_no}/driver_override"
-    
+
+    @classmethod
+    def find_spi_device(cls, of_name):
+        p = Path("/sys/bus/spi/devices/")
+
+        l = p.glob("*")
+
+        for n in l:
+            with open(n/"of_node"/"name", "r") as f:
+                name = f.read()[:-1].strip() 
+
+            if name == of_name:
+                node = tuple(map(int, str(n.name)[3:].split('.')))
+                return SPIDev(*node)
+            
+        
     def __init__(self, bus_no, dev_no, mode=0, speed=500000):
         output.debug(f"Attaching to device {bus_no}.{dev_no}");
         self.bus_no = bus_no

@@ -7,17 +7,22 @@ import h5py
 
 from piradio.util import MHz, GHz, Freq
 
-from .spectrum import Spectrum
+from .spectrum import Spectrum, RealSpectrum
+
+REAL_SAMPLES=0
+IQ_SAMPLES=1
 
 class Samples:
-    def __init__(self, samples, sample_rate=1, decimation=1):
+    def __init__(self, samples, sample_rate=1, decimation=1, real=False):
         if hasattr(samples, "is_sample_buffer"):
             sample_rate = samples.sample_rate
+            real = True if samples.sample_format == REAL_SAMPLES else False
             samples = samples.array
             
         if not hasattr(sample_rate, "hz"):
             sample_rate = Freq(sample_rate)
-        
+
+        self.real = real
         self.samples = samples
         self.sample_rate = sample_rate
 
@@ -35,7 +40,10 @@ class Samples:
     
     @property
     def spectrum(self):
-        return Spectrum(self.samples, sample_rate=self.sample_rate)
+        if self.real:
+            return RealSpectrum(self.samples, sample_rate=self.sample_rate)
+        else:
+            return Spectrum(self.samples, sample_rate=self.sample_rate)
 
     @property
     def mean(self):
@@ -87,7 +95,10 @@ class Samples:
     def plot(self, xlim=None, ylim=[-1,1], fit=False):
         plt.figure()
         plt.plot(self.t, np.real(self.samples))
-        plt.plot(self.t, np.imag(self.samples))
+        
+        if not self.real:
+            plt.plot(self.t, np.imag(self.samples))
+            
         if xlim is not None:
             plt.xlim(xlim)
 
@@ -99,6 +110,8 @@ class Samples:
         plt.show()
 
     def plot_IQ(self, xlim=[-1,1], ylim=[-1, 1], title=None):
+        assert not self.real
+        
         plt.figure()
         plt.scatter(np.real(self.samples), np.imag(self.samples), s=1)
 
