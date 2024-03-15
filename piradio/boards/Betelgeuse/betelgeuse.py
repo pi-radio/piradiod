@@ -1,18 +1,9 @@
 import glob
 import time
 from pathlib import Path
-from piradio.devices import SysFS, SPIDev, AXI_GPIO
+from piradio.devices import SysFS, SPIDev, AXI_GPIO, StreamFIR
 
 class Betelgeuse:
-    #
-    # Channels, board order, bottom to top
-    #
-    _pwren_map = [ 7, 6, 5, 4, 3, 2, 1, 0 ]
-    _connector_map = [ 0, 4, 1, 5, 2, 6, 3, 7 ]
-    _spi_map = [ 1, 3, 0, 2, 4, 6, 5, 7 ]
-    _adc_map = [ 4, 6, 7, 5, 3, 1, 0, 2 ]
-    _dac_map = [ 1, 3, 0, 2, 4, 6, 5, 7 ]
-
     connector_names = [ f"JRF{i+1}" for i in range(8) ]
 
     class Port:
@@ -46,17 +37,15 @@ class Betelgeuse:
             self.Port(self, 6, connector='JRF7', pwren=2, spi=6, adc=1, dac=6),
             self.Port(self, 7, connector='JRF8', pwren=0, spi=7, adc=2, dac=7)
         ]
-        
-        #self._ports = [ None for i in range(8) ]
 
-        #for name, connector, pwren, spi, adc, dac in zip(self.connector_names, self._connector_map, self._pwren_map, self._spi_map, self._adc_map, self._dac_map):
-        #    print(f"self.Port(self, {connector}, connector='{name}', pwren={pwren}, spi={spi}, adc={adc}, dac={dac})")
-        #    self.ports[connector] = self.Port(self, connector, name, pwren, spi, adc, dac)
-        
+        try:
+            self.output_filters = [ StreamFIR(f"data_capture_filter_out{i}") for i in range(8) ]
+        except:
+            self.output_filters = [ StreamFIR(f"filter_out{i}") for i in range(8) ]
         
         l = glob.glob("/sys/firmware/devicetree/base/__symbols__/*pl_gpio")
 
-        assert len(l) == 1
+        assert len(l) == 1, "Too many GPIO units found: {l}"
 
         gpio = Path(l[0]).name
         
@@ -85,6 +74,7 @@ class Betelgeuse:
         return self._ports
         
     def startup(self):
+        print("Resetting and starting up Betelguese RF board...")
         self.power_enable.val = 0
 
         for chsel in self.ampchsel:

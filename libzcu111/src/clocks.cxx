@@ -90,28 +90,8 @@ namespace piradio
     }    
   }
 
-
-
-   
-  void setup_clocks(void)
-  {
-    int n;
-
-    n = zcu111_i2c::find_LMXs();
-
-    zcu111_i2c i2c(n, 0x2F);
-
-    n = zcu111_i2c::find_device(0x68);
-    
-    zcu111_i2c i2c_si(n, 0x68);
-
-    program_Si5382(i2c_si, si_122_88);
-    program_LMK04208(i2c, LMK04208_regs);
-    //program_LMX2594(i2c, LMX_regs_4GHz);
-  }
-
-  const std::vector<unsigned int> LMK04208_regs = {
-    0x00160040,0x80140320,0x80140321,0x80140322,
+  const std::vector<unsigned int> LMK04208_122_88_regs = {
+    0x00160040,0x00140320,0x80140321,0x00140322,
     0xC0140023,0x40140024,0x80141E05,0x03300006,
     0x01300007,0x06010008,0x55555549,0x9102410A,
     0x0401100B,0x1B0C006C,0x2302886D,0x0200000E,
@@ -119,7 +99,39 @@ namespace piradio
     0x8FA8001A,0x10001E1B,0x0021201C,0x0180033D,
     0x0200033E,0x003F001F
   };
-    
+
+  const std::vector<unsigned int> LMK04208_102_4_regs = {
+    0x00160040,
+    0x00142580,
+    0x00142581,
+    0x001403C2,
+    0x00142583,
+    0x001403C4,
+    0x00142585,
+    0x01100006,
+    0x01100007,
+    0x06010008,
+    0x55555549,
+    0x9102510A,
+    0x0401100B,
+    0x1B0C006C,
+    0x2302886D,
+    0x0200000E,
+    0x8000800F,
+    0xC1550410,
+    0x00000058,
+    0x02C9C419,
+    0x8FA8001A,
+    0x10001E1B,
+    0x0021201C,
+    0x0180033D,
+    0x0200033E,
+    0x003F001F
+  };
+
+  
+
+
   const std::map<int, uint16_t> LMX4GHz_template{
     { 0x70, 0x0000 },
     { 0x6f, 0x0000 },

@@ -112,6 +112,22 @@ namespace piradio
       return tile.ref_clk_freq();
     }    
 
+    void bypass_mixer()
+    {
+      XRFdc_Mixer_Settings s;
+
+      s.Freq = 0;
+      s.PhaseOffset = 0;
+      s.EventSource = XRFDC_EVNT_SRC_TILE;
+      s.CoarseMixFreq = XRFDC_COARSE_MIX_BYPASS;
+      s.MixerMode = XRFDC_MIXER_MODE_R2R;
+
+      s.FineMixerScale = XRFDC_MIXER_SCALE_1P0;
+      s.MixerType = XRFDC_MIXER_TYPE_COARSE;
+    
+      set_mixer_settings(s, true);
+    }
+    
     void disable_NCO()
     {
       XRFdc_Mixer_Settings s;
@@ -209,8 +225,19 @@ namespace piradio
 
       return retval;
     }
+
+    inline u32 reg_offset() { return XRFDC_BLOCK_ADDR_OFFSET(block); }
+
+    inline u64 read64(u32 addr) { return tile.read_drp64(reg_offset() + addr); }
+    inline u32 read32(u32 addr) { return tile.read_drp32(reg_offset() + addr); }
+    inline u16 read16(u32 addr) { return tile.read_drp16(reg_offset() + addr); }
+    inline u8 read8(u32 addr) { return tile.read_drp8(reg_offset() + addr); }
+
+    inline void write64(u32 addr, u64 v) { tile.write_drp64(reg_offset() + addr, v); }
+    inline void write32(u32 addr, u32 v) { tile.write_drp32(reg_offset() + addr, v); }
+    inline void write16(u32 addr, u16 v) { tile.write_drp16(reg_offset() + addr, v); }
+    inline void write8(u32 addr, u8 v) { tile.write_drp8(reg_offset() + addr, v); }
     
-       
   protected:
     tile_type &tile;
     int block;
@@ -264,6 +291,19 @@ namespace piradio
   public:
     DAC(DACTile &_tile, int _block);
 
+    int get_inv_sinc_mode() {
+      u16 mode;
+      
+      rfdc_func_no_type(XRFdc_GetInvSincFIR, &mode);
+
+      return mode;
+    }
+
+    void set_inv_sinc_mode(int mode) {
+      std::cout << "Setting mode to " << mode << std::endl;
+      rfdc_func_no_type(XRFdc_SetInvSincFIR, mode);
+    }
+    
   private:
   
   };

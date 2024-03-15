@@ -4,7 +4,7 @@ piradio_project("libzcu111" LIBZCU111)
 
 add_library(zcu111 STATIC
   src/zcu111.cxx
-  src/clocks.cxx
+  src/zcu111_predef_lmx.cxx
   src/i2c.cxx
   )
 
@@ -22,12 +22,13 @@ target_link_libraries(zcu111
 
 add_executable(zcu111-util
   src/zcu111_util.cxx
-  src/zcu111_predef_lmx.cxx
   )
 
 target_link_libraries(zcu111-util
   zcu111
   tilmx
+  rfdc
+  metal
   piradio
   fmt
   i2c

@@ -169,9 +169,17 @@ class SampleBuffer(UIO):
     def start_offset(self):
         return self.csr[2 * 4]
 
+    @start_offset.setter
+    def start_offset(self, v):
+        self.csr[2 * 4] = v
+    
     @property
     def end_offset(self):
         return self.csr[3 * 4]
+
+    @end_offset.setter
+    def end_offset(self, v):
+        self.csr[3 * 4] = v
 
     @cached_property
     def stream_depth(self):
@@ -192,15 +200,28 @@ class SampleBuffer(UIO):
     @cached_property
     def bytes_per_stream_word(self):
         return self.size_bytes // self.stream_depth
+
+    @property
+    def sample_size(self):
+        if self.sample_format == IQ_SAMPLES:
+            return 4
+        elif self.sample_format == REAL_SAMPLES:
+            return 2
     
     @property
     def start_sample(self):
-        return self.start_offset * self.bytes_per_stream_word // 4
+        return self.start_offset * self.bytes_per_stream_word // self.sample_size
 
     @property
     def end_sample(self):
-        return (self.end_offset + 1) * self.bytes_per_stream_word // 4
+        return (self.end_offset + 1) * self.bytes_per_stream_word // self.sample_size
 
+    @end_sample.setter
+    def end_sample(self, v):
+        # (self.end_offset + 1) * self.bytes_per_stream_word // self.sample_size
+        self.end_offset = v * self.sample_size // self.bytes_per_stream_word - 1
+        
+    
     @property
     def nsamples(self):
         return self.end_sample - self.start_sample

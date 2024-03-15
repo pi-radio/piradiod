@@ -15,15 +15,12 @@ class OFDMParameters:
     symbol_offset = 0
     
     def __init__(self):
-        pass
+        if not hasattr(self, "Ncp"):
+            self.Ncp = self.N // 4
     
     @property
     def SCS(self):
         return self.sample_rate/self.N_fft
-
-    @property
-    def CP_len(self):
-        return self.N // 4
 
     @property
     def BW(self):
@@ -31,7 +28,7 @@ class OFDMParameters:
 
     @property
     def symbol_len(self):
-        return self.N + self.CP_len    
+        return self.N + self.Ncp    
 
     @property
     def frame_len(self):
@@ -183,3 +180,7 @@ class OFDM2(OFDMParameters):
     data_idxs = np.concatenate((32 + np.arange(26) - 26, 32 + 1 + np.arange(26)))
     data_idxs = np.delete(data_idxs, np.where(np.isin(data_idxs, pilot_idxs)))
                             
+class OFDM_DOCSIS_1(OFDMParameters):
+    N = 8192
+
+    

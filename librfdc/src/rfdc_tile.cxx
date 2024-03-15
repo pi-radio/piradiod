@@ -29,6 +29,13 @@ namespace piradio
 							  id_string(rfdc::str::tile_types[type] + " " + std::to_string(tile)),
 							  pll(*this)
   {
+    if (type == XRFDC_ADC_TILE) {
+      reg_offset = XRFDC_ADC_TILE_CTRL_STATS_ADDR(tile);
+      drp_offset = XRFDC_ADC_TILE_CTRL_STATS_ADDR(tile);
+    } else {
+      reg_offset = XRFDC_DAC_TILE_CTRL_STATS_ADDR(tile);
+      drp_offset = XRFDC_DAC_TILE_CTRL_STATS_ADDR(tile);
+    }
   }
 
   bool RFDCTile::enabled()
@@ -43,7 +50,8 @@ namespace piradio
   }
 
   DACTile::DACTile(RFDC &_rfdc, int _tile) : RFDCTile(_rfdc, XRFDC_DAC_TILE, _tile)
-  {    
+  {
+    rfdc_func(XRFdc_SetupFIFO, 1);
   }
 };						  
 

@@ -19,7 +19,6 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libzcu111/include")
 include_directories("include")
 
 add_executable(piradio-fpgad
-  src/fpga.cxx
   src/fpgad.cxx
   src/zcu111_manager.cxx
   src/rfdc_manager.cxx

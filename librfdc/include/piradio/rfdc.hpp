@@ -36,9 +36,34 @@ namespace piradio
     int get_n_adc_tiles(void) { return adc_tiles.size(); }
     int get_n_dac_tiles(void) { return dac_tiles.size(); }
 
-    int reset();
+    void startup();
+    void shutdown();
+
+    void reset();
+    
+    void restart();
+
+    bool check_status();
+
+    void MTSSync();
+
+    XRFdc_IPStatus get_status();
     
     static int load_config();
+
+    inline u64 read64(u32 addr) { using namespace std; return metal_io_read64(rfdc.io, addr); }
+    inline u32 read32(u32 addr) { using namespace std; return metal_io_read32(rfdc.io, addr); }
+    inline u16 read16(u32 addr) { using namespace std; return metal_io_read16(rfdc.io, addr); }
+    inline u8 read8(u32 addr) { using namespace std; return metal_io_read8(rfdc.io, addr); }
+
+    inline void write64(u32 addr, u64 v) { using namespace std; metal_io_write64(rfdc.io, addr, v); }
+    inline void write32(u32 addr, u32 v) { using namespace std; metal_io_write32(rfdc.io, addr, v); }
+    inline void write16(u32 addr, u16 v) { using namespace std; metal_io_write16(rfdc.io, addr, v); }
+    inline void write8(u32 addr, u8 v) { using namespace std; metal_io_write8(rfdc.io, addr, v); }
+
+    inline u32 dac_enabled_mask() { return read32(XRFDC_DAC_PATHS_ENABLED_OFFSET); }
+    inline u32 adc_enabled_mask() { return read32(XRFDC_ADC_PATHS_ENABLED_OFFSET); }
+
     
   private:
     XRFdc_Config *cfg;

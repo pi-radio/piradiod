@@ -89,7 +89,7 @@ namespace piradio
   {
     bool retval = false;
 
-    assert(!operating());
+    remove_overlay();
 
     fs::path firmware_dest = firmware_dest_dir / image_path.filename();
     fs::path overlay_dest = firmware_dest_dir / overlay_path.filename();

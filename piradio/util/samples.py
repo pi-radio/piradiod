@@ -147,7 +147,7 @@ class Samples:
         return Samples(np.conjugate(self.samples), self.sample_rate)
 
     def decimate(self, n=2):
-        return Samples(decimate(self.samples, n), self.sample_rate/2)
+        return Samples(decimate(self.samples, n), self.sample_rate/n)
 
     def resample(self, N=None, sample_rate=None):
         assert N is not None or sample_rate is not None

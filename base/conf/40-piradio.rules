@@ -7,6 +7,8 @@ SUBSYSTEM=="spi", ACTION=="add|change", ENV{MODALIAS}=="spi:LTC5594", PROGRAM="/
 SUBSYSTEM=="spi", ACTION=="add|change", ENV{MODALIAS}=="spi:MAX11300", PROGRAM="/bin/sh -c 'echo spidev > /sys/%E{DEVPATH}/driver_override ; echo %k > /sys/bus/spi/drivers/spidev/bind'"
 SUBSYSTEM=="spi", ACTION=="add|change", ENV{MODALIAS}=="spi:LMX2595", PROGRAM="/bin/sh -c 'echo spidev > /sys/%E{DEVPATH}/driver_override ; echo %k > /sys/bus/spi/drivers/spidev/bind'"
 SUBSYSTEM=="spi", ACTION=="add|change", ENV{MODALIAS}=="spi:LMX2598", PROGRAM="/bin/sh -c 'echo spidev > /sys/%E{DEVPATH}/driver_override ; echo %k > /sys/bus/spi/drivers/spidev/bind'"
+SUBSYSTEM=="spi", ACTION=="add|change", ENV{OF_COMPATIBLE_0}=="piradio,bgctrl", PROGRAM="/bin/sh -c 'echo spidev > /sys/%E{DEVPATH}/driver_override ; echo %k > /sys/bus/spi/drivers/spidev/bind'"
+SUBSYSTEM=="spi", ACTION=="add|change", ENV{OF_COMPATIBLE_0}=="piradio,amps", PROGRAM="/bin/sh -c 'echo spidev > /sys/%E{DEVPATH}/driver_override ; echo %k > /sys/bus/spi/drivers/spidev/bind'"
 
 # This is where I was an idiot
 SUBSYSTEM=="spi", ACTION=="add|change", ENV{OF_NAME}=="LMX2598", PROGRAM="/bin/sh -c 'echo spidev > /sys/%E{DEVPATH}/driver_override ; echo %k > /sys/bus/spi/drivers/spidev/bind'"
@@ -19,5 +21,7 @@ SUBSYSTEM=="platform", ENV{OF_NAME}=="usp_rf_data_converter", ACTION=="add|chang
 SUBSYSTEM=="platform", ENV{OF_NAME}=="axis_sample_buffer_in", ACTION=="add|change", PROGRAM="/bin/sh -c 'echo uio_pdrv_genirq > /sys/%E{DEVPATH}/driver_override ; echo $(basename %E{DEVPATH}) > /sys/bus/platform/drivers_probe'"
 SUBSYSTEM=="platform", ENV{OF_NAME}=="axis_sample_buffer_out", ACTION=="add|change", PROGRAM="/bin/sh -c 'echo uio_pdrv_genirq > /sys/%E{DEVPATH}/driver_override ; echo $(basename %E{DEVPATH}) > /sys/bus/platform/drivers_probe'"
 SUBSYSTEM=="platform", ENV{OF_NAME}=="piradip_trigger_unit", ACTION=="add|change", PROGRAM="/bin/sh -c 'echo uio_pdrv_genirq > /sys/%E{DEVPATH}/driver_override ; echo $(basename %E{DEVPATH}) > /sys/bus/platform/drivers_probe'"
+SUBSYSTEM=="platform", ENV{OF_NAME}=="piradio_16x4sym", ACTION=="add|change", PROGRAM="/bin/sh -c 'echo uio_pdrv_genirq > /sys/%E{DEVPATH}/driver_override ; echo $(basename %E{DEVPATH}) > /sys/bus/platform/drivers_probe'"
 
 SUBSYSTEM=="spidev", ACTION=="add|change", OWNER="root", GROUP="spi",MODE="0660"
+

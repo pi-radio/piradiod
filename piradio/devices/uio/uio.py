@@ -5,6 +5,7 @@ import struct
 import os
 
 from pathlib import Path
+from functools import cached_property
 
 from piradio.output import output
 from piradio.command import CommandObject, command
@@ -152,9 +153,25 @@ class UIOMap:
             self.shift = 1
 
         self.mask = (1 << self.shift) - 1
-        
+
+    @cached_property
+    def uint32(self):
+        return self.mv.cast('I')
+
+    @cached_property
+    def int32(self):
+        return self.mv.cast('i')
+
+    @cached_property
+    def uint16(self):
+        return self.mv.cast('H')
+
+    @cached_property
+    def int16(self):
+        return self.mv.cast('h')
+    
     def map(self, cast='I'):
-        output.debug(f"Mapping map {self.n} size {self.size} addr {self.addr}")
+        output.debug(f"Mapping map {self.n} size {self.size} addr {self.addr:08x}h")
         self.mmap = mmap.mmap(self.UIO.fd, self.size,
                               flags = mmap.MAP_SHARED,
                               prot = mmap.PROT_WRITE | mmap.PROT_READ,

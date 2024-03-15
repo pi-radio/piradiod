@@ -101,11 +101,6 @@ namespace piradio
     }
   }
 
-  int RFDC::reset()
-  {
-    return 0;
-  }
-
   int RFDC::load_config()
   {
     int result;
@@ -134,5 +129,88 @@ namespace piradio
 
     return 0;
   }
+
+  void RFDC::startup()
+  {
+    XRFdc_StartUp(&rfdc, 0, -1);
+    XRFdc_StartUp(&rfdc, 1, -1);
+  }
   
+  void RFDC::shutdown()
+  {
+    XRFdc_Shutdown(&rfdc, 0, -1);
+    XRFdc_Shutdown(&rfdc, 1, -1);
+  }
+
+  void RFDC::reset()
+  {
+    XRFdc *p = &rfdc;
+    using std::memory_order_seq_cst;
+    XRFdc_WriteReg16(p, 0, 4, 1);
+  }
+  
+  void RFDC::restart()
+  {
+    XRFdc_Reset(&rfdc, 0, -1);
+    XRFdc_Reset(&rfdc, 1, -1);    
+  }
+
+  bool check_status();
+
+  XRFdc_IPStatus RFDC::get_status()
+  {
+    int result = XRFdc_GetIPStatus(&rfdc, &ip_status);
+
+    if (result != XRFDC_SUCCESS) {
+      throw std::runtime_error("Unable to get IP status");     
+    }
+
+    return ip_status;
+  }  
+
+  void RFDC::MTSSync()
+  {
+    int i;
+    
+    XRFdc_MultiConverter_Sync_Config config;
+    
+    /* Initialize DAC MTS Settings */
+    XRFdc_MultiConverter_Init (&config, 0, 0, XRFDC_TILE_ID0);
+    config.Tiles = 0x3;	/* Sync DAC tiles 0 and 1 */
+    
+    auto status = XRFdc_MultiConverter_Sync(&rfdc, XRFDC_DAC_TILE, &config);
+    
+    if(status == XRFDC_MTS_OK){
+      std::cout << "INFO : DAC Multi-Tile-Sync completed successfully" << std::endl;
+    } else {
+      std:: cout << "ERROR : DAC Multi-Tile-Sync did not complete successfully. Error code is "
+		 << status << std::endl;
+    }
+
+    for(i=0; i<2; i++) {
+      std::cout << "DAC" << i << ": Latency: "
+		<< config.Latency[i] << " Offset: "
+		<< config.Offset[i] << std::endl;
+    }
+
+    
+    XRFdc_MultiConverter_Init (&config, 0, 0, XRFDC_TILE_ID0);
+
+    config.Tiles = 0xF;
+    
+    status = XRFdc_MultiConverter_Sync(&rfdc, XRFDC_ADC_TILE, &config);
+    
+    if(status == XRFDC_MTS_OK){
+      std::cout << "INFO : ADC Multi-Tile-Sync completed successfully" << std::endl;
+    } else {
+      std:: cout << "ERROR : ADC Multi-Tile-Sync did not complete successfully. Error code is "
+		 << status << std::endl;
+    }
+    
+    for(i=0; i<2; i++) {
+      std::cout << "DAC" << i << ": Latency: "
+		<< config.Latency[i] << " Offset: "
+		<< config.Offset[i] << std::endl;
+    }
+  }
 };

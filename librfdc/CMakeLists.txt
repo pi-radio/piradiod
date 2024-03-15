@@ -61,3 +61,9 @@ add_executable(rfdcmix
 
 target_link_libraries(rfdcmix rfdc metal)
 target_compile_options(rfdcmix PUBLIC -g)
+
+add_executable(rfdcutil
+  src/rfdcutil.cxx)
+
+target_link_libraries(rfdcutil rfdc piradio metal)
+target_compile_options(rfdcutil PUBLIC -g)

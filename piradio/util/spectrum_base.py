@@ -9,25 +9,6 @@ import h5py
 from piradio.util import MHz, GHz, Freq, Hz
 
 class SpectrumBase:
-    """
-    Subclass properties:
-     - f: frequency bins
-     - fft: signal based fft
-     - dB: logarithmic magnitude fft (power)
-     - power: linear power
-    """
-    class _shifter:
-        def __init__(self, spec):
-            self.spec = spec
-
-        def __getattr__(self, attr):
-            if attr in [ "f", "f_Hz", "power", "dB", "fft" ]:
-                return np.fft.fftshift(getattr(self.spec, attr))
-            raise AttributeError(attr)
-
-    @cached_property
-    def shifted(self):
-        return SpectrumBase._shifter(self)
         
     @property
     def f_Hz(self):
@@ -50,15 +31,16 @@ class SpectrumBase:
     def bin_width(self):
         return self.f[1] - self.f[0]
         
-    def freq_bin(self, f):
-        return np.argmin([ np.abs(bf - f) for bf in self.f ] )
-
-        
     def find_signal(self, f, w=1):
         def find_one(f, w=1):
-            b = self.freq_bin(f)
-        
-            return b - w + np.argmax(self.power[b-w:b+w+1])
+            b = np.argmin([ np.abs(bf - f) for bf in self.f ] )
+
+            fa = self.f[b-w:b+w+1]
+            pa = self.dB[b-w:b+w+1]
+
+            i = np.argmax(pa)
+            
+            return (fa[i], pa[i])
 
         try:
             fiter = iter(f)
@@ -97,6 +79,15 @@ class SpectrumBase:
         p[self.N//2] = 0
         
         return 10 * np.log10(self.power[b] / np.max[p])
+
+    @property
+    def plot_x_vals(self):
+        return self.f_Hz
+
+    @property
+    def plot_y_vals(self):
+        return self.dB
+
     
     def plot(self, xlim=None, ylim=[-130, 0], title=None, min_peak_height=-30, mark_peaks=True):
         m = max(self.f)
@@ -104,7 +95,7 @@ class SpectrumBase:
         div, label = m.friendly_tuple
 
         plt.figure()
-        plt.plot(self.shifted.f_Hz/div, self.shifted.dB)
+        plt.plot(self.plot_x_vals, self.plot_y_vals)
         plt.xlabel(label)
         plt.ylim(ylim)
 
@@ -112,13 +103,13 @@ class SpectrumBase:
             plt.xlim(xlim)
 
         if mark_peaks:
-            peaks, props = find_peaks(self.shifted.dB, height=min_peak_height)
+            peaks, props = find_peaks(self.plot_y_vals, height=min_peak_height)
             bot = ylim[0]
             top = ylim[1]
 
             heights = props['peak_heights']
 
-            peak_data = {'Frequency (MHz)': [self.shifted.f[peak].MHz for peak in peaks],
+            peak_data = {'Frequency (MHz)': [self.plot_x_vals[peak] / 1e6 for peak in peaks],
                          'Height (dB)': heights}
 
             df = pd.DataFrame(peak_data)
@@ -128,18 +119,9 @@ class SpectrumBase:
 
             display(df)
         
-            plt.vlines(self.shifted.f_Hz[peaks]/div, bot, top, color='r')
+            plt.vlines(self.plot_x_vals[peaks]/div, bot, top, color='r')
         
         if title is not None:
             plt.title(title)
 
-        plt.show()
-
-    def plot_IQ(self, xlim=[-1.5,1.5], ylim=[-1.5, 1.5], title=None):
-        plt.figure()
-        plt.scatter(np.real(self.fft), np.imag(self.fft))
-        plt.xlim(xlim)
-        plt.ylim(ylim)
-        if title is not None:
-            plt.title(title)
         plt.show()

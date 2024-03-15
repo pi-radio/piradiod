@@ -17,8 +17,8 @@ dependencies = [
 ]
 
 [project.scripts]
-pircons="piradio.console:start_console"	
 piradiod="piradio.daemon:main"
+betelgeuse="piradio.boards.Betelgeuse:cli"
 
 [tool]
 

@@ -92,7 +92,7 @@ class AXI_GPIO(CommandObject):
 
         l = list(devpath.glob("gpiochip*"))
         
-        assert(len(l) == 1)
+        assert len(l) == 1, f"Too many gpiochip entires: {l}"
 
         chippath = l[0]
 

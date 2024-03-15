@@ -47,6 +47,8 @@ namespace piradio
     void set_osc_in(const frequency &f);
     void set_doubler_en(bool b);
 
+    void set_sync(bool b);
+    
     void dump(void);
 
     void tune(frequency A, frequency B);

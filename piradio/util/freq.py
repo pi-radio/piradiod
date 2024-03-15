@@ -98,7 +98,6 @@ class Freq:
         if isinstance(other, Freq):
             return other.hz / self.hz
         else:
-            print(f"rtruediv: {other} {self.hz} {other/self.hz}")
             return Time(other / self.hz)
 
     def __rfloordiv__(self, other):
@@ -117,9 +116,8 @@ class Freq:
             return Freq(self.hz/other)
 
     def __floordiv__(self, other):
-        print(f"Floordiv {self} {other}")
         if isinstance(other, Freq):
-            return self.hz // other.hz
+            return int(self.hz // other.hz)
 
         return Freq(self.hz//other)
         
@@ -186,11 +184,11 @@ class Time:
 
     @property
     def friendly_tuple(self):
-        for s, v in self.freq_mult.items():
-            if np.abs(self.hz) >= v:
+        for s, v in self.time_mult.items():
+            if np.abs(self.s) >= v:
                 return (v, s)
             
-        return (1, "Hz")
+        return (1, "s")
         
     
     @property
@@ -221,7 +219,7 @@ class Time:
     def __format__(self, spec):
         v, s = self.friendly_tuple
 
-        return format(self.hz/v, spec) + s
+        return format(self.s/v, spec) + s
 
     def __abs__(self):
         return Time(abs(self.s))

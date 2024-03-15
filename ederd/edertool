@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+
+import Pyro5.api
+import Pyro5.errors
+import click
+
+
+@click.group()
+@click.pass_context
+def edertool(ctx):
+    uri = "PYRO:eder_server@localhost:9999"
+    ctx.obj = Pyro5.api.Proxy(uri)
+
+@edertool.command("restart")
+@click.pass_obj
+def restart(server):
+    server.restart()
+
+    
+@edertool.command("detect-radios")
+@click.pass_obj
+def detect_radios(server):
+    server.detect_radios()
+
+@edertool.command("sx")
+@click.argument("radio", type=int)
+@click.pass_obj
+def tx(server, radio):
+    server.get_radio(radio).SX()
+
+@edertool.command("rx")
+@click.argument("radio", type=int)
+@click.pass_obj
+def tx(server, radio):
+    server.get_radio(radio).RX()
+
+    
+@edertool.command("tx")
+@click.argument("radio", type=int)
+@click.pass_obj
+def tx(server, radio):
+    server.get_radio(radio).TX()
+
+@edertool.command("gain")
+@click.pass_obj
+def gain(server):
+    print(f"{server.get_radio(5).rx_bfrf_gain}")
+    
+    
+if __name__ == "__main__":
+    try:
+        edertool()
+    except SystemExit as e:
+        raise e
+    except:
+        print("".join(Pyro5.errors.get_pyro_traceback()))
