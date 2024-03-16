@@ -186,7 +186,7 @@ int rfdc_status()
     std::cout << fmt::format("ISR {:08x}", tile->read32(0x200)) << std::endl;
     std::cout << fmt::format("IER {:08x}", tile->read32(0x204)) << std::endl;
     
-    std::cout << fmt::format("I0S {:08x}", tile->read32(0x208)) << std::endl;
+     std::cout << fmt::format("I0S {:08x}", tile->read32(0x208)) << std::endl;
     std::cout << fmt::format("I0E {:08x}", tile->read32(0x20C)) << std::endl;
 
     tile->write32(0x208, tile->read32(0x208));
@@ -221,6 +221,10 @@ int rfdc_status()
     std::cout << " FIFO Flags Asserted: " << (adc_status.IsFIFOFlagsAsserted ? "asserted" : "not asserted") << std::endl;
 
     std::cout << " Decimation factor: " << adc->decimation_factor() << std::endl;
+
+    auto mixer = adc->get_mixer_settings();
+
+    std::cout << " Mixer mode: " << mixer.MixerMode << std::endl;
   }
 
   for (int i = 0; i < rfdc.n_dacs(); i++) {

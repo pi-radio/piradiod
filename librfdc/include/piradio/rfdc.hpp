@@ -49,8 +49,8 @@ namespace piradio
 
     XRFdc_IPStatus get_status();
     
-    static int load_config();
-
+    int load_config();
+    
     inline u64 read64(u32 addr) { using namespace std; return metal_io_read64(rfdc.io, addr); }
     inline u32 read32(u32 addr) { using namespace std; return metal_io_read32(rfdc.io, addr); }
     inline u16 read16(u32 addr) { using namespace std; return metal_io_read16(rfdc.io, addr); }
@@ -63,7 +63,6 @@ namespace piradio
 
     inline u32 dac_enabled_mask() { return read32(XRFDC_DAC_PATHS_ENABLED_OFFSET); }
     inline u32 adc_enabled_mask() { return read32(XRFDC_ADC_PATHS_ENABLED_OFFSET); }
-
     
   private:
     XRFdc_Config *cfg;

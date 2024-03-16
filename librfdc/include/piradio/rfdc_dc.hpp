@@ -80,6 +80,8 @@ namespace piradio
       int result;
       XRFdc_Mixer_Settings settings;
 
+      std:: cout << "Get mixer settings " << tile.tile_no() << " " << block << std::endl;
+      
       result = rfdc_func(XRFdc_GetMixerSettings, &settings);
 
       if (result != XRFDC_SUCCESS) {
@@ -93,6 +95,8 @@ namespace piradio
     {
       int result;
 
+      std::cout << "Setting mixer settings " << tile.tile_no() << " " << block << std::endl;
+      
       result = rfdc_func(XRFdc_SetMixerSettings, (XRFdc_Mixer_Settings *)&settings);
 
       if (result != XRFDC_SUCCESS) {
@@ -302,6 +306,12 @@ namespace piradio
     void set_inv_sinc_mode(int mode) {
       std::cout << "Setting mode to " << mode << std::endl;
       rfdc_func_no_type(XRFdc_SetInvSincFIR, mode);
+    }
+
+    void read_mixer() {
+      auto v = read16(XRFDC_DAC_ITERP_DATA_OFFSET);
+
+      std::cout << "v: " << v << std::endl;
     }
     
   private:

@@ -103,31 +103,6 @@ namespace piradio
 
   int RFDC::load_config()
   {
-    int result;
-    XRFdc_Config *cfg;
-    cfg = XRFdc_LookupConfig(0);
-
-    if (cfg == NULL) {
-      throw std::runtime_error("Unable to find config");
-    }
-
-    XRFdc rfdc;
-    struct metal_device *metal_dev;
-
-    result = XRFdc_RegisterMetal(&rfdc, 0, &metal_dev);
-
-    if (result != XRFDC_SUCCESS) {
-      throw std::runtime_error("Unable to open rfdc metal device");
-    }
-
-    
-    result = XRFdc_CfgInitialize(&rfdc, cfg);
-
-    if (result != XRFDC_SUCCESS) {
-      throw std::runtime_error("Unable to initialize rfdc");
-    }
-
-    return 0;
   }
 
   void RFDC::startup()
