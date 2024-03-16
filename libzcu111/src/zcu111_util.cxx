@@ -38,7 +38,7 @@ int sample_freq(piradio::frequency f)
   piradio::LMX2594 lmx(zcu111.get_reference_frequency());
 
   lmx.tune(f, f);
-
+  
   lmx.config.fill_regs(lmx_regs);
 
   zcu111.i2c_program_lmx(0xD, lmx_regs);
@@ -57,6 +57,10 @@ int write_regs(piradio::frequency f)
 
   lmx.tune(f, f);
 
+  lmx.dump();
+  lmx.config.dump();
+
+  
   lmx.config.fill_regs(lmx_regs);
 
   std::ofstream regfile("regs-cpp.txt");
@@ -67,6 +71,29 @@ int write_regs(piradio::frequency f)
 
     regfile << fmt::format("R{:d} 0x{:02x}{:04x}", int(addr), int(addr), r) <<  std::endl;
   }
+
+  return 0;
+}
+
+int load_ti_regs(std::string path)
+{
+  std::ifstream f(path);
+  std::string l;
+  std::map<int, uint16_t> regs;
+
+  while (std::getline(f, l)) {
+    std::size_t pos = l.find_last_of(" \t");
+
+    int v = std::stoi(l.substr(pos+1+2), nullptr, 16);
+
+    std::cout << (v >> 16) << " " << (v & 0xFFFF) << std::endl;
+
+    regs[v >> 16] = v & 0xFFFF;
+  }
+
+  zcu111.i2c_program_lmx(0x1, regs);
+  zcu111.i2c_program_lmx(0x4, regs);
+  zcu111.i2c_program_lmx(0x8, regs);
 
   return 0;
 }
@@ -295,6 +322,7 @@ int main(int argc, const char **argv)
   cli.add_command("init", init);
   cli.add_command("sample-freq", sample_freq);
   cli.add_command("write-regs", write_regs);
+  cli.add_command("load-ti-regs", load_ti_regs);
   cli.add_command("load-firmware", load_firmware);
   cli.add_command("disable", disable);
   cli.add_command("rfdc-status", rfdc_status);
