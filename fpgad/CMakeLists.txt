@@ -31,6 +31,10 @@ target_link_libraries(piradio-fpgad
   rfdc
   piradio
   fmt
+  grpc++_reflection
+  grpc++
+  grpc
+  protobuf
   SDBusCpp::sdbus-c++
   systemd
   i2c
