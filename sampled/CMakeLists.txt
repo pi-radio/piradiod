@@ -2,14 +2,27 @@ include(../cmake/piradio.cmake)
 
 piradio_project("piradio-sampled" SAMPLED)
 
+include(GNUInstallDirs)
+
+find_package(sdbus-c++ REQUIRED)
+
 include(${MACRO_DIR}/changelog.cmake)
 include(${MACRO_DIR}/copyright.cmake)
 include(${MACRO_DIR}/grpc.cmake)
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libsamplebuf/include")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../libpiradio/include")
 
-link_libraries(piradio samplebuf fmt)
+link_libraries(
+  samplebuf
+  fmt
+  piradio
+  grpc++_reflection
+  grpc++
+  grpc
+  protobuf
+  SDBusCpp::sdbus-c++
+  systemd  
+)
 
 add_executable(piradio-sampled
   src/sampled.cxx)

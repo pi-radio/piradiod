@@ -9,7 +9,7 @@ add_subdirectory("interfaces")
 
 set(USE_CPACK 1)
 
-foreach(name IN ITEMS base rfdc libzcu111 libsamplebuf sampled fpgad siversd)
+foreach(name IN ITEMS base librfdc libzcu111 libsamplebuf sampled fpgad siversd)
   message(STATUS "Adding ${name}")
   add_subdirectory("${name}")
 endforeach()  
