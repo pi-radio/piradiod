@@ -59,6 +59,9 @@ class Betelgeuse:
         self.ampcs =  [ self.gpios.outputs[i] for i in range(11, 14) ]
 
         self.pwren = [ self.gpios.outputs[i] for i in range(14, 22) ]
+
+        self.rfdcrst = self.gpios.outputs[26]
+        self.rfdcrstn = self.gpios.inputs[41]
         
         self.initn = self.gpios.inputs[32]
         self.done = self.gpios.inputs[33]
@@ -76,7 +79,8 @@ class Betelgeuse:
     def startup(self):
         print("Resetting and starting up Betelguese RF board...")
         self.power_enable.val = 0
-
+        self.rfdcrst.val = 1
+        
         for chsel in self.ampchsel:
             chsel.val = 0
 
@@ -90,6 +94,7 @@ class Betelgeuse:
         self.jtagen.val = 1
         time.sleep(0.5)
         self.power_enable.val = 1
+        self.rfdcrst.val = 0
 
         time.sleep(0.1)
         

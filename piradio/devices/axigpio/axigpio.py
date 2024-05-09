@@ -13,13 +13,11 @@ class GPIOPin(CommandObject):
         self.n = n
         self.ctrl = ctrl
 
-    @property
-    def request(self):
         config = {
             self.n: gpiod.LineSettings(direction=self.dir)
         }
 
-        return self.ctrl.chip.request_lines(config)
+        self.line = self.ctrl.chip.request_lines(config, consumer="piradio") 
 
 class InputPin(GPIOPin):
     def __init__(self, ctrl, n):
@@ -31,8 +29,7 @@ class InputPin(GPIOPin):
         
     @property
     def val(self):
-        with self.request as r:
-            return r.get_value(self.n)
+        return self.line.get_value(self.n)
 
 class OutputPin(GPIOPin):
     def __init__(self, ctrl, n):
@@ -44,28 +41,30 @@ class OutputPin(GPIOPin):
         
     @property
     def val(self):
-        with self.request as r:
-            return r.get_value(self.n)
+        return self.line.get_value(self.n)
 
     @val.setter
     def val(self, v):
-        with self.request as r:
-            return r.set_values({self.n: Value.ACTIVE if v else Value.INACTIVE})
+        v = Value.ACTIVE if v else Value.INACTIVE
+        self.line.set_value(self.n, v)
+            
 
 _gpios = {}
         
 class AXI_GPIO(CommandObject):
     def __new__(cls, name):
+        print(f"__new__: {name} {_gpios}")
         if name in _gpios:
             return _gpios[name]
 
         _gpios[name] = super().__new__(cls)
 
-        _gpios[name].__init__(name)
-
         return _gpios[name]
         
     def __init__(self, name):
+        if hasattr(self, "chip"):
+            return
+        
         devpath = SysFS.find_device(name)
 
         l = list(devpath.glob("gpiochip*"))
@@ -74,14 +73,10 @@ class AXI_GPIO(CommandObject):
 
         chippath = l[0]
 
-        self.gpion = int(chippath.stem[len("gpiochip"):])
-
-        output.debug(f"Opening GPIO chip {self.gpion} {chippath}")
+        print(f"Opening GPIO {chippath}")
         
-        self.chip = gpiod.Chip(f"/dev/gpiochip{self.gpion}") #, gpiod.chip.OPEN_BY_NUMBER)
+        self.chip = gpiod.Chip(f"/dev/{chippath.stem}")
         
-        self.gpio_path = chippath / "subsystem"
-
         self.pins = {}
         
         class Inputs(CommandObject):
