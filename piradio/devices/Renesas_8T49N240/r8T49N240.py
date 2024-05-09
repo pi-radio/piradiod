@@ -292,7 +292,8 @@ class Renesas_8T49N240(CommandObject):
         output.debug(f"Checking address {addr:x} for 8T49N240")
         try:
             data = self.read_reg_addr(addr, 0, 10)
-        except:
+        except Exception as e:
+            print(e)
             return False
         
         rev_id = data[2] >> 4
