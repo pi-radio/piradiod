@@ -8,7 +8,7 @@ from piradio.output import output
 from piradio.command import CommandObject, command, cmdproperty
 from piradio.devices.sysfs import SysFS
 
-class GPIOPin:
+class GPIOPin(CommandObject):
     def __init__(self, ctrl, n):
         self.n = n
         self.ctrl = ctrl
