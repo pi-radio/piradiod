@@ -2,77 +2,55 @@ import os
 
 import gpiod
 
+from gpiod.line import Direction, Value
+
 from piradio.output import output
 from piradio.command import CommandObject, command, cmdproperty
 from piradio.devices.sysfs import SysFS
 
-class GPIOPin(CommandObject):
-    IN = 0
-    OUT = 1
-    
+class GPIOPin:
     def __init__(self, ctrl, n):
-        self.line = line
-        
-    @cmdproperty
+        self.n = n
+        self.ctrl = ctrl
+
+    @property
+    def request(self):
+        config = {
+            self.n: gpiod.LineSettings(direction=self.dir)
+        }
+
+        return self.ctrl.chip.request_lines(config)
+
+class InputPin(GPIOPin):
+    def __init__(self, ctrl, n):
+        super().__init__(ctrl, n)
+
+    @property
     def dir(self):
-        with open(self.dirpath, "r") as f:
-            s = f.readline().strip()
-            if s == "out":
-                return self.OUT
-            assert s == "in", f"{s} is an invalid direction"
-            return self.IN
-
-    @dir.setter
-    def dir(self, v):
-        with open(self.dirpath, "w") as f:
-            if v == self.IN or v.lower() == "in":
-                f.write("in")
-            elif v == self.OUT or v.lower() == "out":
-                f.write("out")
-            else:
-                raise RuntimeError("Invalid direction")
-
-    @cmdproperty
+        return Direction.INPUT
+        
+    @property
     def val(self):
-        with open(self.valpath, "r") as f:
-            s = f.read().strip()
-            return int(s)
+        with self.request as r:
+            return r.get_value(self.n)
+
+class OutputPin(GPIOPin):
+    def __init__(self, ctrl, n):
+        super().__init__(ctrl, n)
+
+    @property
+    def dir(self):
+        return Direction.OUTPUT
+        
+    @property
+    def val(self):
+        with self.request as r:
+            return r.get_value(self.n)
 
     @val.setter
     def val(self, v):
-        with open(self.valpath, "w") as f:
-            f.write(f"{v}\n")
-
-
-class InputPin(CommandObject):
-    def __init__(self, ctrl, n):
-        config = gpiod.line_request()
-        config.consumer = "piradio"
-        config.request_type = gpiod.line_request.DIRECTION_INPUT
-
-        self.line = ctrl.chip.get_line(n)
-        self.line.request(config)
-
-    @cmdproperty
-    def val(self):
-        return self.line.get_value()
-        
-class OutputPin(CommandObject):
-    def __init__(self, ctrl, n):
-        config = gpiod.line_request()
-        config.consumer = "piradio"
-        config.request_type = gpiod.line_request.DIRECTION_OUTPUT
-        
-        self.line = ctrl.chip.get_line(n)
-        self.line.request(config)
-
-    @cmdproperty
-    def val(self):
-        return self.line.get_value()
-
-    @val.setter
-    def val(self, v):
-        self.line.set_value(v)
+        with self.request as r:
+            return r.set_values({self.n: Value.ACTIVE if v else Value.INACTIVE})
 
 _gpios = {}
         
@@ -100,7 +78,7 @@ class AXI_GPIO(CommandObject):
 
         output.debug(f"Opening GPIO chip {self.gpion} {chippath}")
         
-        self.chip = gpiod.chip(self.gpion) #, gpiod.chip.OPEN_BY_NUMBER)
+        self.chip = gpiod.Chip(f"/dev/gpiochip{self.gpion}") #, gpiod.chip.OPEN_BY_NUMBER)
         
         self.gpio_path = chippath / "subsystem"
 
