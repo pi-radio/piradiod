@@ -67,3 +67,7 @@ add_executable(rfdcutil
 
 target_link_libraries(rfdcutil rfdc piradio metal fmt)
 target_compile_options(rfdcutil PUBLIC -g)
+
+install(TARGETS rfdc DESTINATION usr/lib COMPONENT LIBRFDC)
+
+install(TARGETS rfdcnco DESTINATION usr/bin COMPONENT LIBRFDC)
