@@ -47,7 +47,7 @@ target_compile_options(rfdcstatus PUBLIC -g)
 add_executable(rfdcnco
   src/rfdcnco.cxx)
 
-target_link_libraries(rfdcnco rfdc piradio metal)
+target_link_libraries(rfdcnco rfdc piradio metal fmt)
 target_compile_options(rfdcnco PUBLIC -g)
 
 add_executable(rfdc_disable_nco
@@ -65,5 +65,5 @@ target_compile_options(rfdcmix PUBLIC -g)
 add_executable(rfdcutil
   src/rfdcutil.cxx)
 
-target_link_libraries(rfdcutil rfdc piradio metal)
+target_link_libraries(rfdcutil rfdc piradio metal fmt)
 target_compile_options(rfdcutil PUBLIC -g)
