@@ -300,7 +300,7 @@ class Renesas_8T49N240(CommandObject):
         dev_id = ((data[2] & 0xF) << 12) | (data[3] << 4) | ((data[4] & 0xF0) >> 4)
         dash_code = ((data[4] & 0xF) << 7) | (data[5] >> 1)
 
-        output.info(f"addr: {addr} rev_id: {rev_id} dev_id: {dev_id}")
+        output.info(f"addr: {addr:02x}h rev_id: {rev_id} dev_id: {dev_id}")
             
         if dev_id == 0x60C and data[5] & 1:
             output.debug(f"Found 8T49N240 at 0x{addr:x}")

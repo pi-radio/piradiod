@@ -48,9 +48,8 @@ class Raman(CommandObject):
         self.children.gpio = AXI_GPIO(gpio)
         self.children.reset_gpio = self.gpio.outputs[0]
 
-        if self.reset_gpio.val == 0:
-            self.reset_gpio.val = 1
-            time.sleep(0.25)
+        self.reset_gpio.val = 1
+        time.sleep(0.25)
         
         self.children.clk_root = Renesas_8T49N240()
         self.children.lo_root = LMX2595Dev("LO Root", SPIDev(2, 24), f_src=MHz(45), A=self.LO_freq, B=self.LO_freq, Apwr=10, Bpwr=10)
