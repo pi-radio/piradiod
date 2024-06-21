@@ -149,7 +149,7 @@ class TX(Beamformer):
         self.regs.bias_ctrl = set_bits(0x40)
         self.regs.bias_lo = set_bits(0xA)
 
-        self.regs.tx_ctrl = 0x10
+        self.regs.tx_ctrl = 0x00  # Common mode 1.0V
 
         self.bb_gain = 0
         self.bb_I_gain = 0

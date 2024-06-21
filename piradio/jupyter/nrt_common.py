@@ -1,4 +1,4 @@
-import sys
+simport sys
 import time
 import numpy as np
 

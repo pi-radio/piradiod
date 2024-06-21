@@ -58,7 +58,7 @@ class signals:
             if nrepeat == -1:
                 nrepeat = sbuf.nsamples // N
             
-            sbuf.array = np.concatenate((np.tile(self.wform, nrepeat), np.zeros(sbuf.nsamples - nrepeat * len(wform))))
+            sbuf.array = np.concatenate((np.tile(self.wform, nrepeat), np.zeros(sbuf.nsamples - nrepeat * len(self.wform))))
         
     class RealZadoffChu(ZadoffChu):
         def __init__(self, N, q, u, amplitude=1.0, timescale=1, LO_DIV=4):

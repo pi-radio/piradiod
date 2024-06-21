@@ -358,7 +358,7 @@ class RX(Beamformer):
         # VGA 1-2 allowed values 0xF == 21dB, 0x7 == 18dB, 0x3 == 12dB, 0x1 == 6dB, 0x0 == 0dB
         # VGA 3 0-15 == 0-6dB
 
-        # Total: 15 + 15 + 21 + 21 + 6
+        # Total: 15 + 15 + 21 + 21 + 6 == 78
 
         ov = v
         

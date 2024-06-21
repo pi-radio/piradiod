@@ -33,8 +33,12 @@ class Raman(CommandObject):
         
         l = glob.glob("/sys/firmware/devicetree/base/__symbols__/*pl_gpio")
 
-        assert len(l) == 1
+        if len(l) == 0:
+            print("Could not find FPGA PL.  Please ensure firmware is loaded")
 
+        if len(l) != 1:
+            raise RuntimeError(f"FPGA configuration invalid: GPIOs found: {l}")
+        
         gpio = Path(l[0]).name
 
         if gpio == "pl_gpio":
@@ -48,6 +52,9 @@ class Raman(CommandObject):
         self.children.gpio = AXI_GPIO(gpio)
         self.children.reset_gpio = self.gpio.outputs[0]
 
+        self.reset_gpio.val = 0
+        time.sleep(0.25)
+        
         self.reset_gpio.val = 1
         time.sleep(0.25)
         

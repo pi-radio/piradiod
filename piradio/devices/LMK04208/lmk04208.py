@@ -39,7 +39,7 @@ prog_seq = [
     [0x00, 0x3F, 0x00, 0x1F],
 ]
 
-class LMK04208(CommandObject):
+class LMK04208:
     def __init__(self):
         self.i2c = None
 

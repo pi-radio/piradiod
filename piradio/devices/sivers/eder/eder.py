@@ -100,7 +100,6 @@ class Eder(StateMachine):
         self.rx.load_weights()
         self.tx.load_weights()
 
-    @command
     def steer(self, angle : float):
         if self.cur_state == self.TX:
             self.tx.azimuth = angle
@@ -109,7 +108,6 @@ class Eder(StateMachine):
         else:
             output.warn(f"Not in mode to steer {self.cur_state}")
             
-    @command
     def omni(self):
         if self.cur_state == self.TX:
             self.tx.omni = True
@@ -118,11 +116,10 @@ class Eder(StateMachine):
         else:
             output.warn(f"Not in mode to steer {self.cur_state}")
 
-    @command
     def tx_status(self):
         self.tx.pdet_dump()
-            
-    @cmdproperty
+
+    @property
     def Tj(self):
         return KtoC(self.adc.tj)
         
@@ -163,6 +160,7 @@ class Eder(StateMachine):
             self.regs.trx_ctrl = 0
             return
 
+        print(f"Radio {self.N} initialized")
         output.debug("Eder initialized")
         
     @transition(INIT, SX)
@@ -204,13 +202,14 @@ class Eder(StateMachine):
 
     @transition(SX, TX)
     def SX_to_TX(self):
+        print("TX MF!")
         self.regs.trx_ctrl = set_bits(2)
 
     @transition(TX, SX)
     def TX_to_SX(self):
+        print("Leaving TX")
         self.regs.trx_ctrl = clear_bits(2)
 
-    @command
     def get_tx_pwr(self):
         print(" ".join([f"{i:03x}" for i in self.adc.tx_pdet]))
         print(" ".join([f"{i}" for i in self.adc.tx_pdet]))
@@ -227,7 +226,6 @@ class Eder(StateMachine):
         agc_test(eder)
 
     def post_transition(self, start, end):
-        return
         print(f"Transition: {start}=>{end}")
         print(f"trx_ctrl: {self.regs.trx_ctrl}")
         print(f"tx_ctrl: {self.regs.tx_ctrl}")
