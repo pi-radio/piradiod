@@ -122,7 +122,7 @@ class Raman(CommandObject):
 
         if not self.OFDM:
             if self.NCO_freq == MHz(1000):
-                os.system(f"rfdcnco set fs/4")
+                os.system(f"rfdcnco fs/4")
             else:
                 os.system(f"rfdcnco set {self.NCO_freq.Hz}")
 
