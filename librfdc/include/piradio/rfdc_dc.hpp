@@ -80,7 +80,7 @@ namespace piradio
       int result;
       XRFdc_Mixer_Settings settings;
 
-      std:: cout << "Get mixer settings " << tile.tile_no() << " " << block << std::endl;
+      //std:: cout << "Get mixer settings " << tile.tile_no() << " " << block << std::endl;
       
       result = rfdc_func(XRFdc_GetMixerSettings, &settings);
 
@@ -95,7 +95,7 @@ namespace piradio
     {
       int result;
 
-      std::cout << "Setting mixer settings " << tile.tile_no() << " " << block << std::endl;
+      //std::cout << "Setting mixer settings " << id_string << std::endl;
       
       result = rfdc_func(XRFdc_SetMixerSettings, (XRFdc_Mixer_Settings *)&settings);
 
@@ -175,7 +175,10 @@ namespace piradio
       
       s.FineMixerScale = XRFDC_MIXER_SCALE_1P0;
       s.MixerType = XRFDC_MIXER_TYPE_COARSE;
-    
+
+      std::cout << id_string << std::endl;
+      display_mixer_settings(s);
+      
       set_mixer_settings(s, true);
       
       tile.update_tile(XRFDC_EVENT_MIXER);
@@ -214,6 +217,8 @@ namespace piradio
       
       s.FineMixerScale = XRFDC_MIXER_SCALE_1P0;
       s.MixerType = XRFDC_MIXER_TYPE_FINE;
+
+      display_mixer_settings(s);
     
       set_mixer_settings(s, true);
       

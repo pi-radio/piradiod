@@ -202,12 +202,10 @@ class Eder(StateMachine):
 
     @transition(SX, TX)
     def SX_to_TX(self):
-        print("TX MF!")
         self.regs.trx_ctrl = set_bits(2)
 
     @transition(TX, SX)
     def TX_to_SX(self):
-        print("Leaving TX")
         self.regs.trx_ctrl = clear_bits(2)
 
     def get_tx_pwr(self):
@@ -226,9 +224,10 @@ class Eder(StateMachine):
         agc_test(eder)
 
     def post_transition(self, start, end):
-        print(f"Transition: {start}=>{end}")
-        print(f"trx_ctrl: {self.regs.trx_ctrl}")
-        print(f"tx_ctrl: {self.regs.tx_ctrl}")
+        if False:
+            print(f"Transition: {start}=>{end}")
+            print(f"trx_ctrl: {self.regs.trx_ctrl}")
+            print(f"tx_ctrl: {self.regs.tx_ctrl}")
         
     
         

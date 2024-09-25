@@ -164,7 +164,11 @@ class SampleBuffer(UIO):
     @property
     def ctrl_stat(self):
         return self.csr[1 * 4]
-        
+
+    @ctrl_stat.setter
+    def ctrl_stat(self, v):
+        self.csr[1 * 4] = v
+    
     @property
     def start_offset(self):
         return self.csr[2 * 4]
@@ -226,7 +230,6 @@ class SampleBuffer(UIO):
     def nsamples(self):
         return self.end_sample - self.start_sample
 
-    @command
     def status(self):
         print(f"IP id: {self.csr[4 * 0]:08x}")
         print(f"CTRLSTAT: {self.csr[4 * 1]:08x}")
@@ -236,19 +239,21 @@ class SampleBuffer(UIO):
         print(f"SIZE BYTES: {self.csr[4 * 5]:08x}")
         print(f"TRIGGER COUNT: {self.csr[4 * 6]:08x}")
         print(f"WRITE COUNT: {self.csr[4 * 7]:08x}")
-    
-    @command
-    def one_shot(self, v : bool = True):
+
+    @property
+    def one_shot(self):
+        return True if (self.ctrl_stat & 0x2) else False
+
+    @one_shot.setter
+    def one_shot(self, v : bool):
         if v:
-            self.csr[4 * 1] = (self.csr[4 * 1] & ~0x1) | 2
+            self.ctrl_stat = (self.ctrl_stat & ~0x3) | 2
         else:
-            self.csr[4 * 1] = self.csr[4 * 1] & ~3
+            self.ctrl_stat = self.ctrl_stat & ~0x3        
     
-    @command
     def trigger(self):
         self.csr[4 * 1] |= 1
 
-    @command
     def capture(self):
         self.trigger()
 
@@ -257,7 +262,7 @@ class SampleBuffer(UIO):
 
         return self.array
             
-    @cmdproperty
+    @property
     def fundamental_freq(self):
         return self.sample_rate / (self.end_sample - self.start_sample)
 

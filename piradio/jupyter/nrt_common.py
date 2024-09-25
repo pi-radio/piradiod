@@ -33,11 +33,11 @@ def nrt_setup(module):
     __sbos = module.sbos
 
     for sb in __sbos:
-        sb.one_shot(False)
+        sb.one_shot = False
         sb.array = np.zeros(sb.nsamples)
     
     for sb in __sbis:
-        sb.one_shot(True)
+        sb.one_shot = True
 
         rx_enables = _RXEnables()
         tx_enables = _TXEnables()
@@ -50,7 +50,7 @@ def capture():
 def capture_mode(mode):
     if mode == "CW":
         for i in range(8):
-            __sbos[i].one_shot(False)
+            __sbos[i].one_shot = False
             rx_enables[i] = True
             tx_enables[i] = True
             
@@ -60,6 +60,6 @@ def capture_mode(mode):
             tx_enables[i] = False
     elif mode == "SYNC":
         for i in range(8):
-            __sbos[i].one_shot(True)
+            __sbos[i].one_shot = True
             rx_enables[i] = True
             tx_enables[i] = True        

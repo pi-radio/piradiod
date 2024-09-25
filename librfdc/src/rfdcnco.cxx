@@ -109,7 +109,7 @@ set_nco_frequency(piradio::frequency f)
     auto adc = rfdc->get_adc(i);
 
     if (adc->enabled()) {
-      adc->tune_NCO(f.Hz());
+      adc->tune_NCO(f);
     }
   }
   
@@ -117,7 +117,7 @@ set_nco_frequency(piradio::frequency f)
     auto dac = rfdc->get_dac(i);
     
     if (dac->enabled()) {
-      dac->tune_NCO(f.Hz());
+      dac->tune_NCO(f);
     }
   }
 
@@ -220,7 +220,7 @@ main(int argc, const char **argv)
   cli.add_command("set", set_nco_frequency);
   cli.add_command("fs/2", set_fs2);
   cli.add_command("fs/4", set_fs4);
-  cli.add_command("-fs/4", set_neg_fs4);
+  cli.add_command("nfs/4", set_neg_fs4);
   
   cli.parse(argc, argv);
 }

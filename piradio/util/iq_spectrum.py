@@ -121,6 +121,7 @@ class SpectrumFromFFT(SpectrumBase):
     
 class SpectrumFromTimeDomain(SpectrumFromFFT):
     def __init__(self, td, fft=None, f=None, decimation=1, sample_rate=Hz(1), window=None):
+        print(f"SPECTRUM: sample_rate: {sample_rate}")
         if window is None:
             window = [ 0, len(td) ]
             

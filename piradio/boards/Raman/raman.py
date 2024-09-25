@@ -97,12 +97,11 @@ class Raman(CommandObject):
                 
                     try:
                         eder = Eder(SPIDev(2, 6 * card + 2 * radio + 1, mode=0), n)
-                        print(f"Found radio {n}")
                         self.radios[n] = eder
-                        print(f"Initializing radio {n}")
                         eder.INIT()
                         eder.freq = 60e9
                     except EderChipNotFoundError:
+                        print(f"WARNING: Radio {n} not found")
                         pass
                     except Exception as e:
                         print(f"Failed to detect radio {2 * card + radio}")
@@ -111,8 +110,6 @@ class Raman(CommandObject):
         
     @command
     def reset(self):
-        output.info("Resetting board...")
-
         self.reset_gpio.val = 0
         time.sleep(0.25)
         self.reset_gpio.val = 1
@@ -124,7 +121,10 @@ class Raman(CommandObject):
         self.clk_root.program()
 
         if not self.OFDM:
-            os.system(f"rfdcnco set {self.NCO_freq.Hz}")
+            if self.NCO_freq == MHz(1000):
+                os.system(f"rfdcnco set fs/4")
+            else:
+                os.system(f"rfdcnco set {self.NCO_freq.Hz}")
 
         self.lo_root.program()
 

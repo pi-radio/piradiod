@@ -145,9 +145,8 @@ class Lamarr(CommandObject):
         t = os.t 
         
         os.fill_chirp(fA, fB, N=N)
-
-        self.children.input_samples[0].one_shot(True)
-        os.one_shot(True)
+        self.children.input_samples[0].one_shot = True
+        os.one_shot = True
         self.children.trigger.trigger()
 
         self.children.input_samples[0].plot()

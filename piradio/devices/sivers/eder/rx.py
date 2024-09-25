@@ -27,9 +27,9 @@ class RXChannel(EderChild):
         end_meas = self.dco_diff
 
         if np.sign(start_meas) == np.sign(end_meas):
-            output.warn(f"Unable to fully adjust RX {self.name} DCO Drive control -- out of range {self.start_meas} {self.end_meas}")
+            output.warn(f"Unable to fully adjust RX {self.name} DCO Drive control -- out of range {start_meas} {end_meas}")
             
-            if abs(self.start_meas) < abs(self.end_meas):
+            if abs(start_meas) < abs(end_meas):
                 self.cal_offset = start_dco
             else:
                 self.cal_offset = end_dco
