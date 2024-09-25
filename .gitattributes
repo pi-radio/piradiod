@@ -1,0 +1,2 @@
+firmware/SDRv2/SDRv2NRT.bit.bin filter=lfs diff=lfs merge=lfs -text
+firmware/SDRv2/SDRv2NRT.dtbo filter=lfs diff=lfs merge=lfs -text
