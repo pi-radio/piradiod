@@ -18,8 +18,11 @@ class Beamformer(EderChild):
         for i, wv in enumerate(self._table.wvecs):
             self.beamweights_reg[i].set(wv.to_register)
             
-    def update_beamformer(self):
-        self._index = self._table.get_index(azimuth=self._azimuth, omni=self._omni)
+    def update_beamformer(self, i=None):
+        if i is None:
+            i = self._table.get_index(azimuth=self._azimuth, omni=self._omni)
+            
+        self._index = i 
         self.bf_idx_reg = self._index
         
     @property
