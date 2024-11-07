@@ -89,7 +89,7 @@ class SpectrumBase:
         return self.dB
 
     
-    def plot(self, xlim=None, ylim=[-130, 0], title=None, min_peak_height=-30, mark_peaks=True):
+    def plot(self, xlim=None, ylim=[-130, 0], title=None, min_peak_height=-30, mark_peaks=True, grid=True):
         m = max(self.f)
 
         div, label = m.friendly_tuple
@@ -98,6 +98,9 @@ class SpectrumBase:
         plt.plot(self.plot_x_vals, self.plot_y_vals)
         plt.xlabel(label)
         plt.ylim(ylim)
+
+        if grid:
+            plt.grid()
 
         if xlim is not None:
             plt.xlim(xlim)

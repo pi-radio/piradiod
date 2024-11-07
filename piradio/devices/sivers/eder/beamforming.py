@@ -9,10 +9,14 @@ class Beamformer(EderChild):
         self._table = self._book[0]
         self.load_weights()
         
-    def load_weights(self):
-        self._table = self._book[self.freq]
+    def load_weights(self, table=None):
+        if table is None:
+            self._table = self._book[self.freq]
+        else:
+            self._table = table
+            
         for i, wv in enumerate(self._table.wvecs):
-            self.beamweights_reg[i].set(wv.weights)
+            self.beamweights_reg[i].set(wv.to_register)
             
     def update_beamformer(self):
         self._index = self._table.get_index(azimuth=self._azimuth, omni=self._omni)
@@ -59,6 +63,10 @@ class BeamformingTable:
         self.freq = freq
         self.wvecs = args
 
+    @classmethod
+    def from_complex(cls, wtable):
+        return cls(0.0, *[ BeamWeights.from_complex(v) for v in wtable ])
+        
     def get_index(self, azimuth=0.0, omni=False):
         if omni:
             for i, w in enumerate(self.wvecs):
@@ -95,5 +103,25 @@ class BeamWeights:
         self.azimuth = azimuth
         self.omni = omni
 
+    @classmethod
+    def from_complex(cls, wv):
+        a = []
+
+        for w in wv:
+            a += [ int(round((w.imag + 1) * 31.5)),
+                   int(round((w.real + 1) * 31.5)) ]
+
+        return cls(a)
+        
+    @property
+    def to_register(self):
+        b = []
+        
+        for q, i in zip(self.weights[::2], self.weights[1::2]):
+            v = (i << 6) | q
+            b += [ v >> 8, v & 0xFF ]
+
+        return b
+            
     def __repr__(self):
         return f"<{self.weights} {self.azimuth} {self.omni}>"
