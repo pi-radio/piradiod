@@ -83,29 +83,33 @@ class Raman(CommandObject):
         self.reset()
 
         if direct:
-            from piradio.devices.sivers import Eder, EderChipNotFoundError
+            self.rescan_radios()
 
-            self.radios = [ None ] * 8
-            
-            for card in range(4):
-                for radio in range(2):
-                    n =  2*card + radio
+    @command
+    def rescan_radios(self):
+        from piradio.devices.sivers import Eder, EderChipNotFoundError
 
-                    if self.radios[n] is not None:
-                        # check to make usre it's still there
-                        continue
+        self.radios = [ None ] * 8
+        
+        for card in range(4):
+            for radio in range(2):
+                n =  2*card + radio
                 
-                    try:
-                        eder = Eder(SPIDev(2, 6 * card + 2 * radio + 1, mode=0), n)
-                        self.radios[n] = eder
-                        eder.INIT()
-                        eder.freq = 60e9
-                    except EderChipNotFoundError:
-                        print(f"WARNING: Radio {n} not found")
-                        pass
-                    except Exception as e:
-                        print(f"Failed to detect radio {2 * card + radio}")
-                        traceback.print_exc()
+                if self.radios[n] is not None:
+                    # check to make usre it's still there
+                    continue
+                
+                try:
+                    eder = Eder(SPIDev(2, 6 * card + 2 * radio + 1, mode=0), n)
+                    self.radios[n] = eder
+                    eder.INIT()
+                    eder.freq = 60e9
+                except EderChipNotFoundError:
+                    print(f"WARNING: Radio {n} not found")
+                    pass
+                except Exception as e:
+                    print(f"Failed to detect radio {2 * card + radio}")
+                    traceback.print_exc()
         
         
     @command

@@ -57,7 +57,12 @@ class SPIDev(CommandObject):
 
     @command
     def xfer(self, data):
-        return self.dev.transfer(data)
+        retval = self.dev.transfer(data)
+
+        if False:
+            output.print(f"SPIDEV: sent: {data} recv: {retval}")
+        
+        return retval
         
     def atexit(self):
         self.detach()

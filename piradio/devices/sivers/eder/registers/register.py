@@ -56,11 +56,15 @@ class AbstractRegister:
     SPI_CMD_TOGGLE = 3
     SPI_CMD_READ   = 4
 
-    def __init__(self, name, addr, size):
+    def __init__(self, name, addr, size, mask=None):
         self.name = name
         self.addr = addr
         self.size = size
+        self.mask = mask
 
+        if self.mask is not None:
+            self.shift = ffs(mask)
+        
     def prefix(self, prefix):
         return encode((self.addr << 3) | prefix)
     
@@ -91,20 +95,17 @@ class AbstractRegister:
             x = x.v
 
         d = self.prefix(cmd) + encode(x, self.size) + [ 0x00 ]
-            
+        
         obj.spi.xfer(d)
         
 class Register(AbstractRegister):
     def __init__(self, name, addr, size, default, mask=None):
-        super().__init__(name, addr, size)
+        super().__init__(name, addr, size, mask)
         self.name = name
         setattr(Registers, name, self)
         Registers.registers[name] = self
         self.default = default
-        self.mask = mask
 
-        if self.mask is not None:
-            self.shift = ffs(mask)
 
 
 class BFAzEntry:
@@ -113,15 +114,28 @@ class BFAzEntry:
         self.addr = addr
         self.log_registers = False
         self.saved_registers = []
+        self.mask = None
+
+    def prefix(self, prefix):
+        return encode((self.addr << 3) | prefix)
 
     def set(self, v):
         assert len(v) == 32
-        AbstractRegister("Az", self.addr, 32).__set__(self, v)
+            
+        d = self.prefix(AbstractRegister.SPI_CMD_WRITE) + v
+
+        self.spi.xfer(d)
+
+    def get(self):
+        d = self.prefix(AbstractRegister.SPI_CMD_READ) + [ 0x00 ] * 32
         
-        
+        v = self.spi.xfer(d)
+
+        return v[2:]
+                    
     def __getitem__(self, n):
         assert n < 16
-        AbstractRegister("Az", self.addr + 2 * n, 2).__get__(self)
+        return AbstractRegister("Az", self.addr + 2 * n, 2).__get__(self)
         
     def __setitem__(self, n, v):
         assert n < 16

@@ -43,6 +43,8 @@ class Eder(StateMachine):
 
         self.cid = self.regs.chip_id
 
+        output.print(f"SIVERS Chip Id: {self.cid}")
+        
         if not self.is_eder_b and not self.is_eder_b_mmf:
             self.spi = None
             raise EderChipNotFoundError(f"Unknown SIVERS chip {self.cid}")

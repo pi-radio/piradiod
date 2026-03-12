@@ -1,3 +1,4 @@
+from piradio.output import output
 from piradio.devices.sivers.eder.child import EderChild
 
 class Beamformer(EderChild):
