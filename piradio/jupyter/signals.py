@@ -38,6 +38,56 @@ class signals:
             else:
                 sbuf.array = self.amplitude * np.exp(1j * (-2.0 * np.pi * f.hz * sbuf.t + self.phase)) 
 
+    class ZCSequence:
+        def __init__(self, L, u, q=0):
+            self.L = L
+            self.u = u
+            self.q = q
+            
+            n = np.arange(self.L)
+            
+            p = 1.0j * 2 * np.pi * self.u * n / self.L
+            
+            if self.L % 2 == 0:
+                self.series = np.exp(p * (1 + n / 2))
+            else:
+                self.series = np.exp(p * (1 + (n + 1) / 2))
+        
+        def __getitem__(self, n):
+            return self.series[n]
+    
+        def interpolate(self, N):
+            t = self.L * np.arange(N) / N
+            
+            print(f"t[-1]: {t[-1]}")
+            
+            x = np.zeros(N, dtype=np.complex128)
+            
+            for n in range(self.L):
+                xx = np.pi * (t - n) / (2 * N)
+
+                txx = np.tan(xx)
+                ctxx = -np.tan(xx + np.pi/2)
+                
+                x += (self[n] * 
+                      (-1)**n * 
+                      (
+                          (-1)**(self.L+1) * txx + ctxx
+                      )
+                      )
+                
+            x *= np.sin(np.pi * t) / (2 * N)
+
+            print(f"x[0]: {x[0]} x[-1]: {x[-1]} self[0]: {self[0]} self[-1]: {self[-1]}")
+        
+            # Deal with nan at zero
+            x[0] = self[0]
+            
+            x /= np.max(np.abs(x))
+            
+            return x
+
+                
     class ZadoffChu:
         def __init__(self, N, q, u, amplitude=1.0, timescale=1):
             self.N = N
@@ -45,7 +95,7 @@ class signals:
             self.u = u
             self.amplitude = amplitude
             self.timescale = timescale
-
+            
         @property
         def wform(self):
             cf = self.N % 2

@@ -239,6 +239,7 @@ class SampleBuffer(UIO):
         print(f"SIZE BYTES: {self.csr[4 * 5]:08x}")
         print(f"TRIGGER COUNT: {self.csr[4 * 6]:08x}")
         print(f"WRITE COUNT: {self.csr[4 * 7]:08x}")
+        print(f"WRAP COUNT: {self.csr[4 * 8]:08x}")
 
     @property
     def one_shot(self):

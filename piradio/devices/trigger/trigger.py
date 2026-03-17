@@ -80,11 +80,11 @@ class Trigger(UIO):
     @command
     def status(self):
         print(f"IP id: {self.csr[0]:08x}")
-        print(f"Enables: {self.csr[1]:08x}")
-        print(f"Trigger: {self.csr[2]:08x}")
+        print(f"Enables: {self.csr[4]:08x}")
+        print(f"Trigger: {self.csr[8]:08x}")
 
         for i in range(32):
-            print(f"Delay {i}: {self.csr[3+i]}")
+            print(f"Delay {i}: {self.csr[12+4*i]}")
 
     @contextmanager
     def push(self):

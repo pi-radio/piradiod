@@ -15,14 +15,15 @@ def restart_kernel():
     display(HTML("<script>Jupyter.notebook.kernel.restart()</script>"))    
 
 def plot_signal(sbuf, **kwargs):
-    plot_samples(sbuf.array, **kwargs)
+    plt.plot(sbuf.t * 1e9, np.real(sbuf.array))
+    plt.plot(sbuf.t * 1e9, np.imag(sbuf.array))
 
-def plot_sample_spectrum(v, sample_rate=1, window=None, xlim=None, ylim=[-130, 0], title=None, min_peak_height=-30, mark_peaks=True):
+def plot_sample_spectrum(sbuf, sample_rate=1, window=None, xlim=None, ylim=[-130, 0], title=None, min_peak_height=-30, mark_peaks=True, list_peaks=True):
     if window is None:
-        f, ft = sbuf.fft
-    else:
-        ft = np.fft.fftshift(np.fft.fft(sbuf.array[window[0]:window[1]], mode="forward"))
-        f = np.fft.fftshift(np.fft.fftfreq(len(ft), 1/sbi.sample_rate.Hz))
+        window = (0, len(sbuf.array))
+
+    ft = np.fft.fftshift(np.fft.fft(sbuf.array[window[0]:window[1]], norm="forward"))
+    f = np.fft.fftshift(np.fft.fftfreq(len(ft), 1/sbuf.sample_rate.Hz))
         
     p = np.abs(ft)
     
@@ -33,12 +34,14 @@ def plot_sample_spectrum(v, sample_rate=1, window=None, xlim=None, ylim=[-130, 0
     plt.figure()
     plt.plot(f, dB)
     plt.ylim(ylim)
-
+    plt.grid(True)
+    
     if xlim is not None:
         plt.xlim(xlim)
 
-    if mark_peaks:
+    if mark_peaks or list_peaks:
         peaks, props = find_peaks(dB, height=min_peak_height)
+
         bot = ylim[0]
         top = ylim[1]
 
@@ -51,8 +54,14 @@ def plot_sample_spectrum(v, sample_rate=1, window=None, xlim=None, ylim=[-130, 0
         #df = df[df["Frequency (Hz)"].between(-0.25e9, 0.25e9)]
 
         df = df.sort_values("Height (dB)", ascending=False)
+
         
+    if mark_peaks:
         plt.vlines(f[peaks], bot, top, color='r')
+
+    if list_peaks:
+        for peak, height in zip( peaks, props['peak_heights']):
+            print(f"Peak: {f[peak]/1e6}MHz: {height}dB")
         
     if title is not None:
         plt.title(title)
@@ -60,7 +69,7 @@ def plot_sample_spectrum(v, sample_rate=1, window=None, xlim=None, ylim=[-130, 0
     plt.show()
         
 def plot_spectrum(sbuf, **kwargs):
-    plot_sample_spectrum(sbuf.array, sample_rate=sbuf.sample_rate.Hz, **kwargs)
+    plot_sample_spectrum(sbuf, sample_rate=sbuf.sample_rate.Hz, **kwargs)
 
 
 def recover_fs4(v):

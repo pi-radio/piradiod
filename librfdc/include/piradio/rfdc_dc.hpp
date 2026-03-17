@@ -176,8 +176,8 @@ namespace piradio
       s.FineMixerScale = XRFDC_MIXER_SCALE_1P0;
       s.MixerType = XRFDC_MIXER_TYPE_COARSE;
 
-      std::cout << id_string << std::endl;
-      display_mixer_settings(s);
+      //std::cout << id_string << std::endl;
+      //display_mixer_settings(s);
       
       set_mixer_settings(s, true);
       
@@ -218,7 +218,7 @@ namespace piradio
       s.FineMixerScale = XRFDC_MIXER_SCALE_1P0;
       s.MixerType = XRFDC_MIXER_TYPE_FINE;
 
-      display_mixer_settings(s);
+      //display_mixer_settings(s);
     
       set_mixer_settings(s, true);
       

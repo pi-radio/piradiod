@@ -120,7 +120,7 @@ class Raman(CommandObject):
         time.sleep(0.25)
 
         output.info("Programming clock tree and LO...")
-        
+        output.info(f"NCO Frequency: {self.NCO_freq}")
 
         self.clk_root.program()
 

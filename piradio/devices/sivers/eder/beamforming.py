@@ -24,7 +24,7 @@ class Beamformer(EderChild):
             i = self._table.get_index(azimuth=self._azimuth, omni=self._omni)
             
         self._index = i 
-        self.bf_idx_reg = self._index
+        self.bf_idx_reg = (1 << 7) | self._index
         
     @property
     def omni(self):

@@ -26,8 +26,12 @@ class _RXEnables:
     def __setitem__(self, n, v):
         trigger.enables[n+8] = v
 
+rx_enables = _RXEnables()
+tx_enables = _TXEnables()
+
+        
 def nrt_setup(module):
-    global __sbos, __sbis, rx_enables, tx_enables
+    global __sbos, __sbis
     
     __sbis = module.sbis
     __sbos = module.sbos
@@ -39,8 +43,6 @@ def nrt_setup(module):
     for sb in __sbis:
         sb.one_shot = True
 
-        rx_enables = _RXEnables()
-        tx_enables = _TXEnables()
 
             
 def capture():
@@ -63,3 +65,5 @@ def capture_mode(mode):
             __sbos[i].one_shot = True
             rx_enables[i] = True
             tx_enables[i] = True        
+    else:
+        raise RuntimeException(f"Invalid Capture mode: {mode}")
