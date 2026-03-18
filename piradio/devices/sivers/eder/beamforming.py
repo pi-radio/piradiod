@@ -22,9 +22,12 @@ class Beamformer(EderChild):
     def update_beamformer(self, i=None):
         if i is None:
             i = self._table.get_index(azimuth=self._azimuth, omni=self._omni)
-            
-        self._index = i 
+
+        self._index = i
         self.bf_idx_reg = (1 << 7) | self._index
+
+        self._weights = self._table.wvecs[i]
+
         
     @property
     def omni(self):
@@ -76,17 +79,14 @@ class BeamformingTable:
             for i, w in enumerate(self.wvecs):
                 if w.omni:
                     return i
+            raise RuntimeException("No omnidirectional vector specified")
 
-        return min(enumerate(self.wvecs), key=lambda x: abs(x[1].azimuth - azimuth))[0]
-        
-                
+        return min(enumerate(self.wvecs), key=lambda x: abs(x[1].azimuth - azimuth) if not x[1].omni else 100000)[0]
+                        
     def get_weights(self, azimuth=0.0, omni=False):
-        if omni:
-            for wv in self.wvecs:
-                if wv.omni:
-                    return wv
+        i = self.get_index(azimuth, omni)
 
-        return min(self.weights, key=lambda x: abs(x.azimuth - azimuth))
+        return self.wvecs[i]
 
     @property
     def weight_data(self):
