@@ -1,5 +1,7 @@
 import numpy as np
 
+from functools import cached_property
+
 from piradio.util import REAL_SAMPLES, IQ_SAMPLES, GHz
 
 class NCO:
@@ -18,8 +20,51 @@ class NCO:
         LO = np.exp(-1.0j * theta)
 
         return LO * samples
-    
 
+def mult_inv(n, p):
+    euclid = [ [ p, 1, 0 ], [ n, 0, 1 ] ]
+    
+    while True:
+        r0, s0, t0 = euclid[-2]
+        r1, s1, t1 = euclid[-1]
+
+        q, r = np.divmod(r0, r1)
+
+        if r == 0:
+            return t1        
+        
+        rn = (r0 - q * r1) % p
+        sn = (s0 - q * s1) % p
+        tn = (t0 - q * t1) % p
+
+        #print(f"q: {q} r: {r} rn: {rn} sn: {sn} tn: {tn}")
+
+        euclid += [ [ r, sn, tn ] ]
+
+def issquare(n):
+    x = n//2
+    seen = set([x])
+    
+    while x*x != n:
+        x = (x + (n // x)) // 2
+        if x in seen:
+            return False
+        seen.add(x)
+        
+    return True
+    
+        
+def legendre_symbol(n, N):
+    n = n % N
+    
+    if n == 0:
+        return 0
+    
+    if issquare(n):
+        return 1
+    
+    return -1    
+    
 class signals:
     class Sine:
         def __init__(self, freq, amplitude=1.0, phase=0):
@@ -39,98 +84,49 @@ class signals:
                 sbuf.array = self.amplitude * np.exp(1j * (-2.0 * np.pi * f.hz * sbuf.t + self.phase)) 
 
     class ZCSequence:
-        def __init__(self, L, u, q=0):
-            self.L = L
+        def __init__(self, Nzc, u):
+            self.Nzc = Nzc
             self.u = u
-            self.q = q
-            
-            n = np.arange(self.L)
-            
-            p = 1.0j * 2 * np.pi * self.u * n / self.L
-            
-            if self.L % 2 == 0:
-                self.series = np.exp(p * (1 + n / 2))
+
+            n = np.arange(self.Nzc)
+        
+            self._symbols = np.exp(-1.0j * np.pi * self.u * n * (n + 1) / self.Nzc)
+
+        @property
+        def symbols(self):
+            return self._symbols
+
+        @cached_property
+        def ft(self):
+            if self.Nzc % 4 == 1:
+                eta = 1
             else:
-                self.series = np.exp(p * (1 + (n + 1) / 2))
-        
-        def __getitem__(self, n):
-            return self.series[n]
-    
+                eta = -1.0j
+                
+            Xu0 = (legendre_symbol(2 * self.u, self.Nzc) * 
+                   eta * 
+                   np.sqrt(self.Nzc) * np.exp(1.0j * 2 * np.pi * self.u / self.Nzc * ((self.Nzc+1)/2)**3))
+            
+            uinv = mult_inv(self.u, self.Nzc)
+
+            return Xu0 * np.conjugate(self.symbols[(uinv * np.arange(self.Nzc)) % self.Nzc])
+
         def interpolate(self, N):
-            t = self.L * np.arange(N) / N
-            
-            print(f"t[-1]: {t[-1]}")
-            
-            x = np.zeros(N, dtype=np.complex128)
-            
-            for n in range(self.L):
-                xx = np.pi * (t - n) / (2 * N)
+            ft = np.zeros(N, dtype=np.complex128)
 
-                txx = np.tan(xx)
-                ctxx = -np.tan(xx + np.pi/2)
-                
-                x += (self[n] * 
-                      (-1)**n * 
-                      (
-                          (-1)**(self.L+1) * txx + ctxx
-                      )
-                      )
-                
-            x *= np.sin(np.pi * t) / (2 * N)
+            d = self.Nzc // 2
+            
+            ft[:d+1] = self.ft[:d+1]
+            ft[-d:] = self.ft[d+1:]
 
-            print(f"x[0]: {x[0]} x[-1]: {x[-1]} self[0]: {self[0]} self[-1]: {self[-1]}")
-        
-            # Deal with nan at zero
-            x[0] = self[0]
+            signal = np.fft.ifft(ft)
             
-            x /= np.max(np.abs(x))
-            
-            return x
+            return signal / np.max(np.abs(signal))
 
-                
-    class ZadoffChu:
-        def __init__(self, N, q, u, amplitude=1.0, timescale=1):
-            self.N = N
-            self.q = q
-            self.u = u
-            self.amplitude = amplitude
-            self.timescale = timescale
-            
-        @property
-        def wform(self):
-            cf = self.N % 2
-
-            n = np.arange(self.N * self.timescale) / self.timescale
-            
-            return np.exp(-1.0j * np.pi * self.u * n * (n + cf + 2 * self.q) / self.N / self.timescale)
-            
-        def apply(self, sbuf, nrepeat=1):
-            if nrepeat == -1:
-                nrepeat = sbuf.nsamples // N
-            
-            sbuf.array = np.concatenate((np.tile(self.wform, nrepeat), np.zeros(sbuf.nsamples - nrepeat * len(self.wform))))
-        
-    class RealZadoffChu(ZadoffChu):
-        def __init__(self, N, q, u, amplitude=1.0, timescale=1, LO_DIV=4):
-            super().__init__(N, q, u, amplitude, timescale)
-            self.LO_DIV = LO_DIV
-
-        @property
-        def wform(self):
-            wform = super().wform
-
-            LO_t = 2 * np.pi * np.arange(self.N * self.timescale) / self.LO_DIV
-
-            return self.amplitude * (np.real(wform) * np.cos(LO_t) + np.imag(wform) * -np.sin(LO_t))
+        def apply(self, sbo):
+            sbo.array = self.interpolate(len(sbo.array))          
             
             
-        def apply(self, sbuf, nrepeat=1):
-            wform = self.wform
-            
-            if nrepeat == -1:
-                nrepeat = sbuf.nsamples // N
-            
-            sbuf.array = np.concatenate((np.tile(wform, nrepeat), np.zeros(sbuf.nsamples - nrepeat * len(wform))))
 
     class real:
         class AWGN:

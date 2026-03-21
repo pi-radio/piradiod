@@ -121,7 +121,7 @@ class BeamWeights:
     def to_register(self):
         b = []
         
-        for q, i in zip(self.weights[::2], self.weights[1::2]):
+        for i, q in zip(self.weights[::2], self.weights[1::2]):
             v = (i << 6) | q
             b += [ v >> 8, v & 0xFF ]
 
